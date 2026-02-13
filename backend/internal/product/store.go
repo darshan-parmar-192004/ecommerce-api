@@ -82,3 +82,41 @@ func (s *Store) AppendToCSV(path string, Product models.Product) error {
 
 	return writer.Error()
 }
+
+func (s *Store) RewriteCSV(path string) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	writer.Write([]string{
+		"Product_id",
+		"name",
+		"category_id",
+		"price",
+		"description",
+		"created_at",
+	})
+
+	for _, p := range s.Products {
+
+		record := []string{
+			p.ProductID,
+			p.Name,
+			p.CategoryID,
+			strconv.FormatFloat(p.Price, 'f', -1, 64),
+			p.Description,
+			p.CreatedAt.Format(time.RFC3339),
+		}
+
+		if err := writer.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

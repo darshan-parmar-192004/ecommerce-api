@@ -86,6 +86,12 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	input.CreatedAt = existing.CreatedAt
 
 	h.Store.Products[id] = input
+	err := h.Store.RewriteCSV("./datasets/ecommerce/models.Products.csv")
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 
 	return c.JSON(input)
 }
