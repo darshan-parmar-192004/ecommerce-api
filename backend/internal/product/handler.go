@@ -95,3 +95,25 @@ func (h *Handler) Update(c fiber.Ctx) error {
 
 	return c.JSON(input)
 }
+
+func (h *Handler) Delete(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	if _, exists := h.Store.Products[id]; !exists {
+		return c.Status(404).JSON(fiber.Map{"error": "models.Product to be deleted not found"})
+	}
+
+	delete(h.Store.Products, id)
+
+	fmt.Println("Deleting ID:", id)
+	fmt.Println("Map size before delete:", len(h.Store.Products))
+
+	err := h.Store.RewriteCSV("./datasets/ecommerce/models.Products.csv")
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{"message": "Deleted"})
+}
