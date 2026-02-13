@@ -54,6 +54,13 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	product.CreatedAt = time.Now()
 
 	h.Store.Products[product.ProductID] = product
+	err := h.Store.AppendToCSV("./datasets/ecommerce/models.Products.csv", product)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
 
 	return c.Status(201).JSON(product)
 }

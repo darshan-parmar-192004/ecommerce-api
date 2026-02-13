@@ -55,3 +55,30 @@ func (s *Store) LoadCSV(path string) error {
 	return nil
 
 }
+
+func (s *Store) AppendToCSV(path string, Product models.Product) error {
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+
+	record := []string{
+		Product.ProductID,
+		Product.Name,
+		Product.CategoryID,
+		strconv.FormatFloat(Product.Price, 'f', -1, 64),
+		Product.Description,
+		Product.CreatedAt.Format(time.RFC3339),
+	}
+
+	if err := writer.Write(record); err != nil {
+		return err
+	}
+
+	writer.Flush()
+
+	return writer.Error()
+}
