@@ -61,6 +61,31 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		})
 	}
 
-
 	return c.Status(201).JSON(product)
+}
+
+func (h *Handler) Update(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	existing, exists := h.Store.Products[id]
+	if !exists {
+		return c.Status(404).JSON(fiber.Map{"error": "models.Product not found"})
+	}
+
+	var input models.Product
+
+	if err := c.Bind().Body(&input); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+	}
+
+	if input.Name == "" || input.Price == 0 || input.CategoryID == "" {
+		return c.Status(206).JSON(fiber.Map{"error": "all models.Product fields required to be filled for models.Product update "})
+	}
+
+	input.ProductID = existing.ProductID
+	input.CreatedAt = existing.CreatedAt
+
+	h.Store.Products[id] = input
+
+	return c.JSON(input)
 }
