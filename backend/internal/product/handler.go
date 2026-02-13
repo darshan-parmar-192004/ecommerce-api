@@ -24,3 +24,13 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	}
 	return c.JSON(list)
 }
+
+func (h *Handler) GetById(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	product, exists := h.Store.Products[id]
+	if !exists {
+		return c.Status(404).JSON(fiber.Map{"error": "models.Product not found"})
+	}
+	return c.JSON(product)
+}
