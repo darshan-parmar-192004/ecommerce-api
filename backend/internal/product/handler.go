@@ -3,6 +3,7 @@ package product
 import (
 	"backend/internal/models"
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"time"
 
@@ -25,7 +26,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	for _, p := range h.Store.Products {
 		list = append(list, p)
 	}
-	return c.JSON(list[0:0])
+	return c.JSON(list)
 }
 
 func (h *Handler) GetById(c fiber.Ctx) error {
@@ -33,7 +34,13 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 
 	product, exists := h.Store.Products[id]
 	if !exists {
-		return c.Status(404).JSON(fiber.Map{"error": "Product not found"})
+		return sendError(
+			c,
+			fiber.StatusNotFound,
+			ErrProductNotFound,
+			"Product with ID "+id+" does not exists",
+			nil,
+		)
 	}
 	return c.JSON(product)
 }
@@ -47,25 +54,41 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	var product models.Product
 
 	if err := c.Bind().Body(&product); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+		return sendError(
+			c,
+			fiber.StatusBadRequest,
+			ErrInvalidInput,
+			"Malformed JSON request body",
+			nil,
+		)
 	}
 
 	product.ProductID = GeneratemodelsProductId()
 	product.CreatedAt = time.Now()
 
 	if product.Name == "" || product.Price == 0 || product.CategoryID == "" {
-		return c.Status(206).JSON(fiber.Map{"error": "all Product fields required to be filled for Product creation"})
+		return sendError(
+			c,
+			fiber.StatusPartialContent,
+			ErrMissingField,
+			"any fields should not be empty in order to create product",
+			nil,
+		)
 	}
 
 	h.Store.Products[product.ProductID] = product
-	err := h.Store.AppendToCSV("./datasets/ecommerce/models.Products.csv", product)
+	err := h.Store.AppendToCSV("./datasets/ecommerce/products.csv", product)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return sendError(
+			c,
+			fiber.StatusInternalServerError,
+			ErrInternal,
+			"Failed to persist product",
+			nil,
+		)
 	}
 
-	return c.Status(201).JSON(product)
+	return c.Status(fiber.StatusCreated).JSON(product)
 }
 
 func (h *Handler) Update(c fiber.Ctx) error {
@@ -73,28 +96,50 @@ func (h *Handler) Update(c fiber.Ctx) error {
 
 	existing, exists := h.Store.Products[id]
 	if !exists {
-		return c.Status(404).JSON(fiber.Map{"error": "Product not found"})
+		return sendError(
+			c,
+			fiber.StatusNotFound,
+			ErrProductNotFound,
+			"Product with ID "+id+" not found",
+			nil,
+		)
 	}
 
 	var input models.Product
 
 	if err := c.Bind().Body(&input); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "Invalid JSON"})
+		return sendError(
+			c,
+			fiber.StatusBadRequest,
+			ErrInvalidInput,
+			"Invalid JSON format/malformed JSON",
+			nil,
+		)
 	}
 
 	if input.Name == "" || input.Price == 0 || input.CategoryID == "" {
-		return c.Status(206).JSON(fiber.Map{"error": "all Product fields required to be filled for Product update "})
+		return sendError(
+			c,
+			fiber.StatusPartialContent,
+			ErrMissingField,
+			"all fields must be filled in order to update the product",
+			nil,
+		)
 	}
 
 	input.ProductID = existing.ProductID
 	input.CreatedAt = existing.CreatedAt
 
 	h.Store.Products[id] = input
-	err := h.Store.RewriteCSV("./datasets/ecommerce/models.Products.csv")
+	err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return sendError(
+			c,
+			fiber.StatusInternalServerError,
+			ErrInternal,
+			"Failed to update storage",
+			nil,
+		)
 	}
 
 	return c.JSON(input)
@@ -104,19 +149,29 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 
 	if _, exists := h.Store.Products[id]; !exists {
-		return c.Status(404).JSON(fiber.Map{"error": "Product to be deleted not found"})
+		return sendError(
+			c,
+			fiber.StatusNotFound,
+			ErrProductNotFound,
+			"Product with ID "+id+" not found",
+			nil,
+		)
 	}
 
 	delete(h.Store.Products, id)
 
-	fmt.Println("Deleting ID:", id)
-	fmt.Println("Map size before delete:", len(h.Store.Products))
+	log.Println("Deleting ID:", id)
+	log.Println("Map size before delete:", len(h.Store.Products))
 
-	err := h.Store.RewriteCSV("./datasets/ecommerce/models.Products.csv")
+	err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return sendError(
+			c,
+			fiber.StatusInternalServerError,
+			ErrInternal,
+			"Failed to update storage",
+			nil,
+		)
 	}
 
 	return c.JSON(fiber.Map{"message": "Deleted"})
