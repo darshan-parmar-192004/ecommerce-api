@@ -151,4 +151,78 @@ func TestDelete(t *testing.T) {
 
 }
 
+// error test
 
+func TestIntegration_Errors(t *testing.T) {
+	app := setupTestApp()
+
+	t.Run("GetNonExistent", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/products/PROD-99999999", nil)
+		res, _ := app.Test(req)
+
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("CreateMalformedJSON", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/products",
+			bytes.NewBuffer([]byte("{invalid")))
+		req.Header.Set("Content-Type", "application/json")
+
+		res, _ := app.Test(req)
+
+		if res.StatusCode != http.StatusBadRequest {
+			t.Fatalf("expected 400, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("CreateValidationError", func(t *testing.T) {
+		body := `{
+			"name": "",
+			"price": 0,
+			"category_id": ""
+		}`
+
+		req := httptest.NewRequest(http.MethodPost, "/products",
+			bytes.NewBuffer([]byte(body)))
+		req.Header.Set("Content-Type", "application/json")
+
+		res, _ := app.Test(req)
+
+		if res.StatusCode != http.StatusUnprocessableEntity {
+			t.Fatalf("expected 422, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("UpdateNonExistent", func(t *testing.T) {
+		body := `{
+			"name": "Updated",
+			"price": 200,
+			"category_id": "CAT-12345678"
+		}`
+
+		req := httptest.NewRequest(http.MethodPut,
+			"/products/PROD-99999999",
+			bytes.NewBuffer([]byte(body)))
+		req.Header.Set("Content-Type", "application/json")
+
+		res, _ := app.Test(req)
+
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", res.StatusCode)
+		}
+	})
+
+	t.Run("DeleteNonExistent", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete,
+			"/products/PROD-99999999",
+			nil)
+
+		res, _ := app.Test(req)
+
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", res.StatusCode)
+		}
+	})
+}
