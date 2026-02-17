@@ -3,6 +3,7 @@ package product
 import (
 	"backend/internal/models"
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"time"
 
@@ -65,8 +66,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	product.ProductID = GeneratemodelsProductId()
 	product.CreatedAt = time.Now()
 
-
-	if validationErrors, status, code := validateProductInput(product); validationErrors != nil  {
+	if validationErrors, status, code := validateProductInput(product); validationErrors != nil {
 		return sendError(
 			c,
 			status,
@@ -118,7 +118,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		)
 	}
 
-	if validationErrors, status, code := validateProductInput(input); validationErrors != nil  {
+	if validationErrors, status, code := validateProductInput(input); validationErrors != nil {
 		return sendError(
 			c,
 			status,
@@ -162,8 +162,8 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 
 	delete(h.Store.Products, id)
 
-	fmt.Println("Deleting ID:", id)
-	fmt.Println("Map size before delete:", len(h.Store.Products))
+	log.Println("Deleting ID:", id)
+	log.Println("Map size before delete:", len(h.Store.Products))
 
 	err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
 	if err != nil {
