@@ -357,3 +357,224 @@ Server: backend
     "error": "Product to be deleted not found"
 }
 ```
+
+---
+
+# Phase 3: HTTP Status Codes, Error Handling & Validation
+
+---
+
+# 1️⃣ HTTP Status Codes
+
+## ✅ Success Codes
+
+| Status Code | Meaning | Used For |
+|------------|----------|----------|
+| 200 OK | Request successful | GET, PUT, DELETE |
+| 201 Created | Resource successfully created | POST |
+| 204 No Content | Resource successfully deleted (optional alternative to 200) | DELETE |
+
+### POST Additional Requirement
+- Must return `Location` header:
+```
+Location: /products/{id}
+```
+
+---
+
+## ❌ Client Error Codes
+
+| Status Code | Meaning | When Returned |
+|------------|----------|---------------|
+| 400 Bad Request | Invalid request format | Malformed JSON, missing required fields |
+| 404 Not Found | Resource does not exist | Product not found |
+| 422 Unprocessable Entity | Valid JSON but business rule fails | Validation errors |
+
+---
+
+## 🔥 Server Error Codes
+
+| Status Code | Meaning |
+|------------|----------|
+| 500 Internal Server Error | Unexpected server-side error |
+
+---
+
+# 2️⃣ Standardized Error Response Format
+
+All error responses must follow this structure:
+
+```json
+{
+  "error": {
+    "code": "PRODUCT_NOT_FOUND",
+    "message": "Product with ID PROD-12345678 does not exist",
+    "details": {}
+  }
+}
+```
+
+## Error Object Fields
+
+| Field | Description |
+|-------|------------|
+| code | Machine-readable error identifier |
+| message | Human-readable explanation |
+| details | Field-level validation errors (if applicable) |
+
+---
+
+# 3️⃣ Defined Error Codes
+
+| Error Code | HTTP Status | Meaning |
+|------------|------------|----------|
+| PRODUCT_NOT_FOUND | 404 | Product with given ID does not exist |
+| INVALID_INPUT | 400 | Malformed JSON or invalid request format |
+| MISSING_REQUIRED_FIELD | 400 | Required field not provided |
+| VALIDATION_FAILED | 422 | Business validation rule failed |
+| INTERNAL_ERROR | 500 | Unexpected system error |
+
+---
+
+# 4️⃣ Input Validation Rules
+
+Validation applies to **POST** and **PUT** operations.
+
+---
+
+## 📌 Name
+
+- Required
+- Must be non-empty
+- Maximum 200 characters
+
+| Condition | Response |
+|------------|-----------|
+| Missing | 400 Bad Request |
+| Empty | 400 Bad Request |
+| Too long (>200) | 422 Unprocessable Entity |
+
+---
+
+## 📌 Price
+
+- Required
+- Must be a valid number
+- Must be greater than 0
+- Maximum 2 decimal places
+
+| Condition | Response |
+|------------|-----------|
+| Missing | 400 Bad Request |
+| Not a number | 400 Bad Request |
+| ≤ 0 | 422 Unprocessable Entity |
+| More than 2 decimal places | 422 Unprocessable Entity |
+
+---
+
+## 📌 Category ID
+
+- Required
+- Must be non-empty
+- Must match pattern: `CAT-xxxxxxxx` (optional format validation)
+
+| Condition | Response |
+|------------|-----------|
+| Missing | 400 Bad Request |
+| Empty | 400 Bad Request |
+| Invalid format (if validated) | 422 Unprocessable Entity |
+
+---
+
+## 📌 Description
+
+- Optional
+- Maximum 500 characters
+
+| Condition | Response |
+|------------|-----------|
+| Too long (>500) | 422 Unprocessable Entity |
+
+---
+
+# 5️⃣ Validation Error Response Example
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Input validation failed",
+    "details": {
+      "name": "Name is required and cannot be empty",
+      "price": "Price must be greater than 0"
+    }
+  }
+}
+```
+
+---
+
+# 6️⃣ Response Headers
+
+| Header | Applies To | Requirement |
+|--------|------------|------------|
+| Content-Type: application/json | All responses | Required |
+| Location: /products/{id} | POST success | Required |
+
+---
+
+# 7️⃣ Status Codes Per Endpoint
+
+---
+
+## GET /products
+
+| Scenario | Status |
+|----------|--------|
+| Success | 200 OK |
+
+---
+
+## GET /products/{id}
+
+| Scenario | Status |
+|----------|--------|
+| Success | 200 OK |
+| Product not found | 404 Not Found |
+
+---
+
+## POST /products
+
+| Scenario | Status |
+|----------|--------|
+| Created successfully | 201 Created |
+| Malformed JSON | 400 Bad Request |
+| Missing required fields | 400 Bad Request |
+| Validation failed | 422 Unprocessable Entity |
+| Unexpected error | 500 Internal Server Error |
+
+---
+
+## PUT /products/{id}
+
+| Scenario | Status |
+|----------|--------|
+| Updated successfully | 200 OK |
+| Product not found | 404 Not Found |
+| Malformed JSON | 400 Bad Request |
+| Missing required fields | 400 Bad Request |
+| Validation failed | 422 Unprocessable Entity |
+| Unexpected error | 500 Internal Server Error |
+
+---
+
+## DELETE /products/{id}
+
+| Scenario | Status |
+|----------|--------|
+| Deleted successfully | 200 OK or 204 No Content |
+| Product not found | 404 Not Found |
+| Unexpected error | 500 Internal Server Error |
+
+---
