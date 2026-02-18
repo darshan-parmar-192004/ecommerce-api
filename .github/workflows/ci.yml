@@ -10,7 +10,7 @@ on:
 jobs:
   lint:
     name: Lint GO code
-    runs-on: ubuntu-latest
+    runs-on: vm-hosted
 
     steps:
       - name: Checkout code
