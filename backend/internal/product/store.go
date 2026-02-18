@@ -94,15 +94,16 @@ func (s *Store) RewriteCSV(path string) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	writer.Write([]string{
+	if err := writer.Write([]string{
 		"Product_id",
 		"name",
 		"category_id",
 		"price",
 		"description",
 		"created_at",
-	})
-
+	}); err != nil {
+		return err
+	}
 	for _, p := range s.Products {
 
 		record := []string{
@@ -114,6 +115,7 @@ func (s *Store) RewriteCSV(path string) error {
 			p.CreatedAt.Format(time.RFC3339),
 		}
 
+		writer.Flush()
 		if err := writer.Write(record); err != nil {
 			return err
 		}

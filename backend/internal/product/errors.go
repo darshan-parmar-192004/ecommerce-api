@@ -12,6 +12,7 @@ type ErrorBody struct {
 	Details map[string]interface{} `json:"details"`
 }
 
+
 const (
 	ErrProductNotFound  = "PRODUCT_NOT_FOUND"
 	ErrInvalidInput     = "INVALID_INPUT"
