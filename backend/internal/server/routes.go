@@ -4,6 +4,8 @@ import (
 	"backend/internal/product"
 	"log"
 
+	"github.com/gofiber/fiber/v3"
+
 	"github.com/gofiber/fiber/v3/middleware/cors"
 )
 
@@ -28,4 +30,9 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Post("/products", handler.Create)
 	s.App.Put("/products/:id", handler.Update)
 	s.App.Delete("/products/:id", handler.Delete)
+	s.App.Get("/health", func(c fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status": "ok",
+		})
+	})
 }
