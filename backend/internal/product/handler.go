@@ -4,6 +4,8 @@ import (
 	"backend/internal/models"
 	"fmt"
 	"math/rand/v2"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -20,12 +22,80 @@ func NewHandler(store *Store) *Handler {
 }
 
 func (h *Handler) GetAll(c fiber.Ctx) error {
+
+	category := c.Query("category")
+	MinPriceStr := c.Query("min_price")
+	MaxPriceStr := c.Query("max_price")
+	search := c.Query("search")
+
+	var minPrice, maxPrice float64
+	var err error
+
+	if MinPriceStr != "" {
+		minPrice, err = strconv.ParseFloat(MinPriceStr, 64)
+		if err != nil {
+			return sendError(
+				c,
+				fiber.StatusBadRequest,
+				ErrInvalidInput,
+				"min_price must be valid number",
+				nil,
+			)
+		}
+	}
+
+	if MaxPriceStr != "" {
+		maxPrice, err = strconv.ParseFloat(MinPriceStr, 64)
+		if err != nil {
+			return sendError(
+				c,
+				fiber.StatusBadRequest,
+				ErrInvalidInput,
+				"max_price must be valid number",
+				nil,
+			)
+		}
+	}
+
+	if MinPriceStr != "" && MaxPriceStr != "" && minPrice > maxPrice {
+		return sendError(
+			c,
+			fiber.StatusBadRequest,
+			ErrInvalidInput,
+			"min_price cannot be empty than max_price",
+			nil,
+		)
+	}
+
 	list := []models.Product{}
 
 	for _, p := range h.Store.Products {
+
+		if MinPriceStr != "" && p.Price < minPrice {
+			continue
+		}
+
+		if MaxPriceStr != "" && p.Price > maxPrice {
+			continue
+		}
+
+		if category != "" && p.CategoryID != category {
+			continue
+		}
+
+		if search != "" {
+			searchLower := strings.ToLower(search)
+			nameMatch := strings.Contains(strings.ToLower(p.Name), searchLower)
+			descMatch := strings.Contains(strings.ToLower(p.Description), searchLower)
+
+			if !nameMatch && !descMatch {
+				continue
+			}
+		}
 		list = append(list, p)
+
 	}
-	return c.JSON(list)
+	return c.Status(fiber.StatusOK).JSON(list)
 }
 
 func (h *Handler) GetById(c fiber.Ctx) error {
