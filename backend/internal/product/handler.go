@@ -23,14 +23,55 @@ func NewHandler(store *Store) *Handler {
 
 func (h *Handler) GetAll(c fiber.Ctx) error {
 
+	// filtering queries
 	category := c.Query("category")
 	MinPriceStr := c.Query("min_price")
 	MaxPriceStr := c.Query("max_price")
 	search := c.Query("search")
 
-	var minPrice, maxPrice float64
+	//pagination queries
+	pageStr := c.Query("page")
+	limitStr := c.Query("limit")
+
+	var page, limit int
 	var err error
 
+	//pagination parsing
+	if pageStr != "" {
+		page, err = strconv.Atoi(pageStr)
+		if err != nil || page < 1 {
+			return sendError(
+				c,
+				fiber.StatusBadRequest,
+				ErrInvalidInput,
+				"page must be positive integer",
+				nil,
+			)
+		}
+
+	}
+
+	if limitStr != "" {
+		limit, err = strconv.Atoi(limitStr)
+
+		if err != nil || limit < 1 {
+			return sendError(
+				c,
+				fiber.StatusBadRequest,
+				ErrInvalidInput,
+				"limit must be posiitive integer",
+				nil,
+			)
+		}
+	}
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	var minPrice, maxPrice float64
+
+	//filtering parsing
 	if MinPriceStr != "" {
 		minPrice, err = strconv.ParseFloat(MinPriceStr, 64)
 		if err != nil {
@@ -45,7 +86,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	}
 
 	if MaxPriceStr != "" {
-		maxPrice, err = strconv.ParseFloat(MinPriceStr, 64)
+		maxPrice, err = strconv.ParseFloat(MaxPriceStr, 64)
 		if err != nil {
 			return sendError(
 				c,
@@ -95,7 +136,41 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 		list = append(list, p)
 
 	}
-	return c.Status(fiber.StatusOK).JSON(list)
+	totalItems := len(list)
+	totalPages := (totalItems + limit - 1) / limit
+
+	if page > totalPages && totalItems > 0 {
+		return sendError(
+			c,
+			fiber.StatusBadRequest,
+			ErrInvalidInput,
+			"page exceeds total page",
+			nil,
+		)
+	}
+
+	start := (page - 1) * limit
+	end := start + limit
+
+	if start > totalItems {
+		start = totalItems
+	}
+
+	if end > totalItems {
+		end = totalItems
+	}
+
+	paginated := list[start:end]
+
+	return c.JSON(fiber.Map{
+		"data": paginated,
+		"pagination": fiber.Map{
+			"page":        page,
+			"limit":       limit,
+			"total_items": totalItems,
+			"total_pages": totalPages,
+		},
+	})
 }
 
 func (h *Handler) GetById(c fiber.Ctx) error {
