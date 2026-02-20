@@ -14,7 +14,9 @@ func TestHandler(t *testing.T) {
 	// Inject the Fiber app into the server
 	// s := &FiberServer{App: app}
 	// Define a route in the Fiber app
-	app.Get("/", fiber.Map{"message": "Hello World"})
+	app.Get("/", func(c fiber.Ctx) error {
+		return c.JSON(fiber.Map{"message": "Hello World"})
+	})
 	// Create a test HTTP request
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {

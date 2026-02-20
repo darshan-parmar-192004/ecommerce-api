@@ -1,6 +1,7 @@
 package server
 
 import (
+	"backend/internal/middleware"
 	"backend/internal/product"
 	"log"
 
@@ -10,6 +11,10 @@ import (
 )
 
 func (s *FiberServer) RegisterFiberRoutes() {
+
+	s.App.Use(middleware.RequestID())
+	s.App.Use(middleware.Logging())
+	s.App.Use(middleware.Recovery())
 	s.App.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
