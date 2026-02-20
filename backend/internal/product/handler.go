@@ -30,8 +30,8 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	search := c.Query("search")
 
 	//pagination queries
-	pageStr := c.Query("page")
-	limitStr := c.Query("limit")
+	pageStr := c.Query("page", "1")
+	limitStr := c.Query("limit", "10")
 
 	var page, limit int
 	var err error
