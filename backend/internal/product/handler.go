@@ -1,6 +1,7 @@
 package product
 
 import (
+	"backend/internal/database"
 	"backend/internal/models"
 	"fmt"
 	"math/rand/v2"
@@ -9,15 +10,18 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"golang.org/x/net/context"
 )
 
 type Handler struct {
 	Store *Store
+	db database.Service
 }
 
-func NewHandler(store *Store) *Handler {
+func NewHandler(store *Store, db database.Service) *Handler {
 	return &Handler{
 		Store: store,
+		db : db,
 	}
 }
 
@@ -25,145 +29,105 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 	// filtering queries
 	category := c.Query("category")
-	MinPriceStr := c.Query("min_price")
-	MaxPriceStr := c.Query("max_price")
+	minPriceStr := c.Query("min_price")
+	maxPriceStr := c.Query("max_price")
 	search := c.Query("search")
 
 	//pagination queries
 	pageStr := c.Query("page", "1")
 	limitStr := c.Query("limit", "10")
 
-	var page, limit int
-	var err error
-
-	//pagination parsing
-	if pageStr != "" {
-		page, err = strconv.Atoi(pageStr)
-		if err != nil || page < 1 {
-			return sendError(
-				c,
-				fiber.StatusBadRequest,
-				ErrInvalidInput,
-				"page must be positive integer",
-				nil,
-			)
-		}
-
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
 	}
-
-	if limitStr != "" {
-		limit, err = strconv.Atoi(limitStr)
-
-		if err != nil || limit < 1 {
-			return sendError(
-				c,
-				fiber.StatusBadRequest,
-				ErrInvalidInput,
-				"limit must be posiitive integer",
-				nil,
-			)
-		}
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = 10
 	}
-
 	if limit > 100 {
 		limit = 100
 	}
 
-	var minPrice, maxPrice float64
+	var filters []string
+	var args []interface{}
+	argIndex := 1
 
-	//filtering parsing
-	if MinPriceStr != "" {
-		minPrice, err = strconv.ParseFloat(MinPriceStr, 64)
-		if err != nil {
-			return sendError(
-				c,
-				fiber.StatusBadRequest,
-				ErrInvalidInput,
-				"min_price must be valid number",
-				nil,
-			)
-		}
+	if category != "" {
+		filters = append(filters, fmt.Sprintf("category_id = $%d", argIndex))
+		args = append(args, category)
+		argIndex++
 	}
 
-	if MaxPriceStr != "" {
-		maxPrice, err = strconv.ParseFloat(MaxPriceStr, 64)
-		if err != nil {
-			return sendError(
-				c,
-				fiber.StatusBadRequest,
-				ErrInvalidInput,
-				"max_price must be valid number",
-				nil,
-			)
-		}
+	if minPriceStr != "" {
+		filters = append(filters, fmt.Sprintf("price >= $%d", argIndex))
+		minPrice, _ := strconv.ParseFloat(minPriceStr, 64)
+		args = append(args, minPrice)
+		argIndex++
 	}
 
-	if MinPriceStr != "" && MaxPriceStr != "" && minPrice > maxPrice {
-		return sendError(
-			c,
-			fiber.StatusBadRequest,
-			ErrInvalidInput,
-			"min_price cannot be empty than max_price",
-			nil,
-		)
+	if maxPriceStr != "" {
+		filters = append(filters, fmt.Sprintf("price <= $%d", argIndex))
+		maxPrice, _ := strconv.ParseFloat(maxPriceStr, 64)
+		args = append(args, maxPrice)
+		argIndex++
 	}
 
-	list := []models.Product{}
-
-	for _, p := range h.Store.Products {
-
-		if MinPriceStr != "" && p.Price < minPrice {
-			continue
-		}
-
-		if MaxPriceStr != "" && p.Price > maxPrice {
-			continue
-		}
-
-		if category != "" && p.CategoryID != category {
-			continue
-		}
-
-		if search != "" {
-			searchLower := strings.ToLower(search)
-			nameMatch := strings.Contains(strings.ToLower(p.Name), searchLower)
-			descMatch := strings.Contains(strings.ToLower(p.Description), searchLower)
-
-			if !nameMatch && !descMatch {
-				continue
-			}
-		}
-		list = append(list, p)
-
+	if search != "" {
+		filters = append(filters, fmt.Sprintf("(LOWER(name) LIKE $%d OR LOWER(description) LIKE $%d)", argIndex, argIndex+1))
+		searchPattern := "%" + strings.ToLower(search) + "%"
+		args = append(args, searchPattern, searchPattern)
+		argIndex += 2
 	}
-	totalItems := len(list)
+
+	whereClause := ""
+	if len(filters) > 0 {
+		whereClause = "WHERE " + strings.Join(filters, " AND ")
+	}
+
+	offset := (page - 1) * limit
+
+	query := fmt.Sprintf(`
+		SELECT product_id, name, category_id, price, description, created_at
+		FROM products
+		%s
+		ORDER BY created_at DESC
+		LIMIT $%d OFFSET $%d
+	`, whereClause, argIndex, argIndex+1)
+	args = append(args, limit, offset)
+
+	s := h.db.DB()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	rows, err := s.QueryContext(ctx, query, args...)
+	if err != nil {
+		return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch products", fiber.Map{"debug": err.Error()})
+	}
+	defer rows.Close()
+
+	var products []models.Product
+	for rows.Next() {
+		var p models.Product
+		if err := rows.Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &p.Description, &p.CreatedAt); err != nil {
+			return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to scan product", fiber.Map{"debug": err.Error()})
+		}
+		products = append(products, p)
+	}
+
+	// Get total count for pagination
+	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM products %s", whereClause)
+	var totalItems int
+	err = s.db.QueryRowContext(ctx, countQuery, args[:len(args)-2]...).Scan(&totalItems)
+	if err != nil {
+		return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to count products", fiber.Map{"debug": err.Error()})
+	}
+
 	totalPages := (totalItems + limit - 1) / limit
 
-	if page > totalPages && totalItems > 0 {
-		return sendError(
-			c,
-			fiber.StatusBadRequest,
-			ErrInvalidInput,
-			"page exceeds total page",
-			nil,
-		)
-	}
-
-	start := (page - 1) * limit
-	end := start + limit
-
-	if start > totalItems {
-		start = totalItems
-	}
-
-	if end > totalItems {
-		end = totalItems
-	}
-
-	paginated := list[start:end]
-
 	return c.JSON(fiber.Map{
-		"data": paginated,
+		"data": products,
 		"pagination": fiber.Map{
 			"page":        page,
 			"limit":       limit,
