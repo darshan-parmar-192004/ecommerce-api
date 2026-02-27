@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"database/sql"
 
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/net/context"
@@ -139,18 +140,25 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 func (h *Handler) GetById(c fiber.Ctx) error {
 	id := c.Params("id")
+	query := `
+			SELECT product_id, name, category_id, price, description, created_at
+			FROM products
+			WHERE product_id = $1
+		`
+		s := h.db.DB()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-	product, exists := h.Store.Products[id]
-	if !exists {
-		return sendError(
-			c,
-			fiber.StatusNotFound,
-			ErrProductNotFound,
-			"Product with ID "+id+" does not exists",
-			nil,
-		)
-	}
-	return c.JSON(product)
+		var p models.Product
+		err := s.QueryRowContext(ctx, query, id).Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &p.Description, &p.CreatedAt)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return sendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
+			}
+			return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch product", fiber.Map{"error": err.Error()})
+		}
+
+		return c.JSON(p)
 }
 
 func GeneratemodelsProductId() string {
