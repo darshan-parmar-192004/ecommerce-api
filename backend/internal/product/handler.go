@@ -166,48 +166,33 @@ func GeneratemodelsProductId() string {
 }
 
 func (h *Handler) Create(c fiber.Ctx) error {
-
-	var product models.Product
-
-	if err := c.Bind().Body(&product); err != nil {
-		return sendError(
-			c,
-			fiber.StatusBadRequest,
-			ErrInvalidInput,
-			"Malformed JSON request body",
-			nil,
-		)
+	var p models.Product
+    
+	if err := c.Bind().Body(&p); err != nil {
+		return sendError(c, fiber.StatusBadRequest, "INVALID_INPUT", "Malformed JSON", fiber.Map{"details": err.Error()})
 	}
 
-	product.ProductID = GeneratemodelsProductId()
-	product.CreatedAt = time.Now()
+	p.ProductID = fmt.Sprintf("PROD-%d", time.Now().UnixNano())
+	p.CreatedAt = time.Now()
 
-	if validationErrors, status, code := validateProductInput(product); validationErrors != nil {
-		return sendError(
-			c,
-			status,
-			code,
-			"any fields should not be empty in order to create product",
-			nil,
-		)
-
+	if validationErrors, status, code := validateProductInput(p); validationErrors != nil {
+		return sendError(c, status, code, "Validation failed", validationErrors)
 	}
 
-	h.Store.Products[product.ProductID] = product
-	if !h.Store.DisablePersistance {
-		err := h.Store.AppendToCSV("./datasets/ecommerce/products.csv", product)
-		if err != nil {
-			return sendError(
-				c,
-				fiber.StatusInternalServerError,
-				ErrInternal,
-				"Failed to persist product",
-				nil,
-			)
-		}
+	query := `
+		INSERT INTO products (product_id, name, category_id, price, description, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	db := h.db.DB()
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, query, p.ProductID, p.Name, p.CategoryID, p.Price, p.Description, p.CreatedAt)
+	if err != nil {
+		return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to insert product", fiber.Map{"error": err.Error()})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(product)
+	return c.Status(fiber.StatusCreated).JSON(p)
 }
 
 func (h *Handler) Update(c fiber.Ctx) error {
