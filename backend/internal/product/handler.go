@@ -282,30 +282,48 @@ func (h *Handler) Update(c fiber.Ctx) error {
 func (h *Handler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	if _, exists := h.Store.Products[id]; !exists {
-		return sendError(
-			c,
-			fiber.StatusNotFound,
-			ErrProductNotFound,
-			"Product with ID "+id+" not found",
-			nil,
-		)
-	}
+	db := h.db.DB()
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
 
-	delete(h.Store.Products, id)
+	result, err := db.ExecContext(
+		ctx,
+		`DELETE FROM products WHERE product_id = $1`,
+		id,
+	)
 
-	fmt.Println("Deleting ID:", id)
-	fmt.Println("Map size before delete:", len(h.Store.Products))
-	err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
 	if err != nil {
 		return sendError(
 			c,
 			fiber.StatusInternalServerError,
-			ErrInternal,
-			"Failed to update storage",
+			"DB_ERROR",
+			"Failed to delete product",
+			fiber.Map{"error": err.Error()},
+		)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return sendError(
+			c,
+			fiber.StatusInternalServerError,
+			"DB_ERROR",
+			"Failed to verify deletion",
 			nil,
 		)
 	}
 
-	return c.JSON(fiber.Map{"message": "Deleted"})
+	if rowsAffected == 0 {
+		return sendError(
+			c,
+			fiber.StatusNotFound,
+			"PRODUCT_NOT_FOUND",
+			"Product not found",
+			nil,
+		)
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "Deleted successfully",
+	})
 }
