@@ -198,56 +198,85 @@ func (h *Handler) Create(c fiber.Ctx) error {
 func (h *Handler) Update(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	var input models.Product
-
-	if err := c.Bind().Body(&input); err != nil {
+	var p models.Product
+	if err := c.Bind().Body(&p); err != nil {
 		return sendError(
 			c,
 			fiber.StatusBadRequest,
-			ErrInvalidInput,
-			"Invalid JSON format/malformed JSON",
-			nil,
+			"INVALID_INPUT",
+			"Malformed JSON",
+			fiber.Map{"details": err.Error()},
 		)
 	}
 
-	existing, exists := h.Store.Products[id]
-	if !exists {
+	if validationErrors, status, code := validateProductInput(p); validationErrors != nil {
+		return sendError(c, status, code, "Validation failed", validationErrors)
+	}
+
+	db := h.db.DB()
+	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
+	defer cancel()
+
+	// Check if product exists and get created_at
+	var createdAt time.Time
+	err := db.QueryRowContext(
+		ctx,
+		`SELECT created_at FROM products WHERE product_id = $1`,
+		id,
+	).Scan(&createdAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return sendError(
+				c,
+				fiber.StatusNotFound,
+				"PRODUCT_NOT_FOUND",
+				"Product not found",
+				nil,
+			)
+		}
 		return sendError(
 			c,
-			fiber.StatusNotFound,
-			ErrProductNotFound,
-			"Product with ID "+id+" not found",
-			nil,
+			fiber.StatusInternalServerError,
+			"DB_ERROR",
+			"Database error",
+			fiber.Map{"error": err.Error()},
 		)
 	}
 
-	if validationErrors, status, code := validateProductInput(input); validationErrors != nil {
+	p.ProductID = id
+	p.CreatedAt = createdAt
+
+	query := `
+		UPDATE products
+		SET name = $1,
+		    category_id = $2,
+		    price = $3,
+		    description = $4
+		WHERE product_id = $5
+	`
+
+	_, err = db.ExecContext(
+		ctx,
+		query,
+		p.Name,
+		p.CategoryID,
+		p.Price,
+		p.Description,
+		id,
+	)
+
+	if err != nil {
 		return sendError(
 			c,
-			status,
-			code,
-			"all fields must be filled in order to update the product",
-			nil,
+			fiber.StatusInternalServerError,
+			"DB_ERROR",
+			"Failed to update product",
+			fiber.Map{"error": err.Error()},
 		)
-
 	}
 
-	input.ProductID = existing.ProductID
-	input.CreatedAt = existing.CreatedAt
-
-	h.Store.Products[id] = input
-	// err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
-	// if err != nil {
-	// 	return sendError(
-	// 		c,
-	// 		fiber.StatusInternalServerError,
-	// 		ErrInternal,
-	// 		"Failed to update storage",
-	// 		nil,
-	// 	)
-	// }
-
-	return c.JSON(input)
+	return c.JSON(p)
 }
 
 func (h *Handler) Delete(c fiber.Ctx) error {
