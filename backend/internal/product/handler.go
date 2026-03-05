@@ -12,6 +12,8 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/net/context"
+	"github.com/jackc/pgx/v5/pgconn"
+	"errors"
 )
 
 type Handler struct {
@@ -189,8 +191,50 @@ func (h *Handler) Create(c fiber.Ctx) error {
 
 	_, err := db.ExecContext(ctx, query, p.ProductID, p.Name, p.CategoryID, p.Price, p.Description, p.CreatedAt)
 	if err != nil {
-		return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to insert product", fiber.Map{"error": err.Error()})
-	}
+
+		var pgErr *pgconn.PgError
+
+		if errors.As(err, &pgErr) {
+
+			switch pgErr.Code {
+
+			case "23505": // unique violation
+				return sendError(
+					c,
+					fiber.StatusConflict,
+					"DUPLICATE_PRODUCT",
+					"Product with this ID already exists",
+					nil,
+				)
+
+			case "23503": // foreign key violation
+				return sendError(
+					c,
+					fiber.StatusBadRequest,
+					"INVALID_CATEGORY",
+					"Category does not exist",
+					nil,
+				)
+
+			case "23514": // check constraint
+				return sendError(
+					c,
+					fiber.StatusBadRequest,
+					"INVALID_DATA",
+					"Product data violates database constraints",
+					nil,
+				)
+			}
+		}
+
+		return sendError(
+			c,
+			fiber.StatusInternalServerError,
+			"DB_ERROR",
+			"Database operation failed",
+			fiber.Map{"error": err.Error()},
+		)
+}
 
 	return c.Status(fiber.StatusCreated).JSON(p)
 }
@@ -267,15 +311,50 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return sendError(
-			c,
-			fiber.StatusInternalServerError,
-			"DB_ERROR",
-			"Failed to update product",
-			fiber.Map{"error": err.Error()},
-		)
-	}
 
+			var pgErr *pgconn.PgError
+
+			if errors.As(err, &pgErr) {
+
+				switch pgErr.Code {
+
+				case "23503": // foreign key violation
+					return sendError(
+						c,
+						fiber.StatusBadRequest,
+						"INVALID_CATEGORY",
+						"Category does not exist",
+						nil,
+					)
+
+				case "23514": // check constraint violation
+					return sendError(
+						c,
+						fiber.StatusBadRequest,
+						"INVALID_DATA",
+						"Product data violates database constraints",
+						nil,
+					)
+
+				case "23505": // unique constraint
+					return sendError(
+						c,
+						fiber.StatusConflict,
+						"DUPLICATE_PRODUCT",
+						"Duplicate product detected",
+						nil,
+					)
+				}
+			}
+
+			return sendError(
+				c,
+				fiber.StatusInternalServerError,
+				"DB_ERROR",
+				"Failed to update product",
+				fiber.Map{"error": err.Error()},
+			)
+		}
 	return c.JSON(p)
 }
 

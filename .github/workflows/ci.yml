@@ -38,4 +38,3 @@ jobs:
         run: |
           cd backend
           golangci-lint run ./...
-

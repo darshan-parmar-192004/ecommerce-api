@@ -8,9 +8,11 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"errors"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/gofiber/fiber/v3"
 )
 
 // Service represents a service that interacts with a database.
@@ -65,14 +67,26 @@ func (s *service) Health() map[string]string {
 
 	stats := make(map[string]string)
 
-	// Ping the database
 	err := s.db.PingContext(ctx)
 	if err != nil {
 		stats["status"] = "down"
-		stats["error"] = fmt.Sprintf("db down: %v", err)
-		log.Fatalf("db down: %v", err) // Log the error and terminate the program
+		stats["error"] = err.Error()
 		return stats
 	}
+
+	stats["status"] = "up"
+	stats["message"] = "Database is healthy"
+
+	dbStats := s.db.Stats()
+
+	stats["open_connections"] = strconv.Itoa(dbStats.OpenConnections)
+	stats["in_use"] = strconv.Itoa(dbStats.InUse)
+	stats["idle"] = strconv.Itoa(dbStats.Idle)
+	stats["wait_count"] = strconv.FormatInt(dbStats.WaitCount, 10)
+	stats["wait_duration"] = dbStats.WaitDuration.String()
+
+	return stats
+}
 
 	// Database is up, add more statistics
 	stats["status"] = "up"
