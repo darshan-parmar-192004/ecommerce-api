@@ -9,11 +9,12 @@ import (
 	"strings"
 	"time"
 	"database/sql"
+	"errors"
 
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/net/context"
 	"github.com/jackc/pgx/v5/pgconn"
-	"errors"
+	apperrors "backend/internal/errors"
 )
 
 type Handler struct {
@@ -106,7 +107,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 	rows, err := s.QueryContext(ctx, query, args...)
 	if err != nil {
-		return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch products", fiber.Map{"debug": err.Error()})
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch products", fiber.Map{"debug": err.Error()})
 	}
 	defer rows.Close()
 
@@ -114,7 +115,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	for rows.Next() {
 		var p models.Product
 		if err := rows.Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &p.Description, &p.CreatedAt); err != nil {
-			return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to scan product", fiber.Map{"debug": err.Error()})
+			return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to scan product", fiber.Map{"debug": err.Error()})
 		}
 		products = append(products, p)
 	}
@@ -122,9 +123,9 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	// Get total count for pagination
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM products %s", whereClause)
 	var totalItems int
-	err = s.db.QueryRowContext(ctx, countQuery, args[:len(args)-2]...).Scan(&totalItems)
+	err = s.QueryRowContext(ctx, countQuery, args[:len(args)-2]...).Scan(&totalItems)
 	if err != nil {
-		return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to count products", fiber.Map{"debug": err.Error()})
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to count products", fiber.Map{"debug": err.Error()})
 	}
 
 	totalPages := (totalItems + limit - 1) / limit
@@ -155,9 +156,9 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 		err := s.QueryRowContext(ctx, query, id).Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &p.Description, &p.CreatedAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return sendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
+				return apperrors.SendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
 			}
-			return sendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch product", fiber.Map{"error": err.Error()})
+			return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch product", fiber.Map{"error": err.Error()})
 		}
 
 		return c.JSON(p)
@@ -171,14 +172,14 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	var p models.Product
     
 	if err := c.Bind().Body(&p); err != nil {
-		return sendError(c, fiber.StatusBadRequest, "INVALID_INPUT", "Malformed JSON", fiber.Map{"details": err.Error()})
+		return apperrors.SendError(c, fiber.StatusBadRequest, "INVALID_INPUT", "Malformed JSON", fiber.Map{"details": err.Error()})
 	}
 
 	p.ProductID = fmt.Sprintf("PROD-%d", time.Now().UnixNano())
 	p.CreatedAt = time.Now()
 
 	if validationErrors, status, code := validateProductInput(p); validationErrors != nil {
-		return sendError(c, status, code, "Validation failed", validationErrors)
+		return apperrors.SendError(c, status, code, "Validation failed", validationErrors)
 	}
 
 	query := `
@@ -199,7 +200,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 			switch pgErr.Code {
 
 			case "23505": // unique violation
-				return sendError(
+				return apperrors.SendError(
 					c,
 					fiber.StatusConflict,
 					"DUPLICATE_PRODUCT",
@@ -208,7 +209,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 				)
 
 			case "23503": // foreign key violation
-				return sendError(
+				return apperrors.SendError(
 					c,
 					fiber.StatusBadRequest,
 					"INVALID_CATEGORY",
@@ -217,7 +218,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 				)
 
 			case "23514": // check constraint
-				return sendError(
+				return apperrors.SendError(
 					c,
 					fiber.StatusBadRequest,
 					"INVALID_DATA",
@@ -227,7 +228,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 			}
 		}
 
-		return sendError(
+		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
 			"DB_ERROR",
@@ -244,7 +245,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 
 	var p models.Product
 	if err := c.Bind().Body(&p); err != nil {
-		return sendError(
+		return apperrors.SendError(
 			c,
 			fiber.StatusBadRequest,
 			"INVALID_INPUT",
@@ -254,7 +255,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	}
 
 	if validationErrors, status, code := validateProductInput(p); validationErrors != nil {
-		return sendError(c, status, code, "Validation failed", validationErrors)
+		return apperrors.SendError(c, status, code, "Validation failed", validationErrors)
 	}
 
 	db := h.db.DB()
@@ -271,7 +272,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return sendError(
+			return apperrors.SendError(
 				c,
 				fiber.StatusNotFound,
 				"PRODUCT_NOT_FOUND",
@@ -279,7 +280,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 				nil,
 			)
 		}
-		return sendError(
+		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
 			"DB_ERROR",
@@ -319,7 +320,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 				switch pgErr.Code {
 
 				case "23503": // foreign key violation
-					return sendError(
+					return apperrors.SendError(
 						c,
 						fiber.StatusBadRequest,
 						"INVALID_CATEGORY",
@@ -328,7 +329,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 					)
 
 				case "23514": // check constraint violation
-					return sendError(
+					return apperrors.SendError(
 						c,
 						fiber.StatusBadRequest,
 						"INVALID_DATA",
@@ -337,7 +338,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 					)
 
 				case "23505": // unique constraint
-					return sendError(
+					return apperrors.SendError(
 						c,
 						fiber.StatusConflict,
 						"DUPLICATE_PRODUCT",
@@ -347,7 +348,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 				}
 			}
 
-			return sendError(
+			return apperrors.SendError(
 				c,
 				fiber.StatusInternalServerError,
 				"DB_ERROR",
@@ -372,7 +373,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	)
 
 	if err != nil {
-		return sendError(
+		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
 			"DB_ERROR",
@@ -383,7 +384,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return sendError(
+		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
 			"DB_ERROR",
@@ -393,7 +394,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	}
 
 	if rowsAffected == 0 {
-		return sendError(
+		return apperrors.SendError(
 			c,
 			fiber.StatusNotFound,
 			"PRODUCT_NOT_FOUND",
