@@ -4,12 +4,13 @@ import (
 	"backend/internal/database"
 	"backend/internal/models"
 	"fmt"
-	"math/rand/v2"
 	"strconv"
 	"strings"
 	"time"
 	"database/sql"
 	"errors"
+	"encoding/hex"
+	"crypto/rand"
 
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/net/context"
@@ -18,13 +19,11 @@ import (
 )
 
 type Handler struct {
-	Store *Store
 	db database.Service
 }
 
-func NewHandler(store *Store, db database.Service) *Handler {
+func NewHandler(db database.Service) *Handler {
 	return &Handler{
-		Store: store,
 		db : db,
 	}
 }
@@ -165,7 +164,13 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 }
 
 func GeneratemodelsProductId() string {
-	return fmt.Sprintf("PROD-%08d", rand.IntN(100000000))
+    bytes := make([]byte, 4)
+
+    if _, err := rand.Read(bytes); err != nil {
+       
+        panic("crypto/rand failed: " + err.Error()) 
+    }
+    return fmt.Sprintf("PROD-%s", hex.EncodeToString(bytes))
 }
 
 func (h *Handler) Create(c fiber.Ctx) error {
@@ -175,7 +180,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusBadRequest, "INVALID_INPUT", "Malformed JSON", fiber.Map{"details": err.Error()})
 	}
 
-	p.ProductID = fmt.Sprintf("PROD-%d", time.Now().UnixNano())
+	p.ProductID = GeneratemodelsProductId()
 	p.CreatedAt = time.Now()
 
 	if validationErrors, status, code := validateProductInput(p); validationErrors != nil {

@@ -27,8 +27,6 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=build /app/main .
 
-COPY --from=build /app/datasets ./datasets
-
 RUN chown -R appuser:appgroup /app
 
 USER appuser

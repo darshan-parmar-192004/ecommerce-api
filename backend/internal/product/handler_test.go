@@ -1,7 +1,7 @@
 package product
 
 import (
-	"backend/internal/models"
+	"backend/internal/database"
 	"bytes"
 	"net/http"
 	"net/http/httptest"
@@ -11,12 +11,8 @@ import (
 )
 
 func setupTestApp() *fiber.App {
-	store := &Store{
-		Products:           make(map[string]models.Product),
-		DisablePersistance: true,
-	}
 
-	handler := NewHandler(store)
+	handler := NewHandler(database.New())
 
 	app := fiber.New()
 

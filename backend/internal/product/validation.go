@@ -7,7 +7,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-var categoryPattern = regexp.MustCompile(`^CAT-\d{8}$`)
+var categoryPattern = regexp.MustCompile(`^CAT-[a-f0-9]{8}$`)
 
 func validateProductInput(p models.Product) (map[string]interface{}, int, string) {
 
@@ -36,7 +36,7 @@ func validateProductInput(p models.Product) (map[string]interface{}, int, string
 	}
 
 	if len(errors) > 0 {
-		return errors, fiber.StatusUnprocessableEntity, ErrValidationFailed
+		return errors, fiber.StatusUnprocessableEntity, "VALIDATION_FAILED"
 	}
 
 	return nil, 0, ""

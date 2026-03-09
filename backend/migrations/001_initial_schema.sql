@@ -162,12 +162,12 @@ COMMIT;
 -- 5️⃣ COPY CSV INTO STAGING
 -- =========================================================
 
-\copy staging_categories FROM '/home/darshan.parmar/Desktop/Documentation/ecommerce-api/backend/datasets/ecommerce/categories.csv' CSV HEADER
-\copy staging_customers FROM '/home/darshan.parmar/Desktop/Documentation/ecommerce-api/backend/datasets/ecommerce/customers.csv' CSV HEADER
-\copy staging_products FROM '/home/darshan.parmar/Desktop/Documentation/ecommerce-api/backend/datasets/ecommerce/products.csv' CSV HEADER
-\copy staging_orders FROM '/home/darshan.parmar/Desktop/Documentation/ecommerce-api/backend/datasets/ecommerce/orders.csv' CSV HEADER
-\copy staging_order_items FROM '/home/darshan.parmar/Desktop/Documentation/ecommerce-api/backend/datasets/ecommerce/order_items.csv' CSV HEADER
-\copy staging_inventory FROM '/home/darshan.parmar/Desktop/Documentation/ecommerce-api/backend/datasets/ecommerce/inventory.csv' CSV HEADER
+\copy staging_categories FROM '/datasets/ecommerce/categories.csv' CSV HEADER
+\copy staging_customers FROM '/datasets/ecommerce/customers.csv' CSV HEADER
+\copy staging_products FROM '/datasets/ecommerce/products.csv' CSV HEADER
+\copy staging_orders FROM '/datasets/ecommerce/orders.csv' CSV HEADER
+\copy staging_order_items FROM '/datasets/ecommerce/order_items.csv' CSV HEADER
+\copy staging_inventory FROM '/datasets/ecommerce/inventory.csv' CSV HEADER
 
 -- =========================================================
 -- 6️⃣ DATA CLEANING + MIGRATION

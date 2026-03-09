@@ -1,9 +1,13 @@
 package server
 
 import (
+	"backend/internal/category"
+	"backend/internal/customer"
+	"backend/internal/inventory"
 	"backend/internal/middleware"
+	"backend/internal/order"
 	"backend/internal/product"
-	"log"
+
 
 	"github.com/gofiber/fiber/v3"
 
@@ -23,18 +27,38 @@ func (s *FiberServer) RegisterFiberRoutes() {
 		MaxAge:           300,
 	}))
 
-	store := product.NewStore()
-	err := store.LoadCSV("./datasets/ecommerce/products.csv")
-	if err != nil {
-		log.Fatalf("failed to load csv: %v", err)
-	}
-	handler := product.NewHandler(store)
+	productHandler := product.NewHandler(s.db)
 
-	s.App.Get("/products", handler.GetAll)
-	s.App.Get("/products/:id", handler.GetById)
-	s.App.Post("/products", handler.Create)
-	s.App.Put("/products/:id", handler.Update)
-	s.App.Delete("/products/:id", handler.Delete)
+	categoryHandler := category.NewHandler(s.db)
+
+	customerHandler := customer.NewHandler(s.db)
+	
+	orderHandler := order.NewHandler(s.db)
+	
+	inventoryHandler := inventory.NewHandler(s.db)
+
+	s.App.Get("/products", productHandler.GetAll)
+	s.App.Get("/products/:id", productHandler.GetById)
+	s.App.Post("/products", productHandler.Create)
+	s.App.Put("/products/:id", productHandler.Update)
+	s.App.Delete("/products/:id", productHandler.Delete)
+	
+	s.App.Get("/categories", categoryHandler.GetAll)
+	s.App.Get("/categories/:id/products", categoryHandler.GetCategoryProducts)
+	s.App.Get("/categories/hierarchy", categoryHandler.GetHierarchy)
+	
+	s.App.Get("/customers/:id/orders",customerHandler.GetCustomerOrders)
+	s.App.Get("/customers/:id/lifetime-value", customerHandler.GetCustomerLifetimeValue)
+	
+	s.App.Get("/orders/:id", orderHandler.GetOrder)
+	s.App.Post("/orders", orderHandler.CreateOrder)
+	
+	s.App.Get("/inventory", inventoryHandler.GetAll)
+	s.App.Get("/inventory/stock", inventoryHandler.GetStockLevels)
+	s.App.Get("/inventory/customer-lifetime-value", inventoryHandler.GetCustomerCLV)
+	s.App.Get("/inventory/hierarchy", inventoryHandler.GetCategoryTree)
+	s.App.Get("/inventory/top-sellers", inventoryHandler.GetTopSellers)
+	
 	s.App.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"status": "ok",
