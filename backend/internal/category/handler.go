@@ -33,11 +33,13 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	
 	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
 	if err == nil{
+		cache.RecordHit()
 		var categories []models.Category
 		json.Unmarshal([]byte(cached), &categories)
 		
 		return c.JSON(categories)
 	}
+	cache.RecordMiss()
 
 	db := h.db.DB()
 

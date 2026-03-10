@@ -7,6 +7,7 @@ import (
 	"backend/internal/middleware"
 	"backend/internal/order"
 	"backend/internal/product"
+	"backend/internal/stats"
 
 	"github.com/gofiber/fiber/v3"
 
@@ -35,6 +36,8 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	orderHandler := order.NewHandler(s.db)
 
 	inventoryHandler := inventory.NewHandler(s.db)
+	
+	statsHandler := stats.NewHandler()
 
 	s.App.Get("/products", productHandler.GetAll)
 	s.App.Get("/products/:id", productHandler.GetById)
@@ -57,6 +60,8 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Get("/inventory/customer-lifetime-value", inventoryHandler.GetCustomerCLV)
 	s.App.Get("/inventory/hierarchy", inventoryHandler.GetCategoryTree)
 	s.App.Get("/inventory/top-sellers", inventoryHandler.GetTopSellers)
+	
+	s.App.Get("stats/cache", statsHandler.CacheStats)
 
 	s.App.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{

@@ -39,11 +39,13 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
 	if err == nil {
+		cache.RecordHit()
 		var response fiber.Map
 		if json.Unmarshal([]byte(cached), &response) == nil {
 			return c.JSON(response)
 		}
 	}
+	cache.RecordMiss()
 
 	// filtering queries
 	category := c.Query("category")
@@ -173,11 +175,13 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 	
 	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
 	if err == nil{
+		cache.RecordHit()
 		var product models.Product
 		if json.Unmarshal([]byte(cached), &product) == nil {
 			return c.JSON(product)
 		}
 	}
+	cache.RecordMiss()
 	
 	query := `
 			SELECT product_id, name, category_id, price, description, created_at
