@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"backend/internal/cache"
@@ -32,7 +33,9 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	key := "categoried:all"
 	
 	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
-	if err == nil{
+	if err != nil{
+		fmt.Println("Cache unmarshal error:", err)
+	}else{
 		cache.RecordHit()
 		var categories []models.Category
 		json.Unmarshal([]byte(cached), &categories)

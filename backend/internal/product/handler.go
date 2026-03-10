@@ -38,7 +38,9 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	key := "products:all"
 
 	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
-	if err == nil {
+	if err != nil{
+		fmt.Println("Cache unmarshal error:", err)
+	}else{
 		cache.RecordHit()
 		var response fiber.Map
 		if json.Unmarshal([]byte(cached), &response) == nil {
@@ -174,7 +176,9 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 	key := "product:" + id
 	
 	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
-	if err == nil{
+	if err != nil{
+		fmt.Println("Cache unmarshal error:", err)
+	}else{
 		cache.RecordHit()
 		var product models.Product
 		if json.Unmarshal([]byte(cached), &product) == nil {
