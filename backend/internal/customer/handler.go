@@ -85,10 +85,8 @@ func (h *Handler) GetCustomerOrders(c fiber.Ctx) error {
 	})
 }
 
-//
 // GET /customers/:id/lifetime-value
-// Complex query (aggregate orders)
-//
+
 func (h *Handler) GetCustomerLifetimeValue(c fiber.Ctx) error {
 
 	customerID := c.Params("id")

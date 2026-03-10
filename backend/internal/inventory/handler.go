@@ -43,7 +43,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	return c.JSON(inventoryList)
 }
 
-// 1. Inventory across warehouses (JOIN inventory with products)
+// Inventory across warehouses (JOIN inventory with products)
 func (h *Handler) GetStockLevels(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
@@ -76,7 +76,7 @@ func (h *Handler) GetStockLevels(c fiber.Ctx) error {
 	return c.JSON(results)
 }
 
-// 2. Customer lifetime value (Aggregate orders per customer)
+// Customer lifetime value (Aggregate orders per customer)
 func (h *Handler) GetCustomerCLV(c fiber.Ctx) error {
 	query := `
 		SELECT customer_id, COUNT(order_id) as order_count, SUM(total_amount) as total_spent
@@ -95,13 +95,16 @@ func (h *Handler) GetCustomerCLV(c fiber.Ctx) error {
 		var id string
 		var count int
 		var total float64
-		rows.Scan(&id, &count, &total)
+		err := rows.Scan(&id, &count, &total)
+		if err != nil{
+			return err
+		}
 		stats = append(stats, fiber.Map{"customer_id": id, "order_count": count, "lifetime_value": total})
 	}
 	return c.JSON(stats)
 }
 
-// 3. Category hierarchy (Recursive CTE for parent-child categories)
+// Category hierarchy (Recursive CTE for parent-child categories)
 func (h *Handler) GetCategoryTree(c fiber.Ctx) error {
 
 	query := `
@@ -170,7 +173,7 @@ func (h *Handler) GetCategoryTree(c fiber.Ctx) error {
 	})
 }
 
-// 4. Top selling products (Aggregate order_items)
+// Top selling products (Aggregate order_items)
 func (h *Handler) GetTopSellers(c fiber.Ctx) error {
 	query := `
 		SELECT p.name, SUM(oi.quantity) as total_sold
@@ -190,7 +193,10 @@ func (h *Handler) GetTopSellers(c fiber.Ctx) error {
 	for rows.Next() {
 		var name string
 		var total int
-		rows.Scan(&name, &total)
+		err := rows.Scan(&name, &total)
+		if err != nil{
+			return err
+		}
 		topProducts = append(topProducts, fiber.Map{"product": name, "units_sold": total})
 	}
 	return c.JSON(topProducts)
