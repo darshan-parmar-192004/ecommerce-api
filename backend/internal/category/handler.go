@@ -188,11 +188,13 @@ func (h *Handler) GetHierarchy(c fiber.Ctx) error {
 
 		var cat models.Category
 
-		rows.Scan(
+		if err := rows.Scan(
 			&cat.CategoryID,
 			&cat.Name,
 			&cat.ParentCategoryID,
-		)
+		); err != nil{
+			return  err
+		}
 
 		categories = append(categories, cat)
 	}

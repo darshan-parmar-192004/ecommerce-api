@@ -13,7 +13,7 @@ import (
 	"crypto/rand"
 
 	"github.com/gofiber/fiber/v3"
-	"golang.org/x/net/context"
+	"context"
 	"github.com/jackc/pgx/v5/pgconn"
 	apperrors "backend/internal/errors"
 )

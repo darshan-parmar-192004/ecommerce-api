@@ -38,3 +38,58 @@ jobs:
         run: |
           cd backend
           golangci-lint run ./...
+
+  test:
+    name: Run Go Tests
+    runs-on: vm-hosted
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.25.x"
+
+      - name: Download dependencies
+        run: |
+          cd backend
+          go mod download
+
+      - name: Run tests
+        run: |
+          cd backend
+          go test ./... -v
+
+  container-test:
+    name: Container Integration Test
+    runs-on: vm-hosted
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and start containers
+        run: |
+          podman-compose up -d --build
+
+      - name: Wait for services
+        run: |
+          sleep 15
+
+      - name: Check health endpoint
+        run: |
+          curl -f http://localhost:8080/health
+
+      - name: Show logs if failure
+        if: failure()
+        run: |
+          podman-compose logs
+
+      - name: Stop containers
+        if: always()
+        run: |
+          podman-compose down
