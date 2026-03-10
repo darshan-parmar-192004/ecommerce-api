@@ -3,32 +3,47 @@ package product
 import (
 	"backend/internal/database"
 	"backend/internal/models"
+	"crypto/rand"
+	"database/sql"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-	"database/sql"
-	"errors"
-	"encoding/hex"
-	"crypto/rand"
+
+	"backend/internal/cache"
+	apperrors "backend/internal/errors"
+	"context"
 
 	"github.com/gofiber/fiber/v3"
-	"context"
 	"github.com/jackc/pgx/v5/pgconn"
-	apperrors "backend/internal/errors"
 )
 
 type Handler struct {
-	db database.Service
+	db    database.Service
+	cache cache.RedisService
 }
 
-func NewHandler(db database.Service) *Handler {
+func NewHandler(db database.Service, cache cache.RedisService) *Handler {
 	return &Handler{
-		db : db,
+		db:    db,
+		cache: cache,
 	}
 }
 
 func (h *Handler) GetAll(c fiber.Ctx) error {
+
+	key := "products:all"
+
+	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
+	if err == nil {
+		var response fiber.Map
+		if json.Unmarshal([]byte(cached), &response) == nil {
+			return c.JSON(response)
+		}
+	}
 
 	// filtering queries
 	category := c.Query("category")
@@ -129,7 +144,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 	totalPages := (totalItems + limit - 1) / limit
 
-	return c.JSON(fiber.Map{
+	response := fiber.Map{
 		"data": products,
 		"pagination": fiber.Map{
 			"page":        page,
@@ -137,45 +152,75 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 			"total_items": totalItems,
 			"total_pages": totalPages,
 		},
-	})
+	}
+
+	data, _ := json.Marshal(response)
+
+	h.cache.Client.Set(
+		cache.Ctx,
+		key,
+		data,
+		5*time.Minute,
+	)
+
+	return c.JSON(response)
 }
 
 func (h *Handler) GetById(c fiber.Ctx) error {
 	id := c.Params("id")
+	
+	key := "product:" + id
+	
+	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
+	if err == nil{
+		var product models.Product
+		if json.Unmarshal([]byte(cached), &product) == nil {
+			return c.JSON(product)
+		}
+	}
+	
 	query := `
 			SELECT product_id, name, category_id, price, description, created_at
 			FROM products
 			WHERE product_id = $1
 		`
-		s := h.db.DB()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+	s := h.db.DB()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-		var p models.Product
-		err := s.QueryRowContext(ctx, query, id).Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &p.Description, &p.CreatedAt)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return apperrors.SendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
-			}
-			return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch product", fiber.Map{"error": err.Error()})
+	var p models.Product
+	if err := s.QueryRowContext(ctx, query, id).Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &p.Description, &p.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return apperrors.SendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
 		}
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch product", fiber.Map{"error": err.Error()})
+	}
+	
+	data, _ := json.Marshal(p)
+	
+	h.cache.Client.Set(
+		cache.Ctx,
+		key,
+		data,
+		10*time.Minute,
+	)
 
-		return c.JSON(p)
+	return c.JSON(p)
 }
 
 func GeneratemodelsProductId() string {
-    bytes := make([]byte, 4)
+	bytes := make([]byte, 4)
 
-    if _, err := rand.Read(bytes); err != nil {
-       
-        panic("crypto/rand failed: " + err.Error()) 
-    }
-    return fmt.Sprintf("PROD-%s", hex.EncodeToString(bytes))
+	if _, err := rand.Read(bytes); err != nil {
+
+		panic("crypto/rand failed: " + err.Error())
+	}
+	return fmt.Sprintf("PROD-%s", hex.EncodeToString(bytes))
 }
 
 func (h *Handler) Create(c fiber.Ctx) error {
 	var p models.Product
-    
+
 	if err := c.Bind().Body(&p); err != nil {
 		return apperrors.SendError(c, fiber.StatusBadRequest, "INVALID_INPUT", "Malformed JSON", fiber.Map{"details": err.Error()})
 	}
@@ -232,6 +277,8 @@ func (h *Handler) Create(c fiber.Ctx) error {
 				)
 			}
 		}
+		
+		h.cache.Client.Del(cache.Ctx, "products:all")
 
 		return apperrors.SendError(
 			c,
@@ -240,7 +287,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 			"Database operation failed",
 			fiber.Map{"error": err.Error()},
 		)
-}
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(p)
 }
@@ -318,49 +365,53 @@ func (h *Handler) Update(c fiber.Ctx) error {
 
 	if err != nil {
 
-			var pgErr *pgconn.PgError
+		var pgErr *pgconn.PgError
 
-			if errors.As(err, &pgErr) {
+		if errors.As(err, &pgErr) {
 
-				switch pgErr.Code {
+			switch pgErr.Code {
 
-				case "23503": // foreign key violation
-					return apperrors.SendError(
-						c,
-						fiber.StatusBadRequest,
-						"INVALID_CATEGORY",
-						"Category does not exist",
-						nil,
-					)
+			case "23503": // foreign key violation
+				return apperrors.SendError(
+					c,
+					fiber.StatusBadRequest,
+					"INVALID_CATEGORY",
+					"Category does not exist",
+					nil,
+				)
 
-				case "23514": // check constraint violation
-					return apperrors.SendError(
-						c,
-						fiber.StatusBadRequest,
-						"INVALID_DATA",
-						"Product data violates database constraints",
-						nil,
-					)
+			case "23514": // check constraint violation
+				return apperrors.SendError(
+					c,
+					fiber.StatusBadRequest,
+					"INVALID_DATA",
+					"Product data violates database constraints",
+					nil,
+				)
 
-				case "23505": // unique constraint
-					return apperrors.SendError(
-						c,
-						fiber.StatusConflict,
-						"DUPLICATE_PRODUCT",
-						"Duplicate product detected",
-						nil,
-					)
-				}
+			case "23505": // unique constraint
+				return apperrors.SendError(
+					c,
+					fiber.StatusConflict,
+					"DUPLICATE_PRODUCT",
+					"Duplicate product detected",
+					nil,
+				)
 			}
-
-			return apperrors.SendError(
-				c,
-				fiber.StatusInternalServerError,
-				"DB_ERROR",
-				"Failed to update product",
-				fiber.Map{"error": err.Error()},
-			)
 		}
+
+		return apperrors.SendError(
+			c,
+			fiber.StatusInternalServerError,
+			"DB_ERROR",
+			"Failed to update product",
+			fiber.Map{"error": err.Error()},
+		)
+	}
+	
+	h.cache.Client.Del(cache.Ctx, "products:all")
+	h.cache.Client.Del(cache.Ctx, "products:"+id)
+	
 	return c.JSON(p)
 }
 
@@ -407,6 +458,9 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 			nil,
 		)
 	}
+	
+	h.cache.Client.Del(cache.Ctx, "products:all")
+	h.cache.Client.Del(cache.Ctx, "products:"+id)
 
 	return c.JSON(fiber.Map{
 		"message": "Deleted successfully",

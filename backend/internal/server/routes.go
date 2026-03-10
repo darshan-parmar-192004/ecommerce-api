@@ -8,7 +8,6 @@ import (
 	"backend/internal/order"
 	"backend/internal/product"
 
-
 	"github.com/gofiber/fiber/v3"
 
 	"github.com/gofiber/fiber/v3/middleware/cors"
@@ -27,14 +26,14 @@ func (s *FiberServer) RegisterFiberRoutes() {
 		MaxAge:           300,
 	}))
 
-	productHandler := product.NewHandler(s.db)
+	productHandler := product.NewHandler(s.db, s.cache)
 
-	categoryHandler := category.NewHandler(s.db)
+	categoryHandler := category.NewHandler(s.db, s.cache)
 
 	customerHandler := customer.NewHandler(s.db)
-	
+
 	orderHandler := order.NewHandler(s.db)
-	
+
 	inventoryHandler := inventory.NewHandler(s.db)
 
 	s.App.Get("/products", productHandler.GetAll)
@@ -42,23 +41,23 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Post("/products", productHandler.Create)
 	s.App.Put("/products/:id", productHandler.Update)
 	s.App.Delete("/products/:id", productHandler.Delete)
-	
+
 	s.App.Get("/categories", categoryHandler.GetAll)
 	s.App.Get("/categories/:id/products", categoryHandler.GetCategoryProducts)
 	s.App.Get("/categories/hierarchy", categoryHandler.GetHierarchy)
-	
-	s.App.Get("/customers/:id/orders",customerHandler.GetCustomerOrders)
+
+	s.App.Get("/customers/:id/orders", customerHandler.GetCustomerOrders)
 	s.App.Get("/customers/:id/lifetime-value", customerHandler.GetCustomerLifetimeValue)
-	
+
 	s.App.Get("/orders/:id", orderHandler.GetOrder)
 	s.App.Post("/orders", orderHandler.CreateOrder)
-	
+
 	s.App.Get("/inventory", inventoryHandler.GetAll)
 	s.App.Get("/inventory/stock", inventoryHandler.GetStockLevels)
 	s.App.Get("/inventory/customer-lifetime-value", inventoryHandler.GetCustomerCLV)
 	s.App.Get("/inventory/hierarchy", inventoryHandler.GetCategoryTree)
 	s.App.Get("/inventory/top-sellers", inventoryHandler.GetTopSellers)
-	
+
 	s.App.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"status": "ok",

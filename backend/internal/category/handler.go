@@ -6,23 +6,38 @@ import (
 	"backend/internal/models"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"time"
+
+	"backend/internal/cache"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 type Handler struct {
 	db database.Service
+	cache cache.RedisService
 }
 
-func NewHandler(db database.Service) *Handler {
+func NewHandler(db database.Service, cache cache.RedisService) *Handler {
 	return &Handler{
 		db: db,
+		cache: cache,
 	}
 }
 
 // GET /categories
 func (h *Handler) GetAll(c fiber.Ctx) error {
+	
+	key := "categoried:all"
+	
+	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
+	if err == nil{
+		var categories []models.Category
+		json.Unmarshal([]byte(cached), &categories)
+		
+		return c.JSON(categories)
+	}
 
 	db := h.db.DB()
 
@@ -71,6 +86,14 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 		categories = append(categories, cat)
 	}
+	
+	data, _ := json.Marshal(categories)
+	h.cache.Client.Set(
+		cache.Ctx,
+		key,
+		data,
+		30*time.Minute,
+	)
 
 	return c.JSON(fiber.Map{
 		"data": categories,

@@ -1,6 +1,7 @@
 package product
 
 import (
+	"backend/internal/cache"
 	"backend/internal/database"
 	"bytes"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 
 func setupTestApp() *fiber.App {
 
-	handler := NewHandler(database.New())
+	handler := NewHandler(database.New(), *cache.NewRedis())
 
 	app := fiber.New()
 
