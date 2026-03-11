@@ -19,6 +19,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/redis/go-redis/v9"
 )
 
 type Handler struct {
@@ -38,16 +39,21 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	key := "products:all"
 
 	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
-	if err != nil{
-		fmt.Println("Cache unmarshal error:", err)
-	}else{
+
+	if err == redis.Nil {
+		cache.RecordMiss()
+	} else if err != nil {
+		fmt.Println("Redis error:", err)
+		cache.RecordMiss()
+	} else {
 		cache.RecordHit()
 		var response fiber.Map
 		if json.Unmarshal([]byte(cached), &response) == nil {
 			return c.JSON(response)
+		} else {
+			fmt.Println("Unmarshal error:", err)
 		}
 	}
-	cache.RecordMiss()
 
 	// filtering queries
 	category := c.Query("category")
@@ -130,10 +136,14 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	defer rows.Close()
 
 	var products []models.Product
+	var description sql.NullString
 	for rows.Next() {
 		var p models.Product
-		if err := rows.Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &p.Description, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &description, &p.CreatedAt); err != nil {
 			return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to scan product", fiber.Map{"debug": err.Error()})
+		}
+		if description.Valid {
+			p.Description = &description.String
 		}
 		products = append(products, p)
 	}
@@ -172,21 +182,26 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 func (h *Handler) GetById(c fiber.Ctx) error {
 	id := c.Params("id")
-	
+
 	key := "product:" + id
-	
+
 	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
-	if err != nil{
-		fmt.Println("Cache unmarshal error:", err)
-	}else{
+
+	if err == redis.Nil {
+		cache.RecordMiss()
+	} else if err != nil {
+		fmt.Println("Redis error:", err)
+		cache.RecordMiss()
+	} else {
 		cache.RecordHit()
-		var product models.Product
-		if json.Unmarshal([]byte(cached), &product) == nil {
-			return c.JSON(product)
+		var response fiber.Map
+		if json.Unmarshal([]byte(cached), &response) == nil {
+			return c.JSON(response)
+		} else {
+			fmt.Println("Unmarshal error:", err)
 		}
 	}
-	cache.RecordMiss()
-	
+
 	query := `
 			SELECT product_id, name, category_id, price, description, created_at
 			FROM products
@@ -203,9 +218,9 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 		}
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch product", fiber.Map{"error": err.Error()})
 	}
-	
+
 	data, _ := json.Marshal(p)
-	
+
 	h.cache.Client.Set(
 		cache.Ctx,
 		key,
@@ -285,7 +300,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 				)
 			}
 		}
-		
+
 		h.cache.Client.Del(cache.Ctx, "products:all")
 
 		return apperrors.SendError(
@@ -416,10 +431,10 @@ func (h *Handler) Update(c fiber.Ctx) error {
 			fiber.Map{"error": err.Error()},
 		)
 	}
-	
+
 	h.cache.Client.Del(cache.Ctx, "products:all")
 	h.cache.Client.Del(cache.Ctx, "products:"+id)
-	
+
 	return c.JSON(p)
 }
 
@@ -466,7 +481,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 			nil,
 		)
 	}
-	
+
 	h.cache.Client.Del(cache.Ctx, "products:all")
 	h.cache.Client.Del(cache.Ctx, "products:"+id)
 

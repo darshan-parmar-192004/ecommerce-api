@@ -9,6 +9,6 @@ type Product struct {
 	Name        string    `json:"name"`
 	CategoryID  string    `json:"category_id"`
 	Price       float64   `json:"price"`
-	Description string    `json:"description"`
+	Description *string    `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
 }

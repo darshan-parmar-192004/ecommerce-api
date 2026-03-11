@@ -8,6 +8,9 @@ services:
       target: prod
     container_name: backend
     restart: unless-stopped
+    
+    env_file:
+      - .env
 
     ports:
       - "8080:8080"
@@ -23,7 +26,6 @@ services:
       BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
       BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
 
-
     volumes:
       - ./backend/datasets:/app/datasets
 
@@ -33,20 +35,27 @@ services:
     depends_on:
       psql_bp:
         condition: service_healthy
-        
+      redis:
+        condition: service_started
+
   redis:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     container_name: blueprint_redis
     restart: unless-stopped
-    
+  
     ports:
       - "6379:6379"
-    
+  
+    volumes:
+      - redis_data:/data
+  
+    command: redis-server --appendonly yes
+  
     networks:
       - blueprint
-        
+
   psql_bp:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     container_name: blueprint_postgres
     restart: unless-stopped
 
@@ -79,6 +88,7 @@ services:
 
 volumes:
   psql_volume_bp:
+  redis_data:
 
 networks:
   blueprint:

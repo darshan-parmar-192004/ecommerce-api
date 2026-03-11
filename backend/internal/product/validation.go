@@ -31,7 +31,7 @@ func validateProductInput(p models.Product) (map[string]interface{}, int, string
 		errors["category_id"] = "Category id must match CAT-xxxxxxxx format"
 	}
 
-	if len(p.Description) > 500 {
+	if p.Description != nil && len(*p.Description) > 500 {
 		errors["description"] = "Description must not exceed 500 characters"
 	}
 

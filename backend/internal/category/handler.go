@@ -13,36 +13,42 @@ import (
 	"backend/internal/cache"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/redis/go-redis/v9"
 )
 
 type Handler struct {
-	db database.Service
+	db    database.Service
 	cache cache.RedisService
 }
 
 func NewHandler(db database.Service, cache cache.RedisService) *Handler {
 	return &Handler{
-		db: db,
+		db:    db,
 		cache: cache,
 	}
 }
 
 // GET /categories
 func (h *Handler) GetAll(c fiber.Ctx) error {
-	
-	key := "categoried:all"
-	
+
+	key := "categories:all"
+
 	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
-	if err != nil{
-		fmt.Println("Cache unmarshal error:", err)
-	}else{
+
+	if err == redis.Nil {
+		cache.RecordMiss()
+	} else if err != nil {
+		fmt.Println("Redis error:", err)
+		cache.RecordMiss()
+	} else {
 		cache.RecordHit()
-		var categories []models.Category
-		json.Unmarshal([]byte(cached), &categories)
-		
-		return c.JSON(categories)
+		var response fiber.Map
+		if json.Unmarshal([]byte(cached), &response) == nil {
+			return c.JSON(response)
+		} else {
+			fmt.Println("Unmarshal error:", err)
+		}
 	}
-	cache.RecordMiss()
 
 	db := h.db.DB()
 
@@ -91,7 +97,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 		categories = append(categories, cat)
 	}
-	
+
 	data, _ := json.Marshal(categories)
 	h.cache.Client.Set(
 		cache.Ctx,
@@ -163,7 +169,7 @@ func (h *Handler) GetCategoryProducts(c fiber.Ctx) error {
 		}
 
 		if description.Valid {
-			p.Description = description.String
+			p.Description = &description.String
 		}
 		products = append(products, p)
 	}
@@ -220,8 +226,8 @@ func (h *Handler) GetHierarchy(c fiber.Ctx) error {
 			&cat.CategoryID,
 			&cat.Name,
 			&cat.ParentCategoryID,
-		); err != nil{
-			return  err
+		); err != nil {
+			return err
 		}
 
 		categories = append(categories, cat)

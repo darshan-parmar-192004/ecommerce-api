@@ -16,14 +16,17 @@ type RedisService struct {
 
 func NewRedis() *RedisService {
 
-	host := os.Getenv("REDIS_HOST")
-	port := os.Getenv("REDIS_PORT")
-
-	addr := fmt.Sprintf("%s:%s", host, port)
+	addr := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr: addr,
 	})
+
+	if err := rdb.Ping(Ctx).Err(); err != nil {
+		panic(fmt.Sprintf("Redis connection failed: %v", err))
+	}
+
+	fmt.Println("Connected to Redis:", addr)
 
 	return &RedisService{
 		Client: rdb,
