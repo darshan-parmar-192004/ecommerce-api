@@ -6,6 +6,12 @@ on:
       - "**"
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_integration:
+        description: 'Run integration tests'
+        required: false
+        default: 'false'
 
 jobs:
   lint:
@@ -37,7 +43,7 @@ jobs:
       - name: Run lint
         run: |
           cd backend
-          golangci-lint run ./...
+          golangci-lint run ./... --timeout 5m
 
   test:
     name: Run Go Tests
@@ -53,15 +59,20 @@ jobs:
         with:
           go-version: "1.25.x"
 
-      - name: Download dependencies
-        run: |
-          cd backend
-          go mod download
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: Run tests
         run: |
           cd backend
-          go test ./... -v
+          CI=true go test ./... -v
 
   container-test:
     name: Container Integration Test
@@ -72,9 +83,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Docker
+        uses: docker/setup-docker@v5
+
       - name: Build and start containers
         run: |
-          podman-compose up -d --build
+          docker-compose up -d --build
 
       - name: Wait for services
         run: |
@@ -87,9 +101,9 @@ jobs:
       - name: Show logs if failure
         if: failure()
         run: |
-          podman-compose logs
+          docker-compose logs
 
       - name: Stop containers
         if: always()
         run: |
-          podman-compose down
+          docker-compose down

@@ -44,7 +44,7 @@ CREATE TABLE customers (
     phone VARCHAR(50),
     created_at TIMESTAMP NOT NULL,
     status VARCHAR(50),
-    password_hash TEXT
+    password_hash TEXT NOT NULL
 );
 
 CREATE TABLE products (

@@ -12,4 +12,5 @@ type Customer struct {
 	Phone      string    `json:"phone"`
 	CreatedAt  time.Time `json:"created_at"`
 	Status     string    `json:"status"`
+	PasswordHash string  `json:"-"`
 }

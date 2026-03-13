@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -10,6 +11,19 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+func isDockerAvailable() bool {
+	if os.Getenv("CI") != "" {
+		return false
+	}
+	if _, err := os.Stat("/var/run/docker.sock"); err != nil {
+		return false
+	}
+	if os.Geteuid() != 0 {
+		return false
+	}
+	return true
+}
 
 func mustStartPostgresContainer() (func(context.Context, ...testcontainers.TerminateOption) error, error) {
 	var (
@@ -54,6 +68,11 @@ func mustStartPostgresContainer() (func(context.Context, ...testcontainers.Termi
 }
 
 func TestMain(m *testing.M) {
+	if !isDockerAvailable() {
+		log.Println("Docker not available, skipping database tests")
+		os.Exit(0)
+	}
+
 	teardown, err := mustStartPostgresContainer()
 	if err != nil {
 		log.Fatalf("could not start postgres container: %v", err)

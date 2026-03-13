@@ -38,20 +38,22 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 	key := "products:all"
 
-	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
+	if h.cache.Client != nil {
+		cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
 
-	if err == redis.Nil {
-		cache.RecordMiss()
-	} else if err != nil {
-		fmt.Println("Redis error:", err)
-		cache.RecordMiss()
-	} else {
-		cache.RecordHit()
-		var response fiber.Map
-		if json.Unmarshal([]byte(cached), &response) == nil {
-			return c.JSON(response)
+		if err == redis.Nil {
+			cache.RecordMiss()
+		} else if err != nil {
+			fmt.Println("Redis error:", err)
+			cache.RecordMiss()
 		} else {
-			fmt.Println("Unmarshal error:", err)
+			cache.RecordHit()
+			var response fiber.Map
+			if json.Unmarshal([]byte(cached), &response) == nil {
+				return c.JSON(response)
+			} else {
+				fmt.Println("Unmarshal error:", err)
+			}
 		}
 	}
 
@@ -170,12 +172,14 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 	data, _ := json.Marshal(response)
 
-	h.cache.Client.Set(
-		cache.Ctx,
-		key,
-		data,
-		5*time.Minute,
-	)
+	if h.cache.Client != nil {
+		h.cache.Client.Set(
+			cache.Ctx,
+			key,
+			data,
+			5*time.Minute,
+		)
+	}
 
 	return c.JSON(response)
 }
@@ -183,22 +187,24 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 func (h *Handler) GetById(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	key := "product:" + id
+	key := "products:" + id
 
-	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
+	if h.cache.Client != nil {
+		cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
 
-	if err == redis.Nil {
-		cache.RecordMiss()
-	} else if err != nil {
-		fmt.Println("Redis error:", err)
-		cache.RecordMiss()
-	} else {
-		cache.RecordHit()
-		var response fiber.Map
-		if json.Unmarshal([]byte(cached), &response) == nil {
-			return c.JSON(response)
+		if err == redis.Nil {
+			cache.RecordMiss()
+		} else if err != nil {
+			fmt.Println("Redis error:", err)
+			cache.RecordMiss()
 		} else {
-			fmt.Println("Unmarshal error:", err)
+			cache.RecordHit()
+			var response fiber.Map
+			if json.Unmarshal([]byte(cached), &response) == nil {
+				return c.JSON(response)
+			} else {
+				fmt.Println("Unmarshal error:", err)
+			}
 		}
 	}
 
@@ -221,12 +227,14 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 
 	data, _ := json.Marshal(p)
 
-	h.cache.Client.Set(
-		cache.Ctx,
-		key,
-		data,
-		10*time.Minute,
-	)
+	if h.cache.Client != nil {
+		h.cache.Client.Set(
+			cache.Ctx,
+			key,
+			data,
+			10*time.Minute,
+		)
+	}
 
 	return c.JSON(p)
 }
@@ -301,7 +309,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 			}
 		}
 
-		h.cache.Client.Del(cache.Ctx, "products:all")
+		if h.cache.Client != nil {
+			h.cache.Client.Del(cache.Ctx, "products:all")
+		}
 
 		return apperrors.SendError(
 			c,
@@ -432,8 +442,10 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		)
 	}
 
-	h.cache.Client.Del(cache.Ctx, "products:all")
-	h.cache.Client.Del(cache.Ctx, "products:"+id)
+	if h.cache.Client != nil {
+		h.cache.Client.Del(cache.Ctx, "products:all")
+		h.cache.Client.Del(cache.Ctx, "products:"+id)
+	}
 
 	return c.JSON(p)
 }
@@ -482,8 +494,10 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		)
 	}
 
-	h.cache.Client.Del(cache.Ctx, "products:all")
-	h.cache.Client.Del(cache.Ctx, "products:"+id)
+	if h.cache.Client != nil {
+		h.cache.Client.Del(cache.Ctx, "products:all")
+		h.cache.Client.Del(cache.Ctx, "products:"+id)
+	}
 
 	return c.JSON(fiber.Map{
 		"message": "Deleted successfully",

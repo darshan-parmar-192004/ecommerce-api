@@ -1,6 +1,7 @@
 package server
 
 import (
+	"backend/internal/auth"
 	"backend/internal/category"
 	"backend/internal/customer"
 	"backend/internal/inventory"
@@ -36,18 +37,24 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	orderHandler := order.NewHandler(s.db)
 
 	inventoryHandler := inventory.NewHandler(s.db)
-	
+
 	statsHandler := stats.NewHandler()
+
+	authHandler := auth.NewHandler(s.db, s.cache, s.jwtSecret)
+	authMiddleware := middleware.NewAuthMiddleware(s.jwtSecret)
 
 	s.App.Get("/products", productHandler.GetAll)
 	s.App.Get("/products/:id", productHandler.GetById)
-	s.App.Post("/products", productHandler.Create)
-	s.App.Put("/products/:id", productHandler.Update)
-	s.App.Delete("/products/:id", productHandler.Delete)
+	s.App.Post("/products", authMiddleware.Authenticate, productHandler.Create)
+	s.App.Put("/products/:id", authMiddleware.Authenticate, productHandler.Update)
+	s.App.Delete("/products/:id", authMiddleware.Authenticate, productHandler.Delete)
 
 	s.App.Get("/categories", categoryHandler.GetAll)
 	s.App.Get("/categories/:id/products", categoryHandler.GetCategoryProducts)
 	s.App.Get("/categories/hierarchy", categoryHandler.GetHierarchy)
+
+	s.App.Get("/customers/me", authMiddleware.Authenticate, customerHandler.GetMe)
+	s.App.Put("/customers/me", authMiddleware.Authenticate, customerHandler.UpdateMe)
 
 	s.App.Get("/customers/:id/orders", customerHandler.GetCustomerOrders)
 	s.App.Get("/customers/:id/lifetime-value", customerHandler.GetCustomerLifetimeValue)
@@ -60,8 +67,13 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Get("/inventory/customer-lifetime-value", inventoryHandler.GetCustomerCLV)
 	s.App.Get("/inventory/hierarchy", inventoryHandler.GetCategoryTree)
 	s.App.Get("/inventory/top-sellers", inventoryHandler.GetTopSellers)
-	
+
 	s.App.Get("stats/cache", statsHandler.CacheStats)
+
+	s.App.Post("/auth/register", authHandler.Register)
+	s.App.Post("/auth/login", authHandler.Login)
+	s.App.Post("/auth/logout", authHandler.Logout)
+	s.App.Get("/auth/me", authMiddleware.Authenticate, authHandler.ValidateToken)
 
 	s.App.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
