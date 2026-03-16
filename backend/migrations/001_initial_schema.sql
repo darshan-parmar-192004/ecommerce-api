@@ -180,6 +180,8 @@ FROM staging_categories
 ON CONFLICT DO NOTHING;
 
 -- Customers (basic email validation)
+-- Default password hash: bcrypt hash of "TempPass123" (cost 10)
+-- Customers can use password reset to set their own password
 INSERT INTO import_warnings (table_name, record_id, issue)
 SELECT 'customers', customer_id, 'Invalid email'
 FROM staging_customers
@@ -197,7 +199,7 @@ SELECT
     phone,
     created_at::timestamp,
     status,
-    NULL
+    '$2b$10$gWVt4qiJgt.dj8Cd8ljskOlPgr1dTGMJcQjh5Fn6c.axWK.wZ17c6'
 FROM staging_customers
 WHERE email LIKE '%@%'
 ON CONFLICT (email) DO NOTHING;
