@@ -2,9 +2,6 @@
 bin/
 *.exe
 
-# Env
-.env
-
 # IDE
 .vscode/
 .idea/
