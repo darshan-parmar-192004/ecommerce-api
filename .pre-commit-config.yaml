@@ -1,0 +1,47 @@
+default_install_hook_types: [pre-commit]
+default_stages: [pre-commit]
+
+fail_fast: false
+
+repos:
+  - repo: local
+    hooks:
+      - id: gofmt
+        name: gofmt
+        entry: bash
+        args:
+          - "-c"
+          - "export PATH=\"$PATH:$(go env GOPATH)/bin\" && cd backend && git diff --staged --name-only --diff-filter=ACM | grep '\\.go$' | xargs -I{} dirname | sort -u | sed 's|^|./|;s|/$||' | xargs -I{} gofmt -l -w {}"
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      - id: go-vet
+        name: go vet
+        entry: bash
+        args:
+          - "-c"
+          - "export PATH=\"$PATH:$(go env GOPATH)/bin\" && cd backend && PKGS=$(git diff --staged --name-only --diff-filter=ACM | grep '\\.go$' | xargs -I{} dirname | sort -u | sed 's|^|./|;s|/$||') && [ -n \"$PKGS\" ] && go vet $PKGS || true"
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      - id: golangci-lint
+        name: golangci-lint
+        entry: bash
+        args:
+          - "-c"
+          - "export PATH=\"$PATH:$(go env GOPATH)/bin\" && cd backend && FILES=$(git diff --staged --name-only --diff-filter=ACM | grep '\\.go$') && [ -n \"$FILES\" ] && golangci-lint run $FILES --timeout=5m || true"
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      - id: go-test
+        name: go test
+        entry: bash
+        args:
+          - "-c"
+          - "export PATH=\"$PATH:$(go env GOPATH)/bin\" && cd backend && PKGS=$(git diff --staged --name-only --diff-filter=ACM | grep '\\.go$' | xargs -I{} dirname | sort -u | sed 's|^|./|;s|/$||') && [ -n \"$PKGS\" ] && go test $PKGS || true"
+        language: system
+        types: [go]
+        pass_filenames: false

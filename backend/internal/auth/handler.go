@@ -4,6 +4,7 @@ import (
 	"backend/internal/cache"
 	"backend/internal/database"
 	"backend/internal/errors"
+	"backend/internal/middleware"
 	"backend/internal/models"
 	"context"
 	"database/sql"
@@ -37,6 +38,7 @@ type LoginRequest struct {
 type JWTClaims struct {
 	CustomerID string `json:"customer_id"`
 	Email      string `json:"email"`
+	Role       string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -46,6 +48,47 @@ func NewHandler(db database.Service, cache cache.RedisService, jwtSecret string)
 		cache:     cache,
 		jwtSecret: []byte(jwtSecret),
 	}
+}
+
+func ValidatePasswordPolicy(password string) []string {
+	var errors []string
+
+	if len(password) < 8 {
+		errors = append(errors, "Password must be at least 8 characters")
+	}
+
+	hasUpper := false
+	hasLower := false
+	hasDigit := false
+	hasSpecial := false
+
+	for _, char := range password {
+		switch {
+		case char >= 'A' && char <= 'Z':
+			hasUpper = true
+		case char >= 'a' && char <= 'z':
+			hasLower = true
+		case char >= '0' && char <= '9':
+			hasDigit = true
+		case char == '!' || char == '@' || char == '#' || char == '$' || char == '%' || char == '^' || char == '&' || char == '*' || char == '(' || char == ')' || char == '-' || char == '_' || char == '+' || char == '=':
+			hasSpecial = true
+		}
+	}
+
+	if !hasUpper {
+		errors = append(errors, "Password must contain at least one uppercase letter")
+	}
+	if !hasLower {
+		errors = append(errors, "Password must contain at least one lowercase letter")
+	}
+	if !hasDigit {
+		errors = append(errors, "Password must contain at least one number")
+	}
+	if !hasSpecial {
+		errors = append(errors, "Password must contain at least one special character (!@#$%^&*()-_+=)")
+	}
+
+	return errors
 }
 
 func (h *Handler) Register(c fiber.Ctx) error {
@@ -70,13 +113,13 @@ func (h *Handler) Register(c fiber.Ctx) error {
 		)
 	}
 
-	if len(req.Password) < 8 {
+	if passwordErrors := ValidatePasswordPolicy(req.Password); len(passwordErrors) > 0 {
 		return errors.SendError(
 			c,
 			fiber.StatusBadRequest,
 			errors.ErrValidation,
-			"Password must be at least 8 characters",
-			nil,
+			"Password does not meet requirements",
+			fiber.Map{"errors": passwordErrors},
 		)
 	}
 
@@ -99,9 +142,9 @@ func (h *Handler) Register(c fiber.Ctx) error {
 	defer cancel()
 
 	_, err = db.ExecContext(ctx, `
-		INSERT INTO customers (customer_id, email, name, country, phone, created_at, status, password_hash)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword))
+		INSERT INTO customers (customer_id, email, name, country, phone, created_at, status, password_hash, role)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer")
 
 	if err != nil {
 		return errors.SendError(
@@ -156,7 +199,7 @@ func (h *Handler) Login(c fiber.Ctx) error {
 
 	var customer models.Customer
 	err := db.QueryRowContext(ctx, `
-		SELECT customer_id, email, name, country, phone, created_at, status, password_hash
+		SELECT customer_id, email, name, country, phone, created_at, status, password_hash, COALESCE(role, 'customer')
 		FROM customers
 		WHERE email = $1
 	`, req.Email).Scan(
@@ -168,9 +211,11 @@ func (h *Handler) Login(c fiber.Ctx) error {
 		&customer.CreatedAt,
 		&customer.Status,
 		&customer.PasswordHash,
+		&customer.Role,
 	)
 
 	if err == sql.ErrNoRows {
+		middleware.GetSecurityLogger().LogAuthFailure(req.Email, "user_not_found", c.IP())
 		return errors.SendError(
 			c,
 			fiber.StatusUnauthorized,
@@ -181,6 +226,7 @@ func (h *Handler) Login(c fiber.Ctx) error {
 	}
 
 	if err != nil {
+		middleware.GetSecurityLogger().LogAuthFailure(req.Email, "database_error", c.IP())
 		return errors.SendError(
 			c,
 			fiber.StatusInternalServerError,
@@ -191,6 +237,7 @@ func (h *Handler) Login(c fiber.Ctx) error {
 	}
 
 	if customer.PasswordHash == "" {
+		middleware.GetSecurityLogger().LogAuthFailure(req.Email, "no_password_set", c.IP())
 		return errors.SendError(
 			c,
 			fiber.StatusUnauthorized,
@@ -201,6 +248,7 @@ func (h *Handler) Login(c fiber.Ctx) error {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(customer.PasswordHash), []byte(req.Password)); err != nil {
+		middleware.GetSecurityLogger().LogAuthFailure(req.Email, "invalid_password", c.IP())
 		return errors.SendError(
 			c,
 			fiber.StatusUnauthorized,
@@ -210,9 +258,12 @@ func (h *Handler) Login(c fiber.Ctx) error {
 		)
 	}
 
+	middleware.GetSecurityLogger().LogAuthAttempt(req.Email, true, c.IP())
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, JWTClaims{
 		CustomerID: customer.CustomerID,
 		Email:      customer.Email,
+		Role:       string(customer.Role),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -233,6 +284,7 @@ func (h *Handler) Login(c fiber.Ctx) error {
 	sessionData := fiber.Map{
 		"customer_id": customer.CustomerID,
 		"email":       customer.Email,
+		"role":        customer.Role,
 	}
 	if err := StoreSession(&h.cache, tokenString, sessionData); err != nil {
 		return errors.SendError(
@@ -250,6 +302,7 @@ func (h *Handler) Login(c fiber.Ctx) error {
 			"customer_id": customer.CustomerID,
 			"email":       customer.Email,
 			"name":        customer.Name,
+			"role":        customer.Role,
 		},
 	})
 }

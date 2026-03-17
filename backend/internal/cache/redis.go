@@ -25,7 +25,7 @@ func NewRedis() *RedisService {
 	if port == "" {
 		port = "6379"
 	}
-	
+
 	if os.Getenv("APP_ENV") == "test" {
 		return &RedisService{}
 	}
