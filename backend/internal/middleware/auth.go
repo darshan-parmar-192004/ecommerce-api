@@ -10,6 +10,7 @@ import (
 type JWTClaims struct {
 	CustomerID string `json:"customer_id"`
 	Email      string `json:"email"`
+	Role       string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -64,6 +65,7 @@ func (m *AuthMiddleware) Authenticate(c fiber.Ctx) error {
 
 	c.Locals("customer_id", claims.CustomerID)
 	c.Locals("email", claims.Email)
+	c.Locals("role", claims.Role)
 
 	return c.Next()
 }
@@ -78,6 +80,13 @@ func GetCustomerID(c fiber.Ctx) string {
 func GetEmail(c fiber.Ctx) string {
 	if email, ok := c.Locals("email").(string); ok {
 		return email
+	}
+	return ""
+}
+
+func GetRole(c fiber.Ctx) string {
+	if role, ok := c.Locals("role").(string); ok {
+		return role
 	}
 	return ""
 }
