@@ -1,6 +1,6 @@
 # Build stage
 
-FROM golang:1.25.6-alpine AS build
+FROM golang:1.26-alpine AS build
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 
 
 # Run stage
-FROM alpine:3.20.1 AS prod
+FROM alpine:3.21 AS prod
 
 WORKDIR /app
 
@@ -35,5 +35,8 @@ EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+
+# Read-only root filesystem for security
+VOLUME ["/app"]
 
 CMD ["./main"]
