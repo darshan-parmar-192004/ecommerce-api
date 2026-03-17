@@ -25,10 +25,10 @@ func (h *Handler) CacheStats(c fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"hits": hits,
-		"misses": misses,
+		"hits":           hits,
+		"misses":         misses,
 		"total_requests": total,
-		"hit_rate": hitRate,
-		"miss_rate": missRate,
+		"hit_rate":       hitRate,
+		"miss_rate":      missRate,
 	})
 }

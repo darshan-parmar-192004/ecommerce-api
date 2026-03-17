@@ -96,7 +96,7 @@ func (h *Handler) GetCustomerCLV(c fiber.Ctx) error {
 		var count int
 		var total float64
 		err := rows.Scan(&id, &count, &total)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		stats = append(stats, fiber.Map{"customer_id": id, "order_count": count, "lifetime_value": total})
@@ -194,7 +194,7 @@ func (h *Handler) GetTopSellers(c fiber.Ctx) error {
 		var name string
 		var total int
 		err := rows.Scan(&name, &total)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		topProducts = append(topProducts, fiber.Map{"product": name, "units_sold": total})

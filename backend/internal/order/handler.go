@@ -66,8 +66,7 @@ func (h *Handler) performCreateOrder(ctx context.Context, order models.Order, it
 		return err
 	}
 
-	
-	defer func(){
+	defer func() {
 		_ = tx.Rollback()
 	}()
 

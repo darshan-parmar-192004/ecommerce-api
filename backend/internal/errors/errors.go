@@ -21,6 +21,7 @@ const (
 	ErrDatabase     = "DATABASE_ERROR"
 	ErrInternal     = "INTERNAL_ERROR"
 	ErrUnauthorized = "UNAUTHORIZED"
+	ErrForbidden    = "FORBIDDEN"
 
 	// Resource specific (optional)
 	ErrProductNotFound  = "PRODUCT_NOT_FOUND"
