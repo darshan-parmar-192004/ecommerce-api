@@ -1,6 +1,5 @@
 package models
 
-
 type OrderItem struct {
 	OrderItemID string  `json:"order_item_id"`
 	OrderID     string  `json:"order_id"`
