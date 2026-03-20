@@ -75,21 +75,42 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Run tests
+      - name: Run unit tests
         run: |
           cd backend
-          CI=true go test ./... -v
+          go test -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Combine coverage reports
+        if: always()
+        run: |
+          cd backend
+          COVERAGE=$(go tool cover -func=coverage.out 2>/dev/null | grep total | awk '{print $3}' | sed 's/%//' || echo "0")
+          echo "Total coverage: $COVERAGE%"
+          
+          COVERAGE_INT=$(echo "$COVERAGE" | awk '{print int($1)}')
+          if [ "$COVERAGE_INT" -lt 75 ]; then
+            echo "ERROR: Coverage ($COVERAGE%) is below minimum threshold (75%)"
+            exit 1
+          fi
+          echo "Coverage check passed: $COVERAGE%"
 
   container-test:
     name: Container Integration Test
     runs-on: vm-hosted
     needs: test
     env:
-      BLUEPRINT_DB_PORT: 5433
+      BLUEPRINT_DB_PORT: 5434
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Stop local PostgreSQL services
+        run: |
+          sudo systemctl stop postgresql 2>/dev/null || true
+          sudo service postgresql stop 2>/dev/null || true
+          sudo pkill -f postgres 2>/dev/null || true
+          sleep 2
 
       - name: Clean up previous volumes
         run: docker compose down -v

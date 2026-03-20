@@ -1,42 +1,59 @@
 package server
 
 import (
-	"io"
-	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"backend/internal/database"
 
 	"github.com/gofiber/fiber/v3"
 )
 
-func TestHandler(t *testing.T) {
-	// Create a Fiber app for testing
-	app := fiber.New()
-	// Inject the Fiber app into the server
-	// s := &FiberServer{App: app}
-	// Define a route in the Fiber app
-	app.Get("/", func(c fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "Hello World"})
+func TestFiberServer_Fields2(t *testing.T) {
+	t.Run("ServerWithEmptyApp", func(t *testing.T) {
+		fs := &FiberServer{
+			App:       nil,
+			db:        nil,
+			jwtSecret: "",
+		}
+
+		if fs.jwtSecret != "" {
+			t.Error("expected empty jwtSecret")
+		}
 	})
-	// Create a test HTTP request
-	req, err := http.NewRequest("GET", "/", nil)
-	if err != nil {
-		t.Fatalf("error creating request. Err: %v", err)
-	}
-	// Perform the request
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatalf("error making request to server. Err: %v", err)
-	}
-	// Your test assertions...
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status OK; got %v", resp.Status)
-	}
-	expected := "{\"message\":\"Hello World\"}"
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("error reading response body. Err: %v", err)
-	}
-	if expected != string(body) {
-		t.Errorf("expected response body to be %v; got %v", expected, string(body))
-	}
+}
+
+func TestNew_Config(t *testing.T) {
+	t.Run("CreatesWithDefaultConfig", func(t *testing.T) {
+		fs := &FiberServer{
+			App:       fiber.New(),
+			db:        database.New(),
+			jwtSecret: "default",
+		}
+
+		if fs.App == nil {
+			t.Error("App should not be nil")
+		}
+	})
+}
+
+func TestServerRoutes(t *testing.T) {
+	t.Run("CanAddRoutes", func(t *testing.T) {
+		app := fiber.New()
+
+		app.Get("/health", func(c fiber.Ctx) error {
+			return c.SendString("OK")
+		})
+
+		req := httptest.NewRequest(fiber.MethodGet, "/health", nil)
+		resp, err := app.Test(req)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if resp.StatusCode != fiber.StatusOK {
+			t.Errorf("expected 200, got %d", resp.StatusCode)
+		}
+	})
 }

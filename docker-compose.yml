@@ -67,7 +67,7 @@ services:
       POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
 
     ports:
-      - "${BLUEPRINT_DB_PORT:-5433}:5432"
+      - "${BLUEPRINT_DB_PORT:-5434}:5432"
 
     volumes:
       - psql_volume_bp:/var/lib/postgresql/data

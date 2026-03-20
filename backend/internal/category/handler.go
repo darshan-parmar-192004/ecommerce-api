@@ -33,20 +33,22 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 	key := "categories:all"
 
-	cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
+	if h.cache.Client != nil {
+		cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
 
-	if err == redis.Nil {
-		cache.RecordMiss()
-	} else if err != nil {
-		fmt.Println("Redis error:", err)
-		cache.RecordMiss()
-	} else {
-		cache.RecordHit()
-		var response fiber.Map
-		if json.Unmarshal([]byte(cached), &response) == nil {
-			return c.JSON(response)
+		if err == redis.Nil {
+			cache.RecordMiss()
+		} else if err != nil {
+			fmt.Println("Redis error:", err)
+			cache.RecordMiss()
 		} else {
-			fmt.Println("Unmarshal error:", err)
+			cache.RecordHit()
+			var response fiber.Map
+			if json.Unmarshal([]byte(cached), &response) == nil {
+				return c.JSON(response)
+			} else {
+				fmt.Println("Unmarshal error:", err)
+			}
 		}
 	}
 
@@ -99,12 +101,14 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	}
 
 	data, _ := json.Marshal(categories)
-	h.cache.Client.Set(
-		cache.Ctx,
-		key,
-		data,
-		30*time.Minute,
-	)
+	if h.cache.Client != nil {
+		h.cache.Client.Set(
+			cache.Ctx,
+			key,
+			data,
+			30*time.Minute,
+		)
+	}
 
 	return c.JSON(fiber.Map{
 		"data": categories,

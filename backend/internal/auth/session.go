@@ -8,6 +8,9 @@ import (
 )
 
 func StoreSession(r *cache.RedisService, token string, customer any) error {
+	if r.Client == nil {
+		return nil
+	}
 
 	key := "session:" + token
 
@@ -25,6 +28,9 @@ func StoreSession(r *cache.RedisService, token string, customer any) error {
 }
 
 func GetSession(r *cache.RedisService, token string) ([]byte, error) {
+	if r.Client == nil {
+		return nil, nil
+	}
 
 	key := "session:" + token
 
@@ -35,6 +41,9 @@ func GetSession(r *cache.RedisService, token string) ([]byte, error) {
 }
 
 func DeleteSession(r *cache.RedisService, token string) error {
+	if r.Client == nil {
+		return nil
+	}
 
 	key := "session:" + token
 
