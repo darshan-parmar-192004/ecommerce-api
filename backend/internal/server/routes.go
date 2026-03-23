@@ -2,12 +2,10 @@ package server
 
 import (
 	"backend/internal/auth"
-	"backend/internal/category"
-	"backend/internal/customer"
-	"backend/internal/inventory"
+	"backend/internal/controllers"
 	"backend/internal/middleware"
-	"backend/internal/order"
-	"backend/internal/product"
+	"backend/internal/models"
+	"backend/internal/services"
 	"backend/internal/stats"
 
 	"github.com/gofiber/fiber/v3"
@@ -32,53 +30,71 @@ func (s *FiberServer) RegisterFiberRoutes() {
 
 	s.App.Use(middleware.GeneralRateLimit())
 
-	productHandler := product.NewHandler(s.db, s.cache)
+	// Create repositories
+	productRepo := models.NewProductRepository(s.db.DB())
+	categoryRepo := models.NewCategoryRepository(s.db.DB())
+	customerRepo := models.NewCustomerRepository(s.db.DB())
+	orderRepo := models.NewOrderRepository(s.db.DB())
+	inventoryRepo := models.NewInventoryRepository(s.db.DB())
 
-	categoryHandler := category.NewHandler(s.db, s.cache)
+	// Create services
+	productService := services.NewProductService(productRepo, &s.cache)
+	categoryService := services.NewCategoryService(categoryRepo, &s.cache)
+	customerService := services.NewCustomerService(customerRepo)
+	orderService := services.NewOrderService(orderRepo)
+	inventoryService := services.NewInventoryService(inventoryRepo)
 
-	customerHandler := customer.NewHandler(s.db)
-
-	orderHandler := order.NewHandler(s.db)
-
-	inventoryHandler := inventory.NewHandler(s.db)
-
+	// Create controllers
+	productCtrl := controllers.NewProductController(productService)
+	categoryCtrl := controllers.NewCategoryController(categoryService)
+	customerCtrl := controllers.NewCustomerController(customerService)
+	orderCtrl := controllers.NewOrderController(orderService)
+	inventoryCtrl := controllers.NewInventoryController(inventoryService)
 	statsHandler := stats.NewHandler()
 
+	// Auth (preserved)
 	authHandler := auth.NewHandler(s.db, s.cache, s.jwtSecret)
 	authMiddleware := middleware.NewAuthMiddleware(s.jwtSecret)
 
-	s.App.Get("/products", productHandler.GetAll)
-	s.App.Get("/products/:id", productHandler.GetById)
-	s.App.Post("/products", authMiddleware.Authenticate, middleware.RequireAdmin(), productHandler.Create)
-	s.App.Put("/products/:id", authMiddleware.Authenticate, middleware.RequireAdmin(), productHandler.Update)
-	s.App.Delete("/products/:id", authMiddleware.Authenticate, middleware.RequireAdmin(), productHandler.Delete)
+	// Product routes (admin only for writes)
+	s.App.Get("/products", productCtrl.GetAll)
+	s.App.Get("/products/:id", productCtrl.GetById)
+	s.App.Post("/products", authMiddleware.Authenticate, middleware.RequireAdmin(), productCtrl.Create)
+	s.App.Put("/products/:id", authMiddleware.Authenticate, middleware.RequireAdmin(), productCtrl.Update)
+	s.App.Delete("/products/:id", authMiddleware.Authenticate, middleware.RequireAdmin(), productCtrl.Delete)
 
-	s.App.Get("/categories", categoryHandler.GetAll)
-	s.App.Get("/categories/:id/products", categoryHandler.GetCategoryProducts)
-	s.App.Get("/categories/hierarchy", categoryHandler.GetHierarchy)
+	// Category routes
+	s.App.Get("/categories", categoryCtrl.GetAll)
+	s.App.Get("/categories/:id/products", categoryCtrl.GetCategoryProducts)
+	s.App.Get("/categories/hierarchy", categoryCtrl.GetHierarchy)
 
-	s.App.Get("/customers/me", authMiddleware.Authenticate, customerHandler.GetMe)
-	s.App.Put("/customers/me", authMiddleware.Authenticate, customerHandler.UpdateMe)
+	// Customer routes
+	s.App.Get("/customers/me", authMiddleware.Authenticate, customerCtrl.GetMe)
+	s.App.Put("/customers/me", authMiddleware.Authenticate, customerCtrl.UpdateMe)
+	s.App.Get("/customers/:id/orders", authMiddleware.Authenticate, middleware.ValidateCustomerAccess, customerCtrl.GetCustomerOrders)
+	s.App.Get("/customers/:id/lifetime-value", authMiddleware.Authenticate, middleware.RequireAdmin(), customerCtrl.GetCustomerLifetimeValue)
 
-	s.App.Get("/customers/:id/orders", authMiddleware.Authenticate, middleware.ValidateCustomerAccess, customerHandler.GetCustomerOrders)
-	s.App.Get("/customers/:id/lifetime-value", authMiddleware.Authenticate, middleware.RequireAdmin(), customerHandler.GetCustomerLifetimeValue)
+	// Order routes (ownership check)
+	s.App.Get("/orders/:id", authMiddleware.Authenticate, middleware.ValidateOrderOwnership(s.db), orderCtrl.GetOrder)
+	s.App.Post("/orders", authMiddleware.Authenticate, orderCtrl.CreateOrder)
 
-	s.App.Get("/orders/:id", authMiddleware.Authenticate, middleware.ValidateOrderOwnership(s.db), orderHandler.GetOrder)
-	s.App.Post("/orders", authMiddleware.Authenticate, orderHandler.CreateOrder)
+	// Inventory routes (admin only)
+	s.App.Get("/inventory", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetAll)
+	s.App.Get("/inventory/stock", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetStockLevels)
+	s.App.Get("/inventory/customer-lifetime-value", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetCustomerCLV)
+	s.App.Get("/inventory/hierarchy", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetCategoryTree)
+	s.App.Get("/inventory/top-sellers", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetTopSellers)
 
-	s.App.Get("/inventory", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetAll)
-	s.App.Get("/inventory/stock", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetStockLevels)
-	s.App.Get("/inventory/customer-lifetime-value", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetCustomerCLV)
-	s.App.Get("/inventory/hierarchy", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetCategoryTree)
-	s.App.Get("/inventory/top-sellers", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetTopSellers)
+	// Stats routes
+	s.App.Get("/stats/cache", statsHandler.CacheStats)
 
-	s.App.Get("stats/cache", statsHandler.CacheStats)
-
+	// Auth routes
 	s.App.Post("/auth/register", authHandler.Register)
 	s.App.Post("/auth/login", middleware.LoginRateLimit(), authHandler.Login)
 	s.App.Post("/auth/logout", authMiddleware.Authenticate, authHandler.Logout)
 	s.App.Get("/auth/me", authMiddleware.Authenticate, authHandler.ValidateToken)
 
+	// Health check
 	s.App.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"status": "ok",
