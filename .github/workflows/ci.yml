@@ -98,8 +98,6 @@ jobs:
     name: Container Integration Test
     runs-on: vm-hosted
     needs: test
-    env:
-      BLUEPRINT_DB_PORT: 5434
 
     steps:
       - name: Checkout code
@@ -113,12 +111,25 @@ jobs:
           sleep 2
 
       - name: Clean up previous volumes
-        run: docker compose down -v
+        run: docker compose down -v --remove-orphans || true
 
-      - name: Build and start containers
+      - name: Create .env file for CI
+        run: |
+          cat <<EOF > .env
+          APP_ENV=ci
+          PORT=8080
+          BLUEPRINT_DB_DATABASE=ecommerce
+          BLUEPRINT_DB_USERNAME=darshan.parmar
+          BLUEPRINT_DB_PASSWORD=blueprint
+          BLUEPRINT_DB_SCHEMA=public
+          BLUEPRINT_DB_PORT=5432
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          EOF
+
+      - name: Build and start database services
         run: |
           docker compose up -d psql_bp redis
-          docker compose logs --tail=20
           
       - name: Wait for postgres
         run: |
@@ -130,8 +141,7 @@ jobs:
             echo "Waiting for postgres... ($i/30)"
             sleep 2
           done
-          echo "Postgres did not start"
-          docker compose logs
+          docker compose logs psql_bp
           exit 1
 
       - name: Build app image
@@ -155,15 +165,17 @@ jobs:
       - name: Wait for services
         run: |
           for i in {1..45}; do
-            if docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null | grep -q "healthy"; then
+            # Using service name filter to find the correct container
+            STATUS=$(docker ps --filter "label=com.docker.compose.service=app" --format "{{.Status}}" | grep -o "healthy" || echo "unhealthy")
+            if [ "$STATUS" == "healthy" ]; then
               echo "Service is healthy"
               exit 0
             fi
-            echo "Waiting for service... ($i/45)"
+            echo "Waiting for service... ($i/45) Status: $STATUS"
             sleep 2
           done
           echo "Service did not start in time"
-          docker compose logs
+          docker compose logs app
           exit 1
 
       - name: Show logs on failure
@@ -174,4 +186,4 @@ jobs:
       - name: Stop containers
         if: always()
         run: |
-          docker compose down
+          docker compose down -v

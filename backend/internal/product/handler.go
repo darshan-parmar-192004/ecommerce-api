@@ -34,9 +34,29 @@ func NewHandler(db database.Service, cache cache.RedisService) *Handler {
 	}
 }
 
+func parseFloat(s string, defaultVal float64) float64 {
+	if v, err := strconv.ParseFloat(s, 64); err == nil {
+		return v
+	}
+	return defaultVal
+}
+
 func (h *Handler) GetAll(c fiber.Ctx) error {
 
-	key := "products:all"
+	// filtering queries
+	category := c.Query("category")
+	minPriceStr := c.Query("min_price")
+	maxPriceStr := c.Query("max_price")
+	search := c.Query("search")
+
+	// pagination queries
+	pageStr := c.Query("page", "1")
+	limitStr := c.Query("limit", "10")
+
+	// Create cache key with all filter parameters
+	key := fmt.Sprintf("products:cat=%s:min=%.2f:max=%.2f:search=%s:page=%s:limit=%s",
+		category, parseFloat(minPriceStr, 0), parseFloat(maxPriceStr, 999999),
+		search, pageStr, limitStr)
 
 	if h.cache.Client != nil {
 		cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
@@ -56,16 +76,6 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 			}
 		}
 	}
-
-	// filtering queries
-	category := c.Query("category")
-	minPriceStr := c.Query("min_price")
-	maxPriceStr := c.Query("max_price")
-	search := c.Query("search")
-
-	//pagination queries
-	pageStr := c.Query("page", "1")
-	limitStr := c.Query("limit", "10")
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {

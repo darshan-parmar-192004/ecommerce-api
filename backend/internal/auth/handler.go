@@ -143,8 +143,8 @@ func (h *Handler) Register(c fiber.Ctx) error {
 
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO customers (customer_id, email, name, country, phone, created_at, status, password_hash, role)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer")
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'customer')
+	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword))
 
 	if err != nil {
 		return errors.SendError(
@@ -164,6 +164,7 @@ func (h *Handler) Register(c fiber.Ctx) error {
 		Phone:      req.Phone,
 		CreatedAt:  createdAt,
 		Status:     "active",
+		Role:       models.RoleCustomer,
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
