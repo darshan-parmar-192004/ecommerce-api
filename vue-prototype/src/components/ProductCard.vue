@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed } from "vue";
+import { ref, computed, inject } from "vue";
 
 const props = defineProps({
     product: {
@@ -13,25 +13,18 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(["add-to-cart"]);
-
+const cart = inject("cart");
 const isHovered = ref(false);
-
-const cart = reactive({
-    items: [],
-    count: 0,
-    total: 0,
-});
 
 const formattedPrice = computed(() => {
     return new Intl.NumberFormat("en-US", {
         style: "currency",
-        currency: "INR",
+        currency: "USD",
     }).format(props.product.price);
 });
 
 const truncatedDescription = computed(() => {
-    const maxLength = 80;
+    const maxLength = 100;
     const description = props.product.description || "";
 
     if (description.length <= maxLength) {
@@ -41,112 +34,63 @@ const truncatedDescription = computed(() => {
 });
 
 const handleAddToCart = () => {
-    cart.items.push(props.product);
-    cart.count++;
-    cart.total += props.product.price;
-    emit("add-to-cart", props.product);
+    cart.addItem(props.product);
+};
+
+const getCategoryColor = (category) => {
+    const colors = {
+        Electronics: 'bg-blue-100 text-blue-700',
+        Furniture: 'bg-amber-100 text-amber-700',
+        Lighting: 'bg-purple-100 text-purple-700',
+    };
+    return colors[category] || 'bg-gray-100 text-gray-700';
 };
 </script>
 
 <template>
     <div
-        class="product-card"
-        :class="{ hovered: isHovered }"
+        class="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden group"
+        :class="{ 'shadow-xl': isHovered }"
         @mouseenter="isHovered = true"
         @mouseleave="isHovered = false"
     >
-        <div class="card-header">
-            <span class="category">{{ product.category }}</span>
-        </div>
+        <div class="h-1.5 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700"></div>
+        
+        <div class="p-5">
+            <div class="flex justify-between items-start mb-3">
+                <span 
+                    class="text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                    :class="getCategoryColor(product.category)"
+                >
+                    {{ product.category }}
+                </span>
+            </div>
 
-        <div class="card-body">
-            <h3 class="product-name">{{ product.name }}</h3>
-            <p class="description">{{ truncatedDescription }}</p>
-            <p class="price">{{ formattedPrice }}</p>
-        </div>
+            <div class="mb-3">
+                <h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors duration-200">
+                    {{ product.name }}
+                </h3>
+            </div>
 
-        <div class="card-footer">
-            <button class="add-to-cart-btn" @click="handleAddToCart">
-                Add to Cart
-            </button>
+            <p class="text-sm text-gray-500 leading-relaxed mb-4 line-clamp-2">
+                {{ truncatedDescription }}
+            </p>
+
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                <p class="text-2xl font-extrabold text-gray-900">
+                    {{ formattedPrice }}
+                </p>
+
+                <button
+                    class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-blue-600 text-white font-medium rounded-lg transition-all duration-200 hover:shadow-lg active:scale-95"
+                    @click="handleAddToCart"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span class="hidden sm:inline">Add</span>
+                </button>
+            </div>
         </div>
     </div>
 </template>
-
-<style scoped>
-.product-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 16px;
-    background: white;
-    transition: all 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.product-card.hovered {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.category {
-    font-size: 12px;
-    text-transform: uppercase;
-    color: #666;
-    background: #f5f5f5;
-    padding: 4px 8px;
-    border-radius: 4px;
-}
-
-.card-body {
-    flex: 1;
-}
-
-.product-name {
-    margin: 0 0 8px;
-    font-size: 18px;
-    color: #333;
-}
-
-.description {
-    margin: 0 0 12px;
-    font-size: 14px;
-    color: #666;
-    line-height: 1.4;
-}
-
-.price {
-    margin: 0;
-    font-size: 20px;
-    font-weight: bold;
-    color: #2c5282;
-}
-
-.card-footer {
-    margin-top: auto;
-}
-
-.add-to-cart-btn {
-    width: 100%;
-    padding: 10px;
-    background: #2c5282;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background 0.2s;
-}
-
-.add-to-cart-btn:hover {
-    background: #1a365d;
-}
-</style>
