@@ -8,6 +8,7 @@ import (
 	"backend/internal/models"
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -348,7 +349,26 @@ func (h *Handler) ValidateToken(c fiber.Ctx) error {
 		)
 	}
 
-	token = token[len("Bearer "):]
+	if !strings.HasPrefix(token, "Bearer ") {
+		return errors.SendError(
+			c,
+			fiber.StatusBadRequest,
+			errors.ErrValidation,
+			"Invalid authorization format",
+			nil,
+		)
+	}
+
+	token = strings.TrimPrefix(token, "Bearer ")
+	if token == "" {
+		return errors.SendError(
+			c,
+			fiber.StatusBadRequest,
+			errors.ErrValidation,
+			"Invalid authorization format",
+			nil,
+		)
+	}
 
 	claims := &JWTClaims{}
 	t, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {

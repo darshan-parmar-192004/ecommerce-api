@@ -1,0 +1,51 @@
+category_id,name,parent_category_id
+CAT-001-37321c58,Electronics,
+CAT-002-1859ba33,Computers,
+CAT-003-7208bde3,Audio,
+CAT-004-3c98b695,Accessories,
+CAT-005-a929d897,Gaming,
+CAT-006-8d6f4037,Home,
+CAT-007-592f34fa,Office,
+CAT-008-da46913e,Photography,
+CAT-009-70bb8935,Wearables,
+CAT-010-030b3d37,Storage,
+CAT-011-c685eba3,Computers Pro,CAT-002-1859ba33
+CAT-012-6f026dc7,Gaming Basic,CAT-005-a929d897
+CAT-013-dc204ace,Accessories Basic,CAT-004-3c98b695
+CAT-014-1a1528c6,Computers Premium,CAT-002-1859ba33
+CAT-015-0b8f10ff,Wearables Pro,CAT-009-70bb8935
+CAT-016-758c722f,Storage Max,CAT-010-030b3d37
+CAT-017-8e721e06,Electronics Pro,CAT-001-37321c58
+CAT-018-cce8ae0d,Computers Basic,CAT-002-1859ba33
+CAT-019-1d00880a,Accessories Plus,CAT-004-3c98b695
+CAT-020-70511a1f,Storage Pro,CAT-010-030b3d37
+CAT-021-db89427e,Wearables Basic,CAT-009-70bb8935
+CAT-022-85262081,Wearables Max,CAT-009-70bb8935
+CAT-023-f8d57365,Accessories Max,CAT-004-3c98b695
+CAT-024-3eb3c2fa,Storage Mini,CAT-010-030b3d37
+CAT-025-0e3459b8,Electronics Standard,CAT-001-37321c58
+CAT-026-a50f0b0a,Audio Premium,CAT-003-7208bde3
+CAT-027-952a8185,Office Mini,CAT-007-592f34fa
+CAT-028-2b651f08,Gaming Basic,CAT-005-a929d897
+CAT-029-261d6b5d,Accessories Standard,CAT-004-3c98b695
+CAT-030-8de6632a,Home Pro,CAT-006-8d6f4037
+CAT-031-818aeb4a,Computers Max,CAT-002-1859ba33
+CAT-032-b8b11ff9,Computers Mini,CAT-002-1859ba33
+CAT-033-fdb0e292,Home Plus,CAT-006-8d6f4037
+CAT-034-e3d08d90,Gaming Standard,CAT-005-a929d897
+CAT-035-a6412f5e,Electronics Premium,CAT-001-37321c58
+CAT-036-989e5127,Photography Plus,CAT-008-da46913e
+CAT-037-3965ead9,Computers Max,CAT-002-1859ba33
+CAT-038-dc9a701f,Computers Plus,CAT-002-1859ba33
+CAT-039-5abec072,Gaming Standard,CAT-005-a929d897
+CAT-040-84400788,Storage Standard,CAT-010-030b3d37
+CAT-041-66f4520f,Home Plus,CAT-006-8d6f4037
+CAT-042-a2862b0b,Accessories Premium,CAT-004-3c98b695
+CAT-043-5a7abadf,Computers Pro,CAT-002-1859ba33
+CAT-044-1b971f33,Accessories Standard,CAT-004-3c98b695
+CAT-045-173683e1,Gaming Pro,CAT-005-a929d897
+CAT-046-b9f5dea0,Accessories Standard,CAT-004-3c98b695
+CAT-047-3cc320e9,Computers Max,CAT-002-1859ba33
+CAT-048-01b0c707,Gaming Max,CAT-005-a929d897
+CAT-049-f9e57e25,Home Basic,CAT-006-8d6f4037
+CAT-050-4d3ba3cb,Home Mini,CAT-006-8d6f4037
