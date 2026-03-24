@@ -45,3 +45,25 @@ repos:
         language: system
         types: [go]
         pass_filenames: false
+
+      - id: eslint
+        name: eslint
+        entry: bash
+        args:
+          - "-c"
+          - "cd frontend && FILES=$(git diff --staged --name-only --diff-filter=ACM | grep -E '\\.(js|jsx|ts|tsx)$') && [ -n \"$FILES\" ] && npx eslint $FILES --max-warnings=0 || true"
+        language: node
+        types: [javascript, jsx]
+        pass_filenames: false
+        require_serial: true
+
+      - id: prettier-check
+        name: prettier
+        entry: bash
+        args:
+          - "-c"
+          - "cd frontend && FILES=$(git diff --staged --name-only --diff-filter=ACM | grep -E '\\.(js|jsx|ts|tsx|css|json)$') && [ -n \"$FILES\" ] && npx prettier --check $FILES || true"
+        language: node
+        types: [javascript, css, json]
+        pass_filenames: false
+        require_serial: true
