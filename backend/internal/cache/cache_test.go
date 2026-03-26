@@ -6,13 +6,14 @@ import (
 	"testing"
 )
 
-func TestRedisService_New(t *testing.T) {
-	t.Run("CreatesNewRedisService", func(t *testing.T) {
-		redis := NewRedis()
-		if redis == nil {
-			t.Error("expected redis service to not be nil")
-		}
-	})
+func TestNewRedis_Unit(t *testing.T) {
+	t.Setenv("APP_ENV", "unit_test_no_redis")
+
+	svc := NewRedis()
+
+	if svc.Client != nil {
+		t.Errorf("Expected nil client in unit test mode, got %v", svc.Client)
+	}
 
 	t.Run("UsesEnvironmentVariables", func(t *testing.T) {
 		oldHost := os.Getenv("REDIS_HOST")

@@ -393,6 +393,14 @@ func TestIntegration_Product_CRUDFullWorkflow(t *testing.T) {
 	app, testDB := setupIntegrationTest(t)
 	defer testDB.Close()
 
+	auth := middleware.NewAuthMiddleware("test-secret")
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &middleware.JWTClaims{
+		CustomerID: "CUST-00000001",
+		Email:      "admin@example.com",
+		Role:       "admin",
+	})
+	tokenString, _ := token.SignedString(auth.GetJWTSecret())
+
 	t.Run("create_then_get", func(t *testing.T) {
 		body := `{
 			"name": "Workflow Test Product",
@@ -402,6 +410,7 @@ func TestIntegration_Product_CRUDFullWorkflow(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, "/products", bytes.NewBuffer([]byte(body)))
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+tokenString)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("create failed: %v", err)
@@ -433,6 +442,7 @@ func TestIntegration_Product_CRUDFullWorkflow(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPut, "/products/PROD-00000001", bytes.NewBuffer([]byte(body)))
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+tokenString)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("update failed: %v", err)
@@ -445,6 +455,7 @@ func TestIntegration_Product_CRUDFullWorkflow(t *testing.T) {
 
 	t.Run("delete_then_get", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/products/PROD-00000001", nil)
+		req.Header.Set("Authorization", "Bearer "+tokenString)
 		resp, err := app.Test(req)
 		if err != nil {
 			t.Fatalf("delete failed: %v", err)

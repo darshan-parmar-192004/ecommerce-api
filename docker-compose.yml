@@ -6,7 +6,7 @@ services:
       target: prod
     container_name: backend
     restart: unless-stopped
-    
+
     env_file:
       - .env
 
@@ -16,14 +16,12 @@ services:
     environment:
       APP_ENV: ${APP_ENV}
       PORT: ${PORT}
-
       BLUEPRINT_DB_HOST: psql_bp
       BLUEPRINT_DB_PORT: ${BLUEPRINT_DB_PORT:-5433}
       BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
       BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
       BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
       BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
-
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
       JWT_SECRET: ${JWT_SECRET}
@@ -38,21 +36,23 @@ services:
       psql_bp:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
 
   redis:
     image: docker.io/library/redis:7-alpine
     container_name: blueprint_redis
     restart: unless-stopped
-  
     ports:
       - "6379:6379"
-  
     volumes:
       - redis_data:/data
-  
     command: redis-server --appendonly yes
-  
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
     networks:
       - blueprint
 
@@ -60,33 +60,49 @@ services:
     image: docker.io/library/postgres:16-alpine
     container_name: blueprint_postgres
     restart: unless-stopped
-
     environment:
       POSTGRES_DB: ${BLUEPRINT_DB_DATABASE}
       POSTGRES_USER: ${BLUEPRINT_DB_USERNAME}
       POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
-
     ports:
-      - "${BLUEPRINT_DB_PORT:-5434}:5432"
-
+      - "${BLUEPRINT_DB_PORT:-5433}:5432"
     volumes:
       - psql_volume_bp:/var/lib/postgresql/data
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
       - ./backend/datasets:/datasets
-
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 10s
-
     networks:
       - blueprint
+
+  test-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: build
+    environment:
+      APP_ENV: ci
+      BLUEPRINT_DB_HOST: psql_bp
+      BLUEPRINT_DB_PORT: "5432"
+      BLUEPRINT_DB_DATABASE: ecommerce
+      BLUEPRINT_DB_USERNAME: darshan.parmar
+      BLUEPRINT_DB_PASSWORD: blueprint
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      JWT_SECRET: test_secret_key_123
+    networks:
+      - blueprint
+    depends_on:
+      psql_bp:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /app
+    command: sh -c "sleep 10 && go test -v ./..."
 
 volumes:
   psql_volume_bp:
