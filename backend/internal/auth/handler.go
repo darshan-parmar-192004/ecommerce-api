@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"backend/internal/cache"
-	"backend/internal/database"
+	"backend/internal/services"
+	"backend/internal/repositories"
 	"backend/internal/errors"
 	"backend/internal/middleware"
 	"backend/internal/models"
@@ -17,8 +17,8 @@ import (
 )
 
 type Handler struct {
-	db        database.Service
-	cache     cache.RedisService
+	db        repositories.Service
+	cache     services.RedisService
 	jwtSecret []byte
 }
 
@@ -42,7 +42,7 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewHandler(db database.Service, cache cache.RedisService, jwtSecret string) *Handler {
+func NewHandler(db repositories.Service, cache services.RedisService, jwtSecret string) *Handler {
 	return &Handler{
 		db:        db,
 		cache:     cache,

@@ -8,20 +8,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"backend/internal/auth"
-	"backend/internal/cache"
-	"backend/internal/category"
-	"backend/internal/database"
+	"backend/internal/controllers"
 	"backend/internal/middleware"
-	"backend/internal/order"
-	"backend/internal/product"
+	"backend/internal/repositories"
+	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 func setupE2ETestApp(t *testing.T) *fiber.App {
-	testDB, err := database.NewTestDB()
+	testDB, err := repositories.NewTestDB()
 	if err != nil {
 		t.Skipf("Skipping E2E test: %v", err)
 	}
@@ -34,31 +31,31 @@ func setupE2ETestApp(t *testing.T) *fiber.App {
 		t.Skipf("Skipping E2E test: failed to seed database: %v", err)
 	}
 
-	redis := *cache.NewRedis()
+	redis := services.NewRedis()
 
-	productHandler := product.NewHandler(testDB, redis)
-	orderHandler := order.NewHandler(testDB)
-	categoryHandler := category.NewHandler(testDB, redis)
-	authHandler := auth.NewHandler(testDB, redis, "test-secret")
+	productCtrl := controllers.NewProductController()
+	categoryCtrl := controllers.NewCategoryController()
+	orderCtrl := controllers.NewOrderController()
+	authHandler := controllers.NewAuthHandler(testDB, *redis, "test-secret")
 	authMid := middleware.NewAuthMiddleware("test-secret")
 
 	app := fiber.New()
 
-	app.Get("/products", productHandler.GetAll)
-	app.Get("/products/:id", productHandler.GetById)
-	app.Post("/products", authMid.Authenticate, middleware.RequireAdmin(), productHandler.Create)
-	app.Put("/products/:id", authMid.Authenticate, middleware.RequireAdmin(), productHandler.Update)
-	app.Delete("/products/:id", authMid.Authenticate, middleware.RequireAdmin(), productHandler.Delete)
+	app.Get("/products", productCtrl.GetAll)
+	app.Get("/products/:id", productCtrl.GetById)
+	app.Post("/products", authMid.Authenticate, middleware.RequireAdmin(), productCtrl.Create)
+	app.Put("/products/:id", authMid.Authenticate, middleware.RequireAdmin(), productCtrl.Update)
+	app.Delete("/products/:id", authMid.Authenticate, middleware.RequireAdmin(), productCtrl.Delete)
 
-	app.Get("/categories", categoryHandler.GetAll)
-	app.Get("/categories/:id/products", categoryHandler.GetCategoryProducts)
+	app.Get("/categories", categoryCtrl.GetAll)
+	app.Get("/categories/:id/products", categoryCtrl.GetCategoryProducts)
 
 	app.Post("/orders", authMid.Authenticate, func(c fiber.Ctx) error {
 		c.Locals("customer_id", "CUST-00000001")
-		return orderHandler.CreateOrder(c)
+		return orderCtrl.CreateOrder(c)
 	})
 
-	app.Get("/orders/:id", authMid.Authenticate, orderHandler.GetOrder)
+	app.Get("/orders/:id", authMid.Authenticate, orderCtrl.GetOrder)
 
 	app.Post("/auth/register", authHandler.Register)
 	app.Post("/auth/login", authHandler.Login)

@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"backend/internal/cache"
-	"backend/internal/database"
+	"backend/internal/repositories"
+	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -14,8 +14,8 @@ func TestFiberServer_Fields(t *testing.T) {
 	t.Run("ServerHasRequiredFields", func(t *testing.T) {
 		fs := &FiberServer{
 			App:       fiber.New(),
-			db:        database.New(),
-			cache:     *cache.NewRedis(),
+			db:        repositories.New(),
+			cache:     *services.NewRedis(),
 			jwtSecret: "test-secret",
 		}
 

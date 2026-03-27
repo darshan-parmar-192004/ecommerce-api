@@ -1,17 +1,11 @@
 package server
 
 import (
-	"backend/internal/auth"
-	"backend/internal/category"
-	"backend/internal/customer"
-	"backend/internal/inventory"
+	"backend/internal/controllers"
 	"backend/internal/middleware"
-	"backend/internal/order"
-	"backend/internal/product"
-	"backend/internal/stats"
+	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
-
 	"github.com/gofiber/fiber/v3/middleware/cors"
 )
 
@@ -32,47 +26,42 @@ func (s *FiberServer) RegisterFiberRoutes() {
 
 	s.App.Use(middleware.GeneralRateLimit())
 
-	productHandler := product.NewHandler(s.db, s.cache)
+	productCtrl := controllers.NewProductController()
+	categoryCtrl := controllers.NewCategoryController()
+	customerCtrl := controllers.NewCustomerController()
+	orderCtrl := controllers.NewOrderController()
+	inventoryCtrl := controllers.NewInventoryController()
+	statsCtrl := controllers.NewStatsController()
 
-	categoryHandler := category.NewHandler(s.db, s.cache)
-
-	customerHandler := customer.NewHandler(s.db)
-
-	orderHandler := order.NewHandler(s.db)
-
-	inventoryHandler := inventory.NewHandler(s.db)
-
-	statsHandler := stats.NewHandler()
-
-	authHandler := auth.NewHandler(s.db, s.cache, s.jwtSecret)
+	authHandler := controllers.NewAuthHandler(s.db, *services.NewRedis(), s.jwtSecret)
 	authMiddleware := middleware.NewAuthMiddleware(s.jwtSecret)
 
-	s.App.Get("/products", productHandler.GetAll)
-	s.App.Get("/products/:id", productHandler.GetById)
-	s.App.Post("/products", authMiddleware.Authenticate, middleware.RequireAdmin(), productHandler.Create)
-	s.App.Put("/products/:id", authMiddleware.Authenticate, middleware.RequireAdmin(), productHandler.Update)
-	s.App.Delete("/products/:id", authMiddleware.Authenticate, middleware.RequireAdmin(), productHandler.Delete)
+	s.App.Get("/products", productCtrl.GetAll)
+	s.App.Get("/products/:id", productCtrl.GetById)
+	s.App.Post("/products", authMiddleware.Authenticate, middleware.RequireAdmin(), productCtrl.Create)
+	s.App.Put("/products/:id", authMiddleware.Authenticate, middleware.RequireAdmin(), productCtrl.Update)
+	s.App.Delete("/products/:id", authMiddleware.Authenticate, middleware.RequireAdmin(), productCtrl.Delete)
 
-	s.App.Get("/categories", categoryHandler.GetAll)
-	s.App.Get("/categories/:id/products", categoryHandler.GetCategoryProducts)
-	s.App.Get("/categories/hierarchy", categoryHandler.GetHierarchy)
+	s.App.Get("/categories", categoryCtrl.GetAll)
+	s.App.Get("/categories/:id/products", categoryCtrl.GetCategoryProducts)
+	s.App.Get("/categories/hierarchy", categoryCtrl.GetHierarchy)
 
-	s.App.Get("/customers/me", authMiddleware.Authenticate, customerHandler.GetMe)
-	s.App.Put("/customers/me", authMiddleware.Authenticate, customerHandler.UpdateMe)
+	s.App.Get("/customers/me", authMiddleware.Authenticate, customerCtrl.GetMe)
+	s.App.Put("/customers/me", authMiddleware.Authenticate, customerCtrl.UpdateMe)
 
-	s.App.Get("/customers/:id/orders", authMiddleware.Authenticate, middleware.ValidateCustomerAccess, customerHandler.GetCustomerOrders)
-	s.App.Get("/customers/:id/lifetime-value", authMiddleware.Authenticate, middleware.RequireAdmin(), customerHandler.GetCustomerLifetimeValue)
+	s.App.Get("/customers/:id/orders", authMiddleware.Authenticate, middleware.ValidateCustomerAccess, customerCtrl.GetCustomerOrders)
+	s.App.Get("/customers/:id/lifetime-value", authMiddleware.Authenticate, middleware.RequireAdmin(), customerCtrl.GetCustomerLifetimeValue)
 
-	s.App.Get("/orders/:id", authMiddleware.Authenticate, middleware.ValidateOrderOwnership(s.db), orderHandler.GetOrder)
-	s.App.Post("/orders", authMiddleware.Authenticate, orderHandler.CreateOrder)
+	s.App.Get("/orders/:id", authMiddleware.Authenticate, middleware.ValidateOrderOwnership(s.db), orderCtrl.GetOrder)
+	s.App.Post("/orders", authMiddleware.Authenticate, orderCtrl.CreateOrder)
 
-	s.App.Get("/inventory", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetAll)
-	s.App.Get("/inventory/stock", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetStockLevels)
-	s.App.Get("/inventory/customer-lifetime-value", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetCustomerCLV)
-	s.App.Get("/inventory/hierarchy", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetCategoryTree)
-	s.App.Get("/inventory/top-sellers", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryHandler.GetTopSellers)
+	s.App.Get("/inventory", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetAll)
+	s.App.Get("/inventory/stock", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetStockLevels)
+	s.App.Get("/inventory/customer-lifetime-value", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetCustomerCLV)
+	s.App.Get("/inventory/hierarchy", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetCategoryTree)
+	s.App.Get("/inventory/top-sellers", authMiddleware.Authenticate, middleware.RequireAdmin(), inventoryCtrl.GetTopSellers)
 
-	s.App.Get("stats/cache", statsHandler.CacheStats)
+	s.App.Get("/stats/cache", statsCtrl.CacheStats)
 
 	s.App.Post("/auth/register", authHandler.Register)
 	s.App.Post("/auth/login", middleware.LoginRateLimit(), authHandler.Login)

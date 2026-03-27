@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"backend/internal/cache"
+	"backend/internal/services"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gofiber/fiber/v3"
@@ -49,7 +49,7 @@ func TestRegister_WithMockDB(t *testing.T) {
 		mock.ExpectExec("INSERT INTO customers").
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret-key-for-jwt-signing")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret-key-for-jwt-signing")
 		handler.jwtSecret = []byte("test-secret-key-for-jwt-signing")
 
 		app := fiber.New()
@@ -73,7 +73,7 @@ func TestRegister_WithMockDB(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -93,7 +93,7 @@ func TestRegister_WithMockDB(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -113,7 +113,7 @@ func TestRegister_WithMockDB(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -136,7 +136,7 @@ func TestRegister_WithMockDB(t *testing.T) {
 		mock.ExpectExec("INSERT INTO customers").
 			WillReturnError(sql.ErrConnDone)
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -158,7 +158,7 @@ func TestLogin_WithMockDB(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -178,7 +178,7 @@ func TestLogin_WithMockDB(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -202,7 +202,7 @@ func TestLogin_WithMockDB(t *testing.T) {
 			WithArgs("nonexistent@example.com").
 			WillReturnError(sql.ErrNoRows)
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -230,7 +230,7 @@ func TestLogin_WithMockDB(t *testing.T) {
 			WithArgs("test@example.com").
 			WillReturnRows(rows)
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -259,7 +259,7 @@ func TestLogin_WithMockDB(t *testing.T) {
 			WithArgs("test@example.com").
 			WillReturnRows(rows)
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -283,7 +283,7 @@ func TestLogin_WithMockDB(t *testing.T) {
 			WithArgs("test@example.com").
 			WillReturnError(sql.ErrConnDone)
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -305,7 +305,7 @@ func TestLogout_WithMockDB(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -325,7 +325,7 @@ func TestValidateToken_WithMockDB(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret-key")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret-key")
 		handler.jwtSecret = []byte("test-secret-key")
 
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, JWTClaims{
@@ -359,7 +359,7 @@ func TestValidateToken_WithMockDB(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -377,7 +377,7 @@ func TestValidateToken_WithMockDB(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -397,7 +397,7 @@ func TestNewHandler(t *testing.T) {
 	db, _, mockDB := setupMockDB(t)
 	defer db.Close()
 
-	handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+	handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 	if handler.db == nil {
 		t.Error("expected db to be set")

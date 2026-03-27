@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"backend/internal/cache"
+	"backend/internal/services"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gofiber/fiber/v3"
@@ -293,7 +293,7 @@ func TestLogout(t *testing.T) {
 
 func TestStoreSession(t *testing.T) {
 	t.Run("NilRedisClient", func(t *testing.T) {
-		r := &cache.RedisService{}
+		r := &services.RedisService{}
 		err := StoreSession(r, "test-token", map[string]string{"customer_id": "CUST-123"})
 		if err != nil {
 			t.Errorf("expected nil error with nil client, got %v", err)
@@ -303,7 +303,7 @@ func TestStoreSession(t *testing.T) {
 
 func TestGetSession(t *testing.T) {
 	t.Run("NilRedisClient", func(t *testing.T) {
-		r := &cache.RedisService{}
+		r := &services.RedisService{}
 		_, err := GetSession(r, "test-token")
 		if err != nil {
 			t.Errorf("expected nil error with nil client, got %v", err)
@@ -313,7 +313,7 @@ func TestGetSession(t *testing.T) {
 
 func TestDeleteSession(t *testing.T) {
 	t.Run("NilRedisClient", func(t *testing.T) {
-		r := &cache.RedisService{}
+		r := &services.RedisService{}
 		err := DeleteSession(r, "test-token")
 		if err != nil {
 			t.Errorf("expected nil error with nil client, got %v", err)
@@ -324,7 +324,7 @@ func TestDeleteSession(t *testing.T) {
 func TestRegister_InvalidBody(t *testing.T) {
 	t.Parallel()
 
-	handler := NewHandler(nil, cache.RedisService{}, "test-secret")
+	handler := NewHandler(nil, services.RedisService{}, "test-secret")
 
 	app := fiber.New()
 	app.Post("/register", handler.Register)
@@ -358,7 +358,7 @@ func TestRegister_InvalidBody(t *testing.T) {
 func TestLogin_InvalidBody(t *testing.T) {
 	t.Parallel()
 
-	handler := NewHandler(nil, cache.RedisService{}, "test-secret")
+	handler := NewHandler(nil, services.RedisService{}, "test-secret")
 
 	app := fiber.New()
 	app.Post("/login", handler.Login)
@@ -454,7 +454,7 @@ func TestJWTTokenExpiration(t *testing.T) {
 func TestErrorResponseFormat(t *testing.T) {
 	t.Parallel()
 
-	handler := NewHandler(nil, cache.RedisService{}, "test-secret")
+	handler := NewHandler(nil, services.RedisService{}, "test-secret")
 
 	app := fiber.New()
 	app.Post("/register", handler.Register)
@@ -566,14 +566,14 @@ func TestValidatePasswordPolicy(t *testing.T) {
 
 func TestSessionFunctions(t *testing.T) {
 	t.Run("StoreSession_NilClient", func(t *testing.T) {
-		err := StoreSession(&cache.RedisService{}, "token", map[string]string{"key": "value"})
+		err := StoreSession(&services.RedisService{}, "token", map[string]string{"key": "value"})
 		if err != nil {
 			t.Errorf("expected nil error with nil client, got %v", err)
 		}
 	})
 
 	t.Run("GetSession_NilClient", func(t *testing.T) {
-		data, err := GetSession(&cache.RedisService{}, "token")
+		data, err := GetSession(&services.RedisService{}, "token")
 		if err != nil {
 			t.Errorf("expected nil error with nil client, got %v", err)
 		}
@@ -583,7 +583,7 @@ func TestSessionFunctions(t *testing.T) {
 	})
 
 	t.Run("DeleteSession_NilClient", func(t *testing.T) {
-		err := DeleteSession(&cache.RedisService{}, "token")
+		err := DeleteSession(&services.RedisService{}, "token")
 		if err != nil {
 			t.Errorf("expected nil error with nil client, got %v", err)
 		}
@@ -595,7 +595,7 @@ func TestLogout_MissingBearer(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -616,7 +616,7 @@ func TestValidateToken_ExpiredToken(t *testing.T) {
 		db, _, mockDB := setupMockDB(t)
 		defer db.Close()
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret-key")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret-key")
 		handler.jwtSecret = []byte("test-secret-key")
 
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, JWTClaims{
@@ -658,7 +658,7 @@ func TestLogin_Success(t *testing.T) {
 			WithArgs("test@example.com").
 			WillReturnRows(rows)
 
-		handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+		handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 		app := fiber.New()
 		app.Use(recover.New())
@@ -679,7 +679,7 @@ func TestLogin_OnlyEmailMissing(t *testing.T) {
 	db, _, mockDB := setupMockDB(t)
 	defer db.Close()
 
-	handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+	handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 	app := fiber.New()
 	app.Use(recover.New())
@@ -699,7 +699,7 @@ func TestLogin_OnlyPasswordMissing(t *testing.T) {
 	db, _, mockDB := setupMockDB(t)
 	defer db.Close()
 
-	handler := NewHandler(mockDB, cache.RedisService{}, "test-secret")
+	handler := NewHandler(mockDB, services.RedisService{}, "test-secret")
 
 	app := fiber.New()
 	app.Use(recover.New())

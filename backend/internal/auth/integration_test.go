@@ -7,15 +7,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"backend/internal/cache"
-	"backend/internal/database"
+	"backend/internal/repositories"
+	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func setupAuthIntegrationTest(t *testing.T) (*fiber.App, *database.TestDB) {
-	testDB, err := database.NewTestDB()
+func setupAuthIntegrationTest(t *testing.T) (*fiber.App, *repositories.TestDB) {
+	testDB, err := repositories.NewTestDB()
 	if err != nil {
 		t.Skipf("Skipping integration test: %v", err)
 	}
@@ -33,9 +33,9 @@ func setupAuthIntegrationTest(t *testing.T) (*fiber.App, *database.TestDB) {
 		t.Logf("Warning: failed to seed customer: %v", err)
 	}
 
-	redis := cache.NewRedis()
+	redis := services.NewRedis()
 	if redis == nil {
-		redis = &cache.RedisService{}
+		redis = &services.RedisService{}
 	}
 
 	handler := NewHandler(testDB, *redis, "test-secret")

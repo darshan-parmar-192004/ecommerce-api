@@ -4,7 +4,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"backend/internal/database"
+	"backend/internal/repositories"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -27,7 +27,7 @@ func TestNew_Config(t *testing.T) {
 	t.Run("CreatesWithDefaultConfig", func(t *testing.T) {
 		fs := &FiberServer{
 			App:       fiber.New(),
-			db:        database.New(),
+			db:        repositories.New(),
 			jwtSecret: "default",
 		}
 
