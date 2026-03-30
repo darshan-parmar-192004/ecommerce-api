@@ -2,10 +2,10 @@ package product
 
 import (
 	"backend/internal/models"
-	"encoding/csv"
 	"os"
-	"strconv"
 	"time"
+
+	"github.com/jszwec/csvutil"
 )
 
 type Store struct {
@@ -19,39 +19,35 @@ func NewStore() *Store {
 }
 
 func (s *Store) LoadCSV(path string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-
-	records, err := reader.ReadAll()
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	for i, row := range records {
-		if i == 0 {
-			continue
-		}
+	var rows []ProductRow
+	if err := csvutil.Unmarshal(data, &rows); err != nil {
+		return err
+	}
 
-		price, err := strconv.ParseFloat(row[3], 64)
-		if err != nil {
-			return err
-		}
-		Product := models.Product{
-			ProductID:   row[0],
-			Name:        row[1],
-			CategoryID:  row[2],
-			Price:       price,
-			Description: row[4],
+	for _, p := range rows {
+		product := models.Product{
+			ProductID:   p.ProductID,
+			Name:        p.Name,
+			CategoryID:  p.CategoryID,
+			Price:       p.Price,
+			Description: p.Description,
 			CreatedAt:   time.Now(),
 		}
-
-		s.Products[Product.ProductID] = Product
+		s.Products[product.ProductID] = product
 	}
 	return nil
+}
 
+type ProductRow struct {
+	ProductID   string  `csv:"product_id"`
+	Name        string  `csv:"name"`
+	CategoryID  string  `csv:"category_id"`
+	Price       float64 `csv:"price"`
+	Description string  `csv:"description"`
+	CreatedAt   string  `csv:"created_at"`
 }
