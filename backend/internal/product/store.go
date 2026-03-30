@@ -4,8 +4,9 @@ import (
 	"backend/internal/models"
 	"encoding/csv"
 	"os"
-	"strconv"
 	"time"
+
+	"github.com/jszwec/csvutil"
 )
 
 type Store struct {
@@ -26,34 +27,36 @@ func (s *Store) LoadCSV(path string) error {
 	defer file.Close()
 
 	reader := csv.NewReader(file)
-
-	records, err := reader.ReadAll()
+	dec, err := csvutil.NewDecoder(reader)
 	if err != nil {
 		return err
 	}
 
-	for i, row := range records {
-		if i == 0 {
-			continue
+	for {
+		var p ProductRow
+		if err := dec.Decode(&p); err != nil {
+			break
 		}
-
-		price, err := strconv.ParseFloat(row[3], 64)
-		if err != nil {
-			return err
-		}
-		Product := models.Product{
-			ProductID:   row[0],
-			Name:        row[1],
-			CategoryID:  row[2],
-			Price:       price,
-			Description: row[4],
+		product := models.Product{
+			ProductID:   p.ProductID,
+			Name:        p.Name,
+			CategoryID:  p.CategoryID,
+			Price:       p.Price,
+			Description: p.Description,
 			CreatedAt:   time.Now(),
 		}
-
-		s.Products[Product.ProductID] = Product
+		s.Products[product.ProductID] = product
 	}
 	return nil
+}
 
+type ProductRow struct {
+	ProductID   string  `csv:"product_id"`
+	Name        string  `csv:"name"`
+	CategoryID  string  `csv:"category_id"`
+	Price       float64 `csv:"price"`
+	Description string  `csv:"description"`
+	CreatedAt   string  `csv:"created_at"`
 }
 
 func (s *Store) AppendToCSV(path string, Product models.Product) error {
