@@ -59,31 +59,37 @@ type ProductRow struct {
 	CreatedAt   string  `csv:"created_at"`
 }
 
-func (s *Store) AppendToCSV(path string, Product models.Product) error {
+type ProductCSVRow struct {
+	ProductID   string  `csv:"product_id"`
+	Name        string  `csv:"name"`
+	CategoryID  string  `csv:"category_id"`
+	Price       float64 `csv:"price"`
+	Description string  `csv:"description"`
+	CreatedAt   string  `csv:"created_at"`
+}
+
+func (s *Store) AppendToCSV(path string, product models.Product) error {
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	writer := csv.NewWriter(file)
-
-	record := []string{
-		Product.ProductID,
-		Product.Name,
-		Product.CategoryID,
-		strconv.FormatFloat(Product.Price, 'f', -1, 64),
-		Product.Description,
-		Product.CreatedAt.Format(time.RFC3339),
+	enc := csvutil.NewEncoder(csv.NewWriter(file))
+	csvRow := ProductCSVRow{
+		ProductID:   product.ProductID,
+		Name:        product.Name,
+		CategoryID:  product.CategoryID,
+		Price:       product.Price,
+		Description: product.Description,
+		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
 	}
 
-	if err := writer.Write(record); err != nil {
+	if err := enc.Encode(csvRow); err != nil {
 		return err
 	}
 
-	writer.Flush()
-
-	return writer.Error()
+	return nil
 }
 
 func (s *Store) RewriteCSV(path string) error {
@@ -93,30 +99,24 @@ func (s *Store) RewriteCSV(path string) error {
 	}
 	defer file.Close()
 
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
+	enc := csvutil.NewEncoder(csv.NewWriter(file))
 
-	writer.Write([]string{
-		"Product_id",
-		"name",
-		"category_id",
-		"price",
-		"description",
-		"created_at",
-	})
+	header := []string{"product_id", "name", "category_id", "price", "description", "created_at"}
+	if err := enc.Encode(header); err != nil {
+		return err
+	}
 
 	for _, p := range s.Products {
-
-		record := []string{
-			p.ProductID,
-			p.Name,
-			p.CategoryID,
-			strconv.FormatFloat(p.Price, 'f', -1, 64),
-			p.Description,
-			p.CreatedAt.Format(time.RFC3339),
+		csvRow := ProductCSVRow{
+			ProductID:   p.ProductID,
+			Name:        p.Name,
+			CategoryID:  p.CategoryID,
+			Price:       p.Price,
+			Description: p.Description,
+			CreatedAt:   p.CreatedAt.Format(time.RFC3339),
 		}
 
-		if err := writer.Write(record); err != nil {
+		if err := enc.Encode(csvRow); err != nil {
 			return err
 		}
 	}
