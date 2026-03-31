@@ -161,7 +161,7 @@ const handleSubmit = async () => {
               </div>
 
               <p class="font-semibold text-gray-900">
-                ${{ (item.product.price * item.quantity).toFixed(2) }}
+                ₹ {{ (item.product.price * item.quantity).toFixed(2) }}
               </p>
             </div>
           </div>
@@ -169,15 +169,15 @@ const handleSubmit = async () => {
           <div class="mt-6 pt-4 border-t border-gray-200 space-y-2">
             <div class="flex justify-between text-sm">
               <span class="text-gray-600">Subtotal</span>
-              <span class="font-medium">${{ cartStore.subtotal.toFixed(2) }}</span>
+              <span class="font-medium">₹ {{ cartStore.subtotal.toFixed(2) }}</span>
             </div>
             <div class="flex justify-between text-sm">
               <span class="text-gray-600">Tax (8%)</span>
-              <span class="font-medium">${{ cartStore.tax.toFixed(2) }}</span>
+              <span class="font-medium">₹ {{ cartStore.tax.toFixed(2) }}</span>
             </div>
             <div class="flex justify-between text-base pt-2 border-t border-gray-200">
               <span class="font-semibold text-gray-900">Total</span>
-              <span class="font-bold text-xl text-indigo-600">${{ cartStore.total.toFixed(2) }}</span>
+              <span class="font-bold text-xl text-primary-600">₹ {{ cartStore.total.toFixed(2) }}</span>
             </div>
           </div>
         </div>

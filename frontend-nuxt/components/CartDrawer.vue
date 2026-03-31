@@ -14,19 +14,19 @@ const checkout = async () => {
 <template>
   <Teleport to="body">
     <Transition name="slide">
-      <div 
-        v-if="cartStore.isOpen" 
+      <div
+        v-if="cartStore.isOpen"
         class="fixed inset-0 z-50 overflow-hidden"
       >
-        <div 
-          class="absolute inset-0 bg-black/30 backdrop-blur-sm" 
+        <div
+          class="absolute inset-0 bg-black/30 backdrop-blur-sm"
           @click="cartStore.toggleCart"
         />
-        
+
         <div class="absolute inset-y-0 right-0 max-w-md w-full bg-white shadow-xl flex flex-col">
           <div class="flex items-center justify-between p-4 border-b">
             <h2 class="text-lg font-semibold">Shopping Cart</h2>
-            <button 
+            <button
               @click="cartStore.toggleCart"
               class="p-2 text-gray-400 hover:text-gray-600"
             >
@@ -44,36 +44,36 @@ const checkout = async () => {
             </template>
             <template v-else>
               <div class="space-y-4">
-                <div 
-                  v-for="item in cartStore.items" 
+                <div
+                  v-for="item in cartStore.items"
                   :key="item.product.product_id"
                   class="flex gap-4 p-3 bg-gray-50 rounded-lg"
                 >
                   <div class="w-20 h-20 bg-gray-200 rounded-lg flex-shrink-0" />
-                  
+
                   <div class="flex-1 min-w-0">
                     <h3 class="font-medium text-gray-900 truncate">
                       {{ item.product.name }}
                     </h3>
-                    <p class="text-indigo-600 font-semibold">
+                    <p class="text-primary-600 font-semibold">
                       ₹ {{ item.product.price.toFixed(2) }}
                     </p>
-                    
+
                     <div class="flex items-center gap-2 mt-2">
-                      <button 
+                      <button
                         @click="cartStore.updateQuantity(item.product.product_id, item.quantity - 1)"
                         class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-transform active:scale-90"
                       >
                         -
                       </button>
                       <span class="w-8 text-center font-medium">{{ item.quantity }}</span>
-                      <button 
+                      <button
                         @click="cartStore.updateQuantity(item.product.product_id, item.quantity + 1)"
                         class="w-8 h-8 rounded bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-transform active:scale-90"
                       >
                         +
                       </button>
-                      <button 
+                      <button
                         @click="cartStore.removeItem(item.product.product_id)"
                         class="ml-auto text-red-500 hover:text-red-700"
                       >
@@ -89,11 +89,11 @@ const checkout = async () => {
           <div v-if="!cartStore.isEmpty" class="border-t p-4 space-y-4">
             <div class="flex justify-between text-lg font-semibold">
               <span>Total</span>
-              <span>${{ cartStore.total.toFixed(2) }}</span>
+              <span>₹ {{ cartStore.total.toFixed(2) }}</span>
             </div>
-            <button 
+            <button
               @click="checkout"
-              class="w-full btn-primary"
+              class="w-full py-3 px-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-semibold rounded-xl hover:from-primary-700 hover:to-accent-700 transition-all shadow-lg shadow-primary-500/25"
             >
               Checkout
             </button>

@@ -25,15 +25,15 @@ const proceedToCheckout = () => {
         </svg>
         <h2 class="mt-4 text-xl font-semibold text-gray-900">Your cart is empty</h2>
         <p class="mt-2 text-gray-500">Add some products to get started!</p>
-        <NuxtLink to="/products" class="inline-block mt-6 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+        <NuxtLink to="/products" class="inline-block mt-6 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
           Browse Products
         </NuxtLink>
       </div>
 
       <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 space-y-4">
-          <div 
-            v-for="item in cartStore.items" 
+          <div
+            v-for="item in cartStore.items"
             :key="item.product.product_id"
             class="bg-white rounded-xl shadow-sm p-6 flex gap-6 hover:shadow-md transition-shadow"
           >
@@ -42,40 +42,40 @@ const proceedToCheckout = () => {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-            
+
             <div class="flex-1 min-w-0">
-              <NuxtLink 
+              <NuxtLink
                 :to="`/products/${item.product.product_id}`"
-                class="font-semibold text-gray-900 hover:text-indigo-600 line-clamp-1 text-lg"
+                class="font-semibold text-gray-900 hover:text-primary-600 line-clamp-1 text-lg"
               >
                 {{ item.product.name }}
               </NuxtLink>
-              <p class="text-indigo-600 font-bold text-lg mt-1">
+              <p class="text-primary-600 font-bold text-lg mt-1">
                 ₹ {{ Number(item.product.price).toFixed(2) }}
               </p>
-              
+
               <div class="flex items-center gap-4 mt-4">
                 <div class="flex items-center border border-gray-200 rounded-lg bg-gray-50">
-                  <button 
+                  <button
                     @click="cartStore.updateQuantity(item.product.product_id, item.quantity - 1)"
-                    class="px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-colors rounded-l-lg"
+                    class="px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-primary-600 transition-colors rounded-l-lg"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
                     </svg>
                   </button>
                   <span class="px-4 py-2 font-medium min-w-[3rem] text-center">{{ item.quantity }}</span>
-                  <button 
+                  <button
                     @click="cartStore.updateQuantity(item.product.product_id, item.quantity + 1)"
-                    class="px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-colors rounded-r-lg"
+                    class="px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-primary-600 transition-colors rounded-r-lg"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
                   </button>
                 </div>
-                
-                <button 
+
+                <button
                   @click="cartStore.removeItem(item.product.product_id)"
                   class="text-red-500 hover:text-red-700 text-sm flex items-center gap-1 px-3 py-2 hover:bg-red-50 rounded-lg transition-colors"
                 >
@@ -89,7 +89,7 @@ const proceedToCheckout = () => {
 
             <div class="text-right">
               <p class="text-xl font-bold text-gray-900">
-                ₨{{ (Number(item.product.price) * item.quantity).toFixed(2) }}
+                ₹ {{ (Number(item.product.price) * item.quantity).toFixed(2) }}
               </p>
             </div>
           </div>
@@ -98,7 +98,7 @@ const proceedToCheckout = () => {
         <div class="lg:col-span-1">
           <div class="bg-white rounded-xl shadow-sm p-6 sticky top-24">
             <h2 class="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
-            
+
             <div class="space-y-4 text-base">
               <div class="flex justify-between text-gray-600">
                 <span>Subtotal ({{ cartStore.totalItems }} items)</span>
@@ -110,23 +110,23 @@ const proceedToCheckout = () => {
               </div>
               <div class="border-t pt-4 flex justify-between">
                 <span class="font-bold text-lg">Total</span>
-                <span class="font-bold text-2xl text-indigo-600">₹ {{ cartStore.total.toFixed(2) }}</span>
+                <span class="font-bold text-2xl text-primary-600">₹ {{ cartStore.total.toFixed(2) }}</span>
               </div>
             </div>
 
-            <button 
+            <button
               @click="proceedToCheckout"
-              class="w-full mt-6 py-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 font-semibold text-lg hover:scale-[1.02] active:scale-[0.98]"
+              class="w-full mt-6 py-4 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-all flex items-center justify-center gap-2 font-semibold text-lg hover:scale-[1.02] active:scale-[0.98]"
             >
               Proceed to Checkout
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
             </button>
-            
-            <NuxtLink 
-              to="/products" 
-              class="block text-center text-indigo-600 hover:text-indigo-700 mt-4 font-medium"
+
+            <NuxtLink
+              to="/products"
+              class="block text-center text-primary-600 hover:text-primary-700 mt-4 font-medium"
             >
               Continue Shopping
             </NuxtLink>

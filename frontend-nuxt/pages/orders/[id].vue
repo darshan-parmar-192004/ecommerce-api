@@ -29,7 +29,7 @@ const getStatusColor = (status) => {
   const colors = {
     pending: 'bg-yellow-100 text-yellow-800',
     processing: 'bg-blue-100 text-blue-800',
-    shipped: 'bg-indigo-100 text-indigo-800',
+    shipped: 'bg-primary-100 text-primary-800',
     delivered: 'bg-green-100 text-green-800',
     cancelled: 'bg-red-100 text-red-800'
   }
@@ -57,7 +57,7 @@ const calculateItemTotal = (item) => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <NuxtLink to="/orders" class="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 mb-6 transition-colors">
+    <NuxtLink to="/orders" class="inline-flex items-center text-sm text-gray-500 hover:text-primary-600 mb-6 transition-colors">
       <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
@@ -101,7 +101,7 @@ const calculateItemTotal = (item) => {
           </div>
           <div>
             <p class="text-gray-500">Total Amount</p>
-            <p class="font-semibold text-xl text-indigo-600">{{ formatCurrency(order.total_amount) }}</p>
+            <p class="font-semibold text-xl text-primary-600">{{ formatCurrency(order.total_amount) }}</p>
           </div>
         </div>
       </div>

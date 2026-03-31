@@ -13,20 +13,27 @@ const products = computed(() => data.value?.data || [])
 
 <template>
   <div>
-    <section class="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white overflow-hidden">
-      <div class="absolute inset-0 bg-black/20"></div>
+    <!-- Hero Section -->
+    <section class="relative bg-gradient-to-br from-primary-600 via-accent-600 to-primary-700 text-white overflow-hidden">
+      <!-- Animated background elements -->
+      <div class="absolute inset-0 overflow-hidden">
+        <div class="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-float"></div>
+        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-float" style="animation-delay: -3s"></div>
+      </div>
+      <div class="absolute inset-0 bg-black/10"></div>
+      
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
         <div class="max-w-2xl">
-          <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight animate-fade-in-up">
             Discover Amazing Products
           </h1>
-          <p class="text-xl md:text-2xl text-indigo-100 mb-8">
+          <p class="text-xl md:text-2xl text-white/90 mb-8 animate-fade-in-up" style="animation-delay: 100ms">
             Shop the latest trends with unbeatable prices and fast delivery
           </p>
-          <div class="flex flex-wrap gap-4">
+          <div class="flex flex-wrap gap-4 animate-fade-in-up" style="animation-delay: 200ms">
             <NuxtLink 
               to="/products" 
-              class="inline-flex items-center gap-2 bg-white text-indigo-600 px-8 py-4 rounded-xl font-semibold hover:bg-indigo-50 transition-all hover:scale-105 shadow-lg"
+              class="inline-flex items-center gap-2 bg-white text-primary-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-50 transition-all hover:scale-105 shadow-lg hover:shadow-xl"
             >
               Shop Now
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,7 +42,7 @@ const products = computed(() => data.value?.data || [])
             </NuxtLink>
             <NuxtLink 
               to="/cart" 
-              class="inline-flex items-center gap-2 bg-indigo-800/50 text-white px-8 py-4 rounded-xl font-semibold hover:bg-indigo-800/70 transition-all border border-indigo-400/30"
+              class="inline-flex items-center gap-2 bg-white/20 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/30 transition-all border border-white/30"
             >
               View Cart
             </NuxtLink>
@@ -45,13 +52,14 @@ const products = computed(() => data.value?.data || [])
       <div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-50 to-transparent"></div>
     </section>
 
+    <!-- Featured Products -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div class="flex items-center justify-between mb-8">
         <div>
           <h2 class="text-2xl font-bold text-gray-900">Featured Products</h2>
           <p class="text-gray-600 mt-1">Handpicked for you</p>
         </div>
-        <NuxtLink to="/products" class="text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1">
+        <NuxtLink to="/products" class="text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
           View All
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -73,7 +81,7 @@ const products = computed(() => data.value?.data || [])
         </svg>
         <h3 class="mt-4 text-lg font-medium text-gray-900">Failed to load products</h3>
         <p class="mt-2 text-gray-500">Something went wrong. Please try again.</p>
-        <button @click="refresh" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+        <button @click="refresh" class="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
           Try Again
         </button>
       </div>
@@ -88,18 +96,21 @@ const products = computed(() => data.value?.data || [])
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <ProductCard 
-          v-for="product in products" 
+          v-for="(product, index) in products" 
           :key="product.product_id" 
           :product="product"
+          :class="['animate-fade-in-up']"
+          :style="{ animationDelay: `${index * 50}ms` }"
         />
       </div>
     </section>
 
-    <section class="bg-gray-100 py-16">
+    <!-- Features Section -->
+    <section class="bg-gray-50 py-16">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div class="text-center">
-            <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div class="text-center group">
+            <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
               <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
               </svg>
@@ -107,8 +118,8 @@ const products = computed(() => data.value?.data || [])
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Free Shipping</h3>
             <p class="text-gray-600">On orders over $50</p>
           </div>
-          <div class="text-center">
-            <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div class="text-center group">
+            <div class="w-16 h-16 bg-gradient-to-br from-accent-500 to-accent-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
               <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
@@ -116,8 +127,8 @@ const products = computed(() => data.value?.data || [])
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Secure Payment</h3>
             <p class="text-gray-600">100% secure checkout</p>
           </div>
-          <div class="text-center">
-            <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div class="text-center group">
+            <div class="w-16 h-16 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
               <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
@@ -130,3 +141,34 @@ const products = computed(() => data.value?.data || [])
     </section>
   </div>
 </template>
+
+<style scoped>
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+</style>

@@ -20,13 +20,6 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  if (response.ok && data.token) {
-    setCookie(event, 'auth_token', data.token, {
-      httpOnly: false,
-      maxAge: 60 * 60 * 24,
-      path: '/'
-    })
-  }
-
+  setResponseStatus(event, 201)
   return data
 })

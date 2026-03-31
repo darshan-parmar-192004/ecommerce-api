@@ -43,6 +43,7 @@ export default defineNuxtConfig({
       link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
     },
     errorPage: "/error",
+    pageTransition: { name: 'page', mode: 'out-in' }
   },
 
   css: ["~/assets/css/main.css"],

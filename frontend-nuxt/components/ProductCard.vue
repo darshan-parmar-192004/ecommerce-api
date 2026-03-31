@@ -42,7 +42,7 @@ const addToCart = async () => {
         :to="`/products/${product.product_id}`"
         class="block"
       >
-        <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2 min-h-[2.5rem]">
+        <h3 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2 min-h-[2.5rem]">
           {{ product.name }}
         </h3>
         <p v-if="product.description" class="mt-1 text-sm text-gray-500 line-clamp-2">
@@ -52,15 +52,15 @@ const addToCart = async () => {
 
       <div class="mt-4 flex items-center justify-between">
         <div>
-          <span class="text-xl font-bold text-indigo-600">
-            ₹ {{ Number(product.price).toFixed(2) }}
+          <span class="text-xl font-bold text-primary-600">
+            ₹{{ Number(product.price).toFixed(2) }}
           </span>
         </div>
 
         <button
           @click.prevent="addToCart"
           :disabled="isAdding || product.stock === 0"
-          class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
+          class="flex items-center gap-2 bg-gradient-to-r from-primary-600 to-accent-600 text-white px-4 py-2 rounded-lg hover:from-primary-700 hover:to-accent-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 shadow-md shadow-primary-500/25"
         >
           <svg v-if="isAdding" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

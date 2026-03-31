@@ -9,7 +9,9 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAuthenticated: (state) => !!state.token,
-    isAdmin: (state) => state.user?.role === 'admin'
+    isAdmin: (state) => state.user?.role === 'admin',
+    userName: (state) => state.user?.name || 'User',
+    userEmail: (state) => state.user?.email || ''
   },
 
   actions: {
@@ -26,6 +28,7 @@ export const useAuthStore = defineStore('auth', {
 
     setUser(user) {
       this.user = user
+      this.persistAuth()
     },
 
     clearAuth() {
@@ -38,6 +41,7 @@ export const useAuthStore = defineStore('auth', {
       if (import.meta.client) {
         if (this.token) {
           document.cookie = `auth_token=${this.token}; path=/; max-age=86400; samesite=lax`
+          localStorage.setItem('auth_token', this.token)
         }
         if (this.user) {
           localStorage.setItem('auth_user', JSON.stringify(this.user))
@@ -55,13 +59,47 @@ export const useAuthStore = defineStore('auth', {
             this.user = null
           }
         }
+        
+        const tokenFromStorage = localStorage.getItem('auth_token')
+        if (tokenFromStorage) {
+          this.token = tokenFromStorage
+        }
+        
+        const tokenMatch = document.cookie.match(/auth_token=([^;]+)/)
+        if (tokenMatch && !this.token) {
+          this.token = tokenMatch[1]
+        }
       }
     },
 
     clearAuthStorage() {
       if (import.meta.client) {
-        document.cookie = 'auth_token=; path=/; max-age=0'
+        document.cookie = 'auth_token=; path=/; max-age=0; samesite=lax'
         localStorage.removeItem('auth_user')
+      }
+    },
+
+    async verifyAuth() {
+      if (!this.token) return false
+      
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          this.user = data.data || data
+          return true
+        } else {
+          this.clearAuth()
+          return false
+        }
+      } catch (error) {
+        console.error('Auth verification failed:', error)
+        return false
       }
     }
   }

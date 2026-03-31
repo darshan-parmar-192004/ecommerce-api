@@ -69,7 +69,7 @@ useSeoMeta({
           <div class="bg-white rounded-xl shadow-sm p-6 sticky top-24 transition-all duration-300 hover:shadow-md">
             <div class="flex items-center justify-between mb-6">
               <h3 class="font-semibold text-gray-900">Filters</h3>
-              <button @click="clearFilters" class="text-sm text-indigo-600 hover:text-indigo-700">
+              <button @click="clearFilters" class="text-sm text-primary-600 hover:text-primary-700">
                 Clear all
               </button>
             </div>
@@ -82,7 +82,7 @@ useSeoMeta({
                     type="text"
                     v-model="search"
                     placeholder="Search products..."
-                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     @keyup.enter="applyFilters"
                   />
                   <svg class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +95,7 @@ useSeoMeta({
                 <label class="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <select 
                   v-model="selectedCategory"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">All Categories</option>
                   <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
@@ -111,19 +111,19 @@ useSeoMeta({
                     type="number"
                     v-model="minPrice"
                     placeholder="Min"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-center"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
                   />
                   <span class="text-gray-400">-</span>
                   <input 
                     type="number"
                     v-model="maxPrice"
                     placeholder="Max"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-center"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-center"
                   />
                 </div>
               </div>
 
-              <button @click="applyFilters" class="w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+              <button @click="applyFilters" class="w-full py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
                 Apply Filters
               </button>
             </div>
@@ -145,7 +145,7 @@ useSeoMeta({
             </svg>
             <h3 class="mt-4 text-lg font-medium text-gray-900">Failed to load products</h3>
             <p class="mt-2 text-gray-500">Something went wrong. Please try again.</p>
-            <button @click="refreshProducts" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            <button @click="refreshProducts" class="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
               Try Again
             </button>
           </div>
@@ -157,7 +157,7 @@ useSeoMeta({
               </svg>
               <h2 class="mt-4 text-xl font-medium text-gray-900">No products found</h2>
               <p class="mt-2 text-gray-500">Try adjusting your filters or search terms.</p>
-              <button @click="clearFilters" class="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              <button @click="clearFilters" class="mt-6 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
                 Clear Filters
               </button>
             </div>
@@ -191,7 +191,7 @@ useSeoMeta({
                       :class="[
                         'w-10 h-10 rounded-lg transition-colors',
                         p === page 
-                          ? 'bg-indigo-600 text-white' 
+                          ? 'bg-primary-600 text-white' 
                           : 'bg-white border border-gray-300 hover:bg-gray-50'
                       ]"
                     >

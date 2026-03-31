@@ -24,7 +24,7 @@ const addToCart = () => {
 
 <template>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <NuxtLink to="/products" class="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 mb-6 transition-colors">
+    <NuxtLink to="/products" class="inline-flex items-center text-sm text-gray-500 hover:text-primary-600 mb-6 transition-colors">
       <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
@@ -65,9 +65,9 @@ const addToCart = () => {
         <h1 class="text-3xl font-bold text-gray-900 mb-2">
           {{ product.name }}
         </h1>
-        
-        <p class="text-3xl font-semibold text-indigo-600 mb-6">
-          ${{ Number(product.price).toFixed(2) }}
+
+        <p class="text-3xl font-semibold text-primary-600 mb-6">
+          ₹ {{ Number(product.price).toFixed(2) }}
         </p>
 
         <div v-if="product.description" class="prose prose-gray mb-6">
@@ -75,7 +75,7 @@ const addToCart = () => {
         </div>
 
         <div class="flex gap-4">
-          <button 
+          <button
             @click="addToCart"
             class="flex-1 btn-primary flex items-center justify-center gap-2"
             :class="{ 'bg-green-600 hover:bg-green-700': added }"
@@ -88,7 +88,7 @@ const addToCart = () => {
             </svg>
             {{ added ? 'Added to Cart!' : 'Add to Cart' }}
           </button>
-          
+
           <NuxtLink to="/products" class="btn-secondary">
             Back to Products
           </NuxtLink>

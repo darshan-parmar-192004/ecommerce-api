@@ -1,9 +1,3 @@
-<script setup>
-definePageMeta({
-  pageTransition: { name: 'page', mode: 'out-in' }
-})
-</script>
-
 <template>
   <NuxtLayout>
     <NuxtPage />
