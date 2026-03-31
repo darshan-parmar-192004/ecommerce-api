@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"backend/internal/cache"
-	"backend/internal/database"
+	"backend/internal/services"
+	"backend/internal/repositories"
 	"backend/internal/errors"
 	"backend/internal/middleware"
 	"backend/internal/models"
@@ -17,8 +17,8 @@ import (
 )
 
 type Handler struct {
-	db        database.Service
-	cache     cache.RedisService
+	db        repositories.Service
+	cache     services.RedisService
 	jwtSecret []byte
 }
 
@@ -42,7 +42,7 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewHandler(db database.Service, cache cache.RedisService, jwtSecret string) *Handler {
+func NewHandler(db repositories.Service, cache services.RedisService, jwtSecret string) *Handler {
 	return &Handler{
 		db:        db,
 		cache:     cache,
@@ -143,8 +143,8 @@ func (h *Handler) Register(c fiber.Ctx) error {
 
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO customers (customer_id, email, name, country, phone, created_at, status, password_hash, role)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer")
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'customer')
+	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword))
 
 	if err != nil {
 		return errors.SendError(
@@ -164,6 +164,7 @@ func (h *Handler) Register(c fiber.Ctx) error {
 		Phone:      req.Phone,
 		CreatedAt:  createdAt,
 		Status:     "active",
+		Role:       models.RoleCustomer,
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{

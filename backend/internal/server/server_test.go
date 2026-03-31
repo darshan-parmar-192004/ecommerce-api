@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"backend/internal/cache"
+	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -89,7 +89,7 @@ func TestNew_DefaultJWTSecret(t *testing.T) {
 func TestFiberServer_Structure(t *testing.T) {
 	fs := &FiberServer{
 		db:        nil,
-		cache:     cache.RedisService{},
+		cache:     services.RedisService{},
 		jwtSecret: "test",
 	}
 

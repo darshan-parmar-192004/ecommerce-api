@@ -1,4 +1,28 @@
 services:
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: build
+    container_name: blueprint_migrate
+    env_file:
+      - .env
+    environment:
+      BLUEPRINT_DB_HOST: psql_bp
+      BLUEPRINT_DB_PORT: "5432"
+      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
+      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+    volumes:
+      - ./backend/datasets:/datasets
+    networks:
+      - blueprint
+    depends_on:
+      psql_bp:
+        condition: service_healthy
+    working_dir: /app
+    command: ./migrate up
+
   app:
     build:
       context: ./backend
@@ -35,6 +59,8 @@ services:
       - blueprint
 
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       psql_bp:
         condition: service_healthy
       redis:
@@ -71,7 +97,6 @@ services:
 
     volumes:
       - psql_volume_bp:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
       - ./backend/datasets:/datasets
 
     healthcheck:

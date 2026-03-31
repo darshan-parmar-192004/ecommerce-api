@@ -5,9 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"backend/internal/cache"
-	"backend/internal/database"
 	"backend/internal/middleware"
+	"backend/internal/repositories"
+	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -16,7 +16,8 @@ func TestServerInitialization(t *testing.T) {
 	t.Run("FiberServerCanBeCreated", func(t *testing.T) {
 		fs := &FiberServer{
 			App:       fiber.New(),
-			db:        database.New(),
+			db:        repositories.New(),
+			cache:     services.RedisService{},
 			jwtSecret: "test-secret-key",
 		}
 
@@ -114,14 +115,14 @@ func TestAuthMiddleware(t *testing.T) {
 
 func TestCacheIntegration(t *testing.T) {
 	t.Run("RedisService", func(t *testing.T) {
-		redis := cache.NewRedis()
+		redis := services.NewRedis()
 		if redis == nil {
 			t.Error("Redis service should not be nil")
 		}
 	})
 
 	t.Run("CacheStats", func(t *testing.T) {
-		hits, misses, total := cache.GetStats()
+		hits, misses, total := services.GetStats()
 
 		if total < 0 {
 			t.Error("total should be non-negative")

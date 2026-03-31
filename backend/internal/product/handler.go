@@ -36,27 +36,6 @@ func NewHandler(db database.Service, cache cache.RedisService) *Handler {
 
 func (h *Handler) GetAll(c fiber.Ctx) error {
 
-	key := "products:all"
-
-	if h.cache.Client != nil {
-		cached, err := h.cache.Client.Get(cache.Ctx, key).Result()
-
-		if err == redis.Nil {
-			cache.RecordMiss()
-		} else if err != nil {
-			fmt.Println("Redis error:", err)
-			cache.RecordMiss()
-		} else {
-			cache.RecordHit()
-			var response fiber.Map
-			if json.Unmarshal([]byte(cached), &response) == nil {
-				return c.JSON(response)
-			} else {
-				fmt.Println("Unmarshal error:", err)
-			}
-		}
-	}
-
 	// filtering queries
 	category := c.Query("category")
 	minPriceStr := c.Query("min_price")
@@ -123,7 +102,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 		%s
 		ORDER BY created_at DESC
 		LIMIT $%d OFFSET $%d
-	`, whereClause, argIndex, argIndex+1)
+	`, whereClause, len(args)+1, len(args)+2)
 	args = append(args, limit, offset)
 
 	s := h.db.DB()
@@ -168,17 +147,6 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 			"total_items": totalItems,
 			"total_pages": totalPages,
 		},
-	}
-
-	data, _ := json.Marshal(response)
-
-	if h.cache.Client != nil {
-		h.cache.Client.Set(
-			cache.Ctx,
-			key,
-			data,
-			5*time.Minute,
-		)
 	}
 
 	return c.JSON(response)
