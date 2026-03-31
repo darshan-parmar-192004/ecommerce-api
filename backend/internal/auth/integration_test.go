@@ -7,15 +7,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"backend/internal/repositories"
+	"backend/internal/database"
 	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func setupAuthIntegrationTest(t *testing.T) (*fiber.App, *repositories.TestDB) {
-	testDB, err := repositories.NewTestDB()
+func setupAuthIntegrationTest(t *testing.T) (*fiber.App, *database.TestDB) {
+	testDB, err := database.NewTestDB()
 	if err != nil {
 		t.Skipf("Skipping integration test: %v", err)
 	}

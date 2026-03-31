@@ -6,6 +6,16 @@
 </template>
 
 <style>
+/* Hide scrollbar but allow scrolling */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
 .page-enter-active,
 .page-leave-active {
   transition: all 0.3s ease-out;

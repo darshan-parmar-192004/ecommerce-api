@@ -157,7 +157,7 @@ const handleSubmit = async () => {
               
               <div class="flex-1 min-w-0">
                 <p class="font-medium text-gray-900 truncate">{{ item.product.name }}</p>
-                <p class="text-sm text-gray-500">Qty: {{ item.quantity }} × ${{ item.product.price.toFixed(2) }}</p>
+                <p class="text-sm text-gray-500">Qty: {{ item.quantity }} × ₹ {{ item.product.price.toFixed(2) }}</p>
               </div>
 
               <p class="font-semibold text-gray-900">

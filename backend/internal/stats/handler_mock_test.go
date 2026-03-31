@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"backend/internal/cache"
+	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -30,9 +30,9 @@ func TestCacheStats_Detailed(t *testing.T) {
 	})
 
 	t.Run("NonZeroStats", func(t *testing.T) {
-		cache.RecordHit()
-		cache.RecordHit()
-		cache.RecordMiss()
+		services.RecordHit()
+		services.RecordMiss()
+		services.RecordHit()
 
 		handler := NewHandler()
 
@@ -71,18 +71,18 @@ func TestStatsEndpoints(t *testing.T) {
 }
 
 func TestCacheHitMissReset(t *testing.T) {
-	atomic.StoreInt64(&cache.CacheHits, 0)
-	atomic.StoreInt64(&cache.CacheMisses, 0)
+	atomic.StoreInt64(&services.CacheHits, 0)
+	atomic.StoreInt64(&services.CacheMisses, 0)
 
-	_, _, total := cache.GetStats()
+	_, _, total := services.GetStats()
 	if total != 0 {
 		t.Errorf("expected total 0, got %d", total)
 	}
 
-	cache.RecordHit()
-	cache.RecordMiss()
+	services.RecordHit()
+	services.RecordMiss()
 
-	hits, misses, total := cache.GetStats()
+	hits, misses, total := services.GetStats()
 	if hits != 1 || misses != 1 || total != 2 {
 		t.Errorf("expected 1 hit, 1 miss, total 2, got %d hits, %d misses, total %d", hits, misses, total)
 	}

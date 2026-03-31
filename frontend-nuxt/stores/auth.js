@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useCartStore } from './cart'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -19,6 +20,9 @@ export const useAuthStore = defineStore('auth', {
       this.token = data.token
       this.user = data.customer
       this.persistAuth()
+      
+      const cartStore = useCartStore()
+      cartStore.loadCart()
     },
 
     setToken(token) {
@@ -75,6 +79,7 @@ export const useAuthStore = defineStore('auth', {
     clearAuthStorage() {
       if (import.meta.client) {
         document.cookie = 'auth_token=; path=/; max-age=0; samesite=lax'
+        localStorage.removeItem('auth_token')
         localStorage.removeItem('auth_user')
       }
     },

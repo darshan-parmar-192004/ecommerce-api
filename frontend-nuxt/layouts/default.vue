@@ -7,9 +7,12 @@ const isUserMenuOpen = ref(false)
 
 const { isAuthenticated, user } = storeToRefs(authStore)
 
-onMounted(() => {
-  cartStore.loadCart()
+onMounted(async () => {
   authStore.loadAuth()
+  if (authStore.token) {
+    await authStore.verifyAuth()
+    cartStore.loadCart()
+  }
 })
 
 const closeMenu = () => {
@@ -29,6 +32,7 @@ const handleLogout = async () => {
     console.error('Logout error:', e)
   }
   authStore.clearAuth()
+  cartStore.clearCart()
   closeMenu()
   navigateTo('/')
 }

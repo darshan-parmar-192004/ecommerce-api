@@ -1,7 +1,7 @@
 package stats
 
 import (
-	"backend/internal/cache"
+	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -14,7 +14,7 @@ func NewHandler() *Handler {
 
 func (h *Handler) CacheStats(c fiber.Ctx) error {
 
-	hits, misses, total := cache.GetStats()
+	hits, misses, total := services.GetStats()
 
 	hitRate := float64(0)
 	missRate := float64(0)

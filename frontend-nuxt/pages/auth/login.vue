@@ -6,6 +6,7 @@ definePageMeta({
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const cartStore = useCartStore()
 const { success: showSuccess } = useToast()
 
 const form = reactive({
@@ -52,6 +53,7 @@ const handleSubmit = async () => {
       token: data.token,
       customer: data.customer
     })
+    cartStore.loadCart()
     
     success.value = true
     showSuccess(`Welcome back, ${data.customer?.name || 'User'}!`)

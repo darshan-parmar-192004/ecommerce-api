@@ -10,7 +10,10 @@ const maxPrice = ref(route.query.max_price || '')
 const selectedCategory = ref(route.query.category || '')
 
 const queryParams = computed(() => {
-  const params = { page: page.value, limit }
+  const params = { 
+    page: page.value, 
+    limit: limit 
+  }
   if (selectedCategory.value) params.category = selectedCategory.value
   if (search.value) params.search = search.value
   if (minPrice.value) params.min_price = minPrice.value
@@ -20,8 +23,8 @@ const queryParams = computed(() => {
 
 const { data: productsData, pending: productsLoading, error: productsError, refresh: refreshProducts } = await useFetch('/api/products', {
   query: queryParams,
-  key: () => `products-${page.value}-${selectedCategory.value}-${search.value}`,
-  watch: [() => page.value, () => selectedCategory.value, () => search.value]
+  key: () => `products-${page.value}-${limit}-${selectedCategory.value}-${search.value}-${minPrice.value}-${maxPrice.value}`,
+  watch: [() => page.value, () => limit, () => selectedCategory.value, () => search.value, () => minPrice.value, () => maxPrice.value]
 })
 
 const { data: categoriesData } = await useFetch('/api/categories')
