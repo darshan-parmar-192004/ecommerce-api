@@ -13,7 +13,9 @@ RUN go mod download
 COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -ldflags="-s -w" -o main ./cmd/api
+    go build -ldflags="-s -w" -o main ./cmd/api && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o migrate ./cmd/migrate
 
 
 # Run stage
@@ -26,6 +28,8 @@ RUN apk add --no-cache wget
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=build /app/main .
+COPY --from=build /app/migrate .
+COPY --from=build /app/migrations ./migrations
 
 RUN chown -R appuser:appgroup /app
 
