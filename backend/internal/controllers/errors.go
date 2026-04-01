@@ -1,4 +1,4 @@
-package product
+package controllers
 
 import "github.com/gofiber/fiber/v3"
 
@@ -11,7 +11,6 @@ type ErrorBody struct {
 	Message string                 `json:"message"`
 	Details map[string]interface{} `json:"details"`
 }
-
 
 const (
 	ErrProductNotFound  = "PRODUCT_NOT_FOUND"
