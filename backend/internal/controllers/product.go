@@ -1,8 +1,10 @@
-package product
+package controllers
 
 import (
 	"backend/internal/models"
+	"backend/internal/services"
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"strconv"
 	"strings"
@@ -11,32 +13,29 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-type Handler struct {
-	Store *Store
+type ProductController struct {
+	Service *services.ProductService
 }
 
-func NewHandler(store *Store) *Handler {
-	return &Handler{
-		Store: store,
+func NewProductController(service *services.ProductService) *ProductController {
+	return &ProductController{
+		Service: service,
 	}
 }
 
-func (h *Handler) GetAll(c fiber.Ctx) error {
+func (h *ProductController) GetAll(c fiber.Ctx) error {
 
-	// filtering queries
 	category := c.Query("category")
 	MinPriceStr := c.Query("min_price")
 	MaxPriceStr := c.Query("max_price")
 	search := c.Query("search")
 
-	//pagination queries
 	pageStr := c.Query("page", "1")
 	limitStr := c.Query("limit", "10")
 
 	var page, limit int
 	var err error
 
-	//pagination parsing
 	if pageStr != "" {
 		page, err = strconv.Atoi(pageStr)
 		if err != nil || page < 1 {
@@ -71,7 +70,6 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 
 	var minPrice, maxPrice float64
 
-	//filtering parsing
 	if MinPriceStr != "" {
 		minPrice, err = strconv.ParseFloat(MinPriceStr, 64)
 		if err != nil {
@@ -108,9 +106,10 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 		)
 	}
 
-	list := []models.Product{}
+	list := h.Service.GetAll()
+	filtered := []models.Product{}
 
-	for _, p := range h.Store.Products {
+	for _, p := range list {
 
 		if MinPriceStr != "" && p.Price < minPrice {
 			continue
@@ -133,10 +132,10 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 				continue
 			}
 		}
-		list = append(list, p)
+		filtered = append(filtered, p)
 
 	}
-	totalItems := len(list)
+	totalItems := len(filtered)
 	totalPages := (totalItems + limit - 1) / limit
 
 	if page > totalPages && totalItems > 0 {
@@ -160,7 +159,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 		end = totalItems
 	}
 
-	paginated := list[start:end]
+	paginated := filtered[start:end]
 
 	return c.JSON(fiber.Map{
 		"data": paginated,
@@ -173,10 +172,10 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	})
 }
 
-func (h *Handler) GetById(c fiber.Ctx) error {
+func (h *ProductController) GetById(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	product, exists := h.Store.Products[id]
+	product, exists := h.Service.GetByID(id)
 	if !exists {
 		return sendError(
 			c,
@@ -189,11 +188,11 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 	return c.JSON(product)
 }
 
-func GeneratemodelsProductId() string {
+func generateProductID() string {
 	return fmt.Sprintf("PROD-%08d", rand.IntN(100000000))
 }
 
-func (h *Handler) Create(c fiber.Ctx) error {
+func (h *ProductController) Create(c fiber.Ctx) error {
 
 	var product models.Product
 
@@ -207,7 +206,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		)
 	}
 
-	product.ProductID = GeneratemodelsProductId()
+	product.ProductID = generateProductID()
 	product.CreatedAt = time.Now()
 
 	if validationErrors, status, code := validateProductInput(product); validationErrors != nil {
@@ -221,9 +220,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 
 	}
 
-	h.Store.Products[product.ProductID] = product
-	if !h.Store.DisablePersistance {
-		err := h.Store.AppendToCSV("./datasets/ecommerce/products.csv", product)
+	h.Service.Create(product)
+	if !h.Service.DisablePersistance {
+		err := h.Service.AppendToCSV("./datasets/ecommerce/products.csv", product)
 		if err != nil {
 			return sendError(
 				c,
@@ -238,7 +237,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(product)
 }
 
-func (h *Handler) Update(c fiber.Ctx) error {
+func (h *ProductController) Update(c fiber.Ctx) error {
 	id := c.Params("id")
 
 	var input models.Product
@@ -253,7 +252,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		)
 	}
 
-	existing, exists := h.Store.Products[id]
+	existing, exists := h.Service.GetByID(id)
 	if !exists {
 		return sendError(
 			c,
@@ -278,25 +277,16 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	input.ProductID = existing.ProductID
 	input.CreatedAt = existing.CreatedAt
 
-	h.Store.Products[id] = input
-	// err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
-	// if err != nil {
-	// 	return sendError(
-	// 		c,
-	// 		fiber.StatusInternalServerError,
-	// 		ErrInternal,
-	// 		"Failed to update storage",
-	// 		nil,
-	// 	)
-	// }
+	h.Service.Update(id, input)
 
 	return c.JSON(input)
 }
 
-func (h *Handler) Delete(c fiber.Ctx) error {
+func (h *ProductController) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	if _, exists := h.Store.Products[id]; !exists {
+	_, exists := h.Service.GetByID(id)
+	if !exists {
 		return sendError(
 			c,
 			fiber.StatusNotFound,
@@ -306,11 +296,11 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		)
 	}
 
-	delete(h.Store.Products, id)
+	h.Service.Delete(id)
 
-	fmt.Println("Deleting ID:", id)
-	fmt.Println("Map size before delete:", len(h.Store.Products))
-	err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
+	log.Println("Deleting ID:", id)
+	log.Println("Map size before delete:", len(h.Service.Products))
+	err := h.Service.RewriteCSV("./datasets/ecommerce/products.csv")
 	if err != nil {
 		return sendError(
 			c,
