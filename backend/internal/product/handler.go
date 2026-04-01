@@ -3,6 +3,7 @@ package product
 import (
 	"backend/internal/models"
 	"fmt"
+	"log"
 	"math/rand/v2"
 	"time"
 
@@ -163,8 +164,8 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 
 	delete(h.Store.Products, id)
 
-	fmt.Println("Deleting ID:", id)
-	fmt.Println("Map size before delete:", len(h.Store.Products))
+	log.Println("Deleting ID:", id)
+	log.Println("Map size before delete:", len(h.Store.Products))
 	err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
 	if err != nil {
 		return sendError(
