@@ -13,4 +13,5 @@ bin/
 .DS_Store
 
 
+# datasets are tracked in backend/datasets/ for seeding
 **/datasets
