@@ -7,7 +7,6 @@ import (
 
 func RequestID() fiber.Handler {
 	return func(c fiber.Ctx) error {
-
 		id := uuid.NewString()
 
 		c.Set("X-Request-Id", id)

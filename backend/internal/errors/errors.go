@@ -20,6 +20,7 @@ const (
 	ErrMissingField = "MISSING_REQUIRED_FIELD"
 	ErrDatabase     = "DATABASE_ERROR"
 	ErrInternal     = "INTERNAL_ERROR"
+	ErrUnauthorized = "UNAUTHORIZED"
 
 	// Resource specific (optional)
 	ErrProductNotFound  = "PRODUCT_NOT_FOUND"
@@ -28,7 +29,6 @@ const (
 )
 
 func SendError(c fiber.Ctx, status int, code, message string, details map[string]interface{}) error {
-
 	return c.Status(status).JSON(ErrorResponse{
 		Error: ErrorBody{
 			Code:    code,

@@ -62,7 +62,7 @@ jobs:
         run: |
           cd backend
           if ls **/*_test.go 1> /dev/null 2>&1; then
-            go test $(go list ./... | grep -v -E 'internal/database|internal/product') -v
+            go test ./... -v
           else
             echo "No test files found. Skipping tests."
           fi
@@ -75,12 +75,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Cleanup existing CI containers
-        run: |
-          docker compose down -v --remove-orphans || true
-          docker rm -f $(docker ps -aq --filter name=backend) 2>/dev/null || true
-
+      
       - name: Create .env file for CI
         run: |
           cat <<EOF > .env
@@ -91,13 +86,21 @@ jobs:
           BLUEPRINT_DB_PASSWORD=blueprint
           BLUEPRINT_DB_SCHEMA=public
           BLUEPRINT_DB_PORT=5432
-          REDIS_HOST=redis
-          REDIS_PORT=6379
           EOF
+
+      - name: Install docker-compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+          
+      - name: Cleanup existing CI containers
+        run: |
+          docker-compose down -v --remove-orphans || true
+          docker rm -f $(docker ps -aq --filter name=backend) 2>/dev/null || true
 
       - name: Build and start containers
         run: |
-          docker compose up -d --build
+          docker-compose up -d --build
 
       - name: Wait for services
         run: |
@@ -106,9 +109,9 @@ jobs:
       - name: Show logs if failure
         if: failure()
         run: |
-          docker compose logs
+          docker-compose logs
 
       - name: Stop containers
         if: always()
         run: |
-          docker compose down
+          docker-compose down

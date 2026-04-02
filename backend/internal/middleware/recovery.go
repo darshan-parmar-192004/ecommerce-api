@@ -9,10 +9,8 @@ import (
 
 func Recovery() fiber.Handler {
 	return func(c fiber.Ctx) error {
-
 		defer func() {
 			if err := recover(); err != nil {
-
 				requestID := c.Locals("request_id")
 
 				log.Printf("PANIC: %v\nSTACK TRACE:\n%s\nREQUEST_ID: %v",
