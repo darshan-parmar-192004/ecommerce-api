@@ -8,13 +8,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
-
-var categoryPattern = regexp.MustCompile(`^CAT-[a-f0-9]{8}$`)
 
 type ProductService struct {
 	repo  *models.ProductRepository

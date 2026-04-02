@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"backend/internal/auth"
+	"backend/internal/cache"
 	apperrors "backend/internal/errors"
 
 	"github.com/gofiber/fiber/v3"
@@ -15,11 +17,13 @@ type JWTClaims struct {
 
 type AuthMiddleware struct {
 	jwtSecret []byte
+	cache     *cache.RedisService
 }
 
-func NewAuthMiddleware(secret string) *AuthMiddleware {
+func NewAuthMiddleware(secret string, cache *cache.RedisService) *AuthMiddleware {
 	return &AuthMiddleware{
 		jwtSecret: []byte(secret),
+		cache:     cache,
 	}
 }
 
@@ -60,6 +64,19 @@ func (m *AuthMiddleware) Authenticate(c fiber.Ctx) error {
 			"Invalid or expired token",
 			fiber.Map{"details": err.Error()},
 		)
+	}
+
+	if m.cache != nil && m.cache.Client != nil {
+		_, err := auth.GetSession(m.cache, token)
+		if err != nil {
+			return apperrors.SendError(
+				c,
+				fiber.StatusUnauthorized,
+				apperrors.ErrUnauthorized,
+				"Session expired or invalid",
+				nil,
+			)
+		}
 	}
 
 	c.Locals("customer_id", claims.CustomerID)

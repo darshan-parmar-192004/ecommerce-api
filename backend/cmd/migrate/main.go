@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -27,15 +28,29 @@ func main() {
 
 	dsn := buildDSN()
 
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
-	}
-	defer db.Close()
+	var db *sql.DB
+	var err error
 
-	if err := db.Ping(); err != nil {
-		log.Fatalf("failed to ping database: %v", err)
+	log.Println("Connecting to database...")
+	for i := 0; i < 10; i++ { // Try 10 times
+		db, err = sql.Open("pgx", dsn)
+		if err == nil {
+			err = db.Ping()
+		}
+
+		if err == nil {
+			log.Println("Database connection established!")
+			break
+		}
+
+		log.Printf("Database not ready (attempt %d/10): %v. Retrying in 2s...", i+1, err)
+		time.Sleep(2 * time.Second)
 	}
+
+	if err != nil {
+		log.Fatalf("could not connect to database after retries: %v", err)
+	}
+	defer func() { _ = db.Close() }()
 
 	m, err := migrate.New(
 		"file://migrations",
@@ -87,7 +102,9 @@ func main() {
 			log.Fatal("usage: migrate force <version>")
 		}
 		var version int
-		fmt.Sscanf(args[1], "%d", &version)
+		if _, err := fmt.Sscanf(args[1], "%d", &version); err != nil {
+			log.Fatalf("invalid version: %v", err)
+		}
 		if err := m.Force(version); err != nil {
 			log.Fatalf("force failed: %v", err)
 		}
@@ -118,7 +135,7 @@ func SeedDatabase(dsn string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	var count int
 	err = db.QueryRow("SELECT COUNT(*) FROM categories").Scan(&count)
@@ -137,7 +154,7 @@ func SeedDatabase(dsn string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect with pgx: %v", err)
 	}
-	defer conn.Close(context.Background())
+	defer func() { _ = conn.Close(context.Background()) }()
 
 	log.Println("Dropping all constraints for seeding...")
 	dropAllConstraints(db)
@@ -187,7 +204,7 @@ func SeedDatabase(dsn string) error {
 		}
 
 		count, err := copyFromCSVText(conn, sf.table, sf.columns, file)
-		file.Close()
+		_ = file.Close()
 		if err != nil {
 			log.Printf("Warning: failed to seed %s: %v", sf.table, err)
 			continue
@@ -215,7 +232,9 @@ func dropAllConstraints(db *sql.DB) {
 		"ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_pkey",
 	}
 	for _, c := range constraints {
-		db.Exec(c)
+		if _, err := db.Exec(c); err != nil {
+			log.Printf("Warning: failed to drop constraint: %v", err)
+		}
 	}
 }
 

@@ -2,12 +2,10 @@ package server
 
 import (
 	"backend/internal/auth"
-	"backend/internal/category"
-	"backend/internal/customer"
-	"backend/internal/inventory"
+	"backend/internal/controllers"
 	"backend/internal/middleware"
-	"backend/internal/order"
-	"backend/internal/product"
+	"backend/internal/models"
+	"backend/internal/services"
 	"backend/internal/stats"
 
 	"github.com/gofiber/fiber/v3"
@@ -17,10 +15,10 @@ import (
 
 func (s *FiberServer) RegisterFiberRoutes() {
 
-	s.App.Use(middleware.RequestID())
-	s.App.Use(middleware.Logging())
-	s.App.Use(middleware.Recovery())
-	s.App.Use(cors.New(cors.Config{
+	s.Use(middleware.RequestID())
+	s.Use(middleware.Logging())
+	s.Use(middleware.Recovery())
+	s.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowHeaders:     []string{"Accept", "Authorization", "Content-Type"},
@@ -28,54 +26,72 @@ func (s *FiberServer) RegisterFiberRoutes() {
 		MaxAge:           300,
 	}))
 
-	productHandler := product.NewHandler(s.db, s.cache)
+	// Create repositories
+	productRepo := models.NewProductRepository(s.db.DB())
+	categoryRepo := models.NewCategoryRepository(s.db.DB())
+	customerRepo := models.NewCustomerRepository(s.db.DB())
+	orderRepo := models.NewOrderRepository(s.db.DB())
+	inventoryRepo := models.NewInventoryRepository(s.db.DB())
 
-	categoryHandler := category.NewHandler(s.db, s.cache)
+	// Create services
+	productService := services.NewProductService(productRepo, &s.cache)
+	categoryService := services.NewCategoryService(categoryRepo, &s.cache)
+	customerService := services.NewCustomerService(customerRepo)
+	orderService := services.NewOrderService(orderRepo)
+	inventoryService := services.NewInventoryService(inventoryRepo)
 
-	customerHandler := customer.NewHandler(s.db)
-
-	orderHandler := order.NewHandler(s.db)
-
-	inventoryHandler := inventory.NewHandler(s.db)
-
+	// Create controllers
+	productCtrl := controllers.NewProductController(productService)
+	categoryCtrl := controllers.NewCategoryController(categoryService)
+	customerCtrl := controllers.NewCustomerController(customerService)
+	orderCtrl := controllers.NewOrderController(orderService)
+	inventoryCtrl := controllers.NewInventoryController(inventoryService)
 	statsHandler := stats.NewHandler()
 
+	// Auth (preserved)
 	authHandler := auth.NewHandler(s.db, s.cache, s.jwtSecret)
-	authMiddleware := middleware.NewAuthMiddleware(s.jwtSecret)
+	authMiddleware := middleware.NewAuthMiddleware(s.jwtSecret, &s.cache)
 
-	s.App.Get("/products", productHandler.GetAll)
-	s.App.Get("/products/:id", productHandler.GetById)
-	s.App.Post("/products", authMiddleware.Authenticate, productHandler.Create)
-	s.App.Put("/products/:id", authMiddleware.Authenticate, productHandler.Update)
-	s.App.Delete("/products/:id", authMiddleware.Authenticate, productHandler.Delete)
+	// Product routes
+	s.Get("/products", productCtrl.GetAll)
+	s.Get("/products/:id", productCtrl.GetById)
+	s.Post("/products", authMiddleware.Authenticate, productCtrl.Create)
+	s.Put("/products/:id", authMiddleware.Authenticate, productCtrl.Update)
+	s.Delete("/products/:id", authMiddleware.Authenticate, productCtrl.Delete)
 
-	s.App.Get("/categories", categoryHandler.GetAll)
-	s.App.Get("/categories/:id/products", categoryHandler.GetCategoryProducts)
-	s.App.Get("/categories/hierarchy", categoryHandler.GetHierarchy)
+	// Category routes
+	s.Get("/categories", categoryCtrl.GetAll)
+	s.Get("/categories/:id/products", categoryCtrl.GetCategoryProducts)
+	s.Get("/categories/hierarchy", categoryCtrl.GetHierarchy)
 
-	s.App.Get("/customers/me", authMiddleware.Authenticate, customerHandler.GetMe)
-	s.App.Put("/customers/me", authMiddleware.Authenticate, customerHandler.UpdateMe)
+	// Customer routes
+	s.Get("/customers/me", authMiddleware.Authenticate, customerCtrl.GetMe)
+	s.Put("/customers/me", authMiddleware.Authenticate, customerCtrl.UpdateMe)
+	s.Get("/customers/:id/orders", customerCtrl.GetCustomerOrders)
+	s.Get("/customers/:id/lifetime-value", customerCtrl.GetCustomerLifetimeValue)
 
-	s.App.Get("/customers/:id/orders", customerHandler.GetCustomerOrders)
-	s.App.Get("/customers/:id/lifetime-value", customerHandler.GetCustomerLifetimeValue)
+	// Order routes
+	s.Get("/orders/:id", orderCtrl.GetOrder)
+	s.Post("/orders", orderCtrl.CreateOrder)
 
-	s.App.Get("/orders/:id", orderHandler.GetOrder)
-	s.App.Post("/orders", orderHandler.CreateOrder)
+	// Inventory routes
+	s.Get("/inventory", inventoryCtrl.GetAll)
+	s.Get("/inventory/stock", inventoryCtrl.GetStockLevels)
+	s.Get("/inventory/customer-lifetime-value", inventoryCtrl.GetCustomerCLV)
+	s.Get("/inventory/hierarchy", inventoryCtrl.GetCategoryTree)
+	s.Get("/inventory/top-sellers", inventoryCtrl.GetTopSellers)
 
-	s.App.Get("/inventory", inventoryHandler.GetAll)
-	s.App.Get("/inventory/stock", inventoryHandler.GetStockLevels)
-	s.App.Get("/inventory/customer-lifetime-value", inventoryHandler.GetCustomerCLV)
-	s.App.Get("/inventory/hierarchy", inventoryHandler.GetCategoryTree)
-	s.App.Get("/inventory/top-sellers", inventoryHandler.GetTopSellers)
+	// Stats routes
+	s.Get("/stats/cache", statsHandler.CacheStats)
 
-	s.App.Get("stats/cache", statsHandler.CacheStats)
+	// Auth routes
+	s.Post("/auth/register", authHandler.Register)
+	s.Post("/auth/login", authHandler.Login)
+	s.Post("/auth/logout", authHandler.Logout)
+	s.Get("/auth/me", authMiddleware.Authenticate, authHandler.ValidateToken)
 
-	s.App.Post("/auth/register", authHandler.Register)
-	s.App.Post("/auth/login", authHandler.Login)
-	s.App.Post("/auth/logout", authHandler.Logout)
-	s.App.Get("/auth/me", authMiddleware.Authenticate, authHandler.ValidateToken)
-
-	s.App.Get("/health", func(c fiber.Ctx) error {
+	// Health check
+	s.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"status": "ok",
 		})
