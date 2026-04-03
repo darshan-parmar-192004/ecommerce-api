@@ -6,7 +6,7 @@ services:
       target: prod
     container_name: backend
     restart: unless-stopped
-    
+
     env_file:
       - .env
 
@@ -29,7 +29,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
 
     volumes:
-      - ./backend/datasets:/app/datasets
+      - ./backend/internal/datasets:/app/datasets
 
     networks:
       - blueprint
@@ -39,20 +39,42 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: migrate
+    container_name: blueprint_migrate
+    env_file:
+      - .env
+    environment:
+      BLUEPRINT_DB_HOST: psql_bp
+      BLUEPRINT_DB_PORT: 5432
+      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
+      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+    networks:
+      - blueprint
+    depends_on:
+      psql_bp:
+        condition: service_healthy
 
   redis:
     image: docker.io/library/redis:7-alpine
     container_name: blueprint_redis
     restart: unless-stopped
-  
+
     ports:
       - "6379:6379"
-  
+
     volumes:
       - redis_data:/data
-  
+
     command: redis-server --appendonly yes
-  
+
     networks:
       - blueprint
 
@@ -71,8 +93,6 @@ services:
 
     volumes:
       - psql_volume_bp:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
-      - ./backend/datasets:/datasets
 
     healthcheck:
       test:
