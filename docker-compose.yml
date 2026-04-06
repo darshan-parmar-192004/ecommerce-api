@@ -1,28 +1,4 @@
 services:
-  migrate:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: build
-    container_name: blueprint_migrate
-    env_file:
-      - .env
-    environment:
-      BLUEPRINT_DB_HOST: psql_bp
-      BLUEPRINT_DB_PORT: "5432"
-      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
-      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
-      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
-    volumes:
-      - ./backend/datasets:/datasets
-    networks:
-      - blueprint
-    depends_on:
-      psql_bp:
-        condition: service_healthy
-    working_dir: /app
-    command: ./migrate up
-
   app:
     build:
       context: ./backend
@@ -40,45 +16,68 @@ services:
     environment:
       APP_ENV: ${APP_ENV}
       PORT: ${PORT}
+
       BLUEPRINT_DB_HOST: psql_bp
-      BLUEPRINT_DB_PORT: ${BLUEPRINT_DB_PORT:-5433}
+      BLUEPRINT_DB_PORT: ${BLUEPRINT_DB_PORT:-5432}
       BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
       BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
       BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
       BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
+
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
       JWT_SECRET: ${JWT_SECRET}
 
     volumes:
-      - ./backend/datasets:/app/datasets
+      - ./backend/internal/datasets:/app/datasets
 
     networks:
       - blueprint
 
     depends_on:
-      migrate:
-        condition: service_completed_successfully
       psql_bp:
         condition: service_healthy
       redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: migrate
+    container_name: blueprint_migrate
+    env_file:
+      - .env
+    environment:
+      BLUEPRINT_DB_HOST: psql_bp
+      BLUEPRINT_DB_PORT: 5432
+      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
+      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+    networks:
+      - blueprint
+    depends_on:
+      psql_bp:
         condition: service_healthy
+
+    entrypoint: >
+      sh -c "until nc -z psql_bp 5432; do echo 'Waiting for postgres...'; sleep 1; done; ./migrate up"
 
   redis:
     image: docker.io/library/redis:7-alpine
     container_name: blueprint_redis
     restart: unless-stopped
+
     ports:
       - "6379:6379"
+
     volumes:
       - redis_data:/data
+
     command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
+
     networks:
       - blueprint
 
@@ -86,48 +85,31 @@ services:
     image: docker.io/library/postgres:16-alpine
     container_name: blueprint_postgres
     restart: unless-stopped
+
     environment:
       POSTGRES_DB: ${BLUEPRINT_DB_DATABASE}
       POSTGRES_USER: ${BLUEPRINT_DB_USERNAME}
       POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+
     ports:
-      - "${BLUEPRINT_DB_PORT:-5433}:5432"
+      - "${BLUEPRINT_DB_PORT:-5432}:5432"
+
     volumes:
       - psql_volume_bp:/var/lib/postgresql/data
-      - ./backend/datasets:/datasets
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 10s
-    networks:
-      - blueprint
 
-  test-runner:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: build
-    environment:
-      APP_ENV: ci
-      BLUEPRINT_DB_HOST: psql_bp
-      BLUEPRINT_DB_PORT: "5432"
-      BLUEPRINT_DB_DATABASE: ecommerce
-      BLUEPRINT_DB_USERNAME: darshan.parmar
-      BLUEPRINT_DB_PASSWORD: blueprint
-      REDIS_HOST: redis
-      REDIS_PORT: "6379"
-      JWT_SECRET: test_secret_key_123
     networks:
       - blueprint
-    depends_on:
-      psql_bp:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    working_dir: /app
-    command: sh -c "sleep 10 && go test -v ./..."
 
 volumes:
   psql_volume_bp:

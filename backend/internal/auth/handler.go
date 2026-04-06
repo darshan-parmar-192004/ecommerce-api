@@ -1,13 +1,14 @@
 package auth
 
 import (
-	"backend/internal/services"
-	"backend/internal/repositories"
+	"backend/internal/cache"
+	"backend/internal/database"
 	"backend/internal/errors"
 	"backend/internal/middleware"
 	"backend/internal/models"
 	"context"
 	"database/sql"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -17,8 +18,8 @@ import (
 )
 
 type Handler struct {
-	db        repositories.Service
-	cache     services.RedisService
+	db        database.Service
+	cache     cache.RedisService
 	jwtSecret []byte
 }
 
@@ -42,7 +43,7 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-func NewHandler(db repositories.Service, cache services.RedisService, jwtSecret string) *Handler {
+func NewHandler(db database.Service, cache cache.RedisService, jwtSecret string) *Handler {
 	return &Handler{
 		db:        db,
 		cache:     cache,
@@ -143,8 +144,8 @@ func (h *Handler) Register(c fiber.Ctx) error {
 
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO customers (customer_id, email, name, country, phone, created_at, status, password_hash, role)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'customer')
-	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword))
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer")
 
 	if err != nil {
 		return errors.SendError(
@@ -164,7 +165,6 @@ func (h *Handler) Register(c fiber.Ctx) error {
 		Phone:      req.Phone,
 		CreatedAt:  createdAt,
 		Status:     "active",
-		Role:       models.RoleCustomer,
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -349,7 +349,26 @@ func (h *Handler) ValidateToken(c fiber.Ctx) error {
 		)
 	}
 
-	token = token[len("Bearer "):]
+	if !strings.HasPrefix(token, "Bearer ") {
+		return errors.SendError(
+			c,
+			fiber.StatusBadRequest,
+			errors.ErrValidation,
+			"Invalid authorization format",
+			nil,
+		)
+	}
+
+	token = strings.TrimPrefix(token, "Bearer ")
+	if token == "" {
+		return errors.SendError(
+			c,
+			fiber.StatusBadRequest,
+			errors.ErrValidation,
+			"Invalid authorization format",
+			nil,
+		)
+	}
 
 	claims := &JWTClaims{}
 	t, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {

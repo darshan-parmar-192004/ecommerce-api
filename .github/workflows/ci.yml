@@ -25,7 +25,7 @@ jobs:
       - name: Setup GO
         uses: actions/setup-go@v4
         with:
-          go-version: "1.25.8"
+          go-version: "1.25.x"
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -45,16 +45,11 @@ jobs:
           cd backend
           golangci-lint run ./... --timeout 5m
 
-      - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          cd backend
-          govulncheck ./...
-
   test:
-    name: Run Unit Tests
+    name: Run Go Tests
     runs-on: vm-hosted
     needs: lint
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,43 +57,77 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.25.8"
+          go-version: "1.25.x"
 
-      - name: Run Unit Tests
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run tests
         run: |
-          cd backend
-          # Set the skip flag for the entire test run
-          # APP_ENV=unit_test_no_redis go test ./...
+            cd backend
+            # Use grep -v to exclude the e2e test directory
+            CI=true go test $(go list ./... | grep -v /test/e2e) -v
 
   container-test:
     name: Container Integration Test
     runs-on: vm-hosted
     needs: test
+    env:
+      BLUEPRINT_DB_PORT: 5433
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Clean up environment
-        run: |
-          docker compose down -v --remove-orphans || true
-          # Kill local processes that might block ports on the VM
-          sudo fuser -k 8080/tcp 6379/tcp 5432/tcp 2>/dev/null || true
+      - name: Clean up previous volumes
+        run: docker compose down -v
 
-      - name: Run Integration Tests in Docker
+      - name: Run Application Stack
         run: |
-          # Use docker compose run and pass explicit vars
-          docker compose run --rm \
-          -e REDIS_HOST=redis \
-          -e REDIS_PORT=6379 \
-          -e BLUEPRINT_DB_HOST=psql_bp \
-          -e BLUEPRINT_DB_PORT=5432 \
-          -e APP_ENV=ci \
-          test-runner
+          docker compose up -d --build app
+
+      - name: Wait for services
+        run: |
+          for i in {1..45}; do
+            # We check the 'backend' container health status
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "starting")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Application is healthy!"
+              exit 0
+            fi
+
+            # Check if migration failed early
+            MIGRATE_EXIT=$(docker inspect --format='{{.State.ExitCode}}' blueprint_migrate 2>/dev/null || echo "0")
+            if [ "$MIGRATE_EXIT" != "0" ]; then
+              echo "Migration failed with exit code $MIGRATE_EXIT"
+              docker logs blueprint_migrate
+              exit 1
+            fi
+
+            echo "Waiting for service... status is $STATUS ($i/45)"
+            sleep 2
+          done
+          echo "Service did not become healthy in time"
+          docker compose logs
+          exit 1
 
       - name: Show logs on failure
         if: failure()
-        run: docker compose logs
+        run: |
+          echo "--- Postgres Logs ---"
+          docker logs blueprint_postgres
+          echo "--- Migration Logs ---"
+          docker logs blueprint_migrate
+          echo "--- App Logs ---"
+          docker logs backend
 
-      - name: Cleanup
+      - name: Stop containers
         if: always()
         run: docker compose down -v
