@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"backend/internal/database"
 	apperrors "backend/internal/errors"
-	"backend/internal/repositories"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -88,7 +88,7 @@ func OwnershipCheck(ownerIDGetter func(c fiber.Ctx) string) fiber.Handler {
 	}
 }
 
-func ValidateOrderOwnership(db repositories.Service) fiber.Handler {
+func ValidateOrderOwnership(db database.Service) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		orderID := c.Params("id")
 		if orderID == "" {

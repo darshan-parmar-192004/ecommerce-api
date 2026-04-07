@@ -3,18 +3,17 @@ package server
 import (
 	"os"
 
-	"backend/internal/database"
-	"backend/internal/repositories"
-	"backend/internal/services"
-
 	"github.com/gofiber/fiber/v3"
+
+	"backend/internal/cache"
+	"backend/internal/database"
 )
 
 type FiberServer struct {
 	*fiber.App
 
-	db        repositories.Service
-	cache     services.RedisService
+	db        database.Service
+	cache     cache.RedisService
 	jwtSecret string
 }
 
@@ -24,16 +23,14 @@ func New() *FiberServer {
 		jwtSecret = "your-super-secret-jwt-key-change-in-production"
 	}
 
-	_ = database.GetDB()
-
 	server := &FiberServer{
 		App: fiber.New(fiber.Config{
 			ServerHeader: "backend",
 			AppName:      "backend",
 		}),
 
-		db:        repositories.New(),
-		cache:     *services.NewRedis(),
+		db:        database.New(),
+		cache:     *cache.NewRedis(),
 		jwtSecret: jwtSecret,
 	}
 

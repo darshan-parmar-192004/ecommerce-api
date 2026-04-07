@@ -2,9 +2,10 @@ package models
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
-	"backend/internal/database"
+	"backend/internal/querybuilder"
 )
 
 type Inventory struct {
@@ -14,42 +15,23 @@ type Inventory struct {
 	LastUpdated time.Time `json:"last_updated"`
 }
 
-type StockInfo struct {
-	ProductName string    `json:"product_name"`
-	ProductID   string    `json:"product_id"`
-	WarehouseID string    `json:"warehouse_id"`
-	Quantity    int       `json:"quantity"`
-	LastUpdated time.Time `json:"last_updated"`
+type InventoryRepository struct {
+	db *sql.DB
 }
 
-type CustomerCLV struct {
-	CustomerID    string  `json:"customer_id"`
-	OrderCount    int     `json:"order_count"`
-	LifetimeValue float64 `json:"lifetime_value"`
+func NewInventoryRepository(db *sql.DB) *InventoryRepository {
+	return &InventoryRepository{db: db}
 }
 
-type CategoryTreeNode struct {
-	CategoryID       string  `json:"category_id"`
-	Name             string  `json:"name"`
-	ParentCategoryID *string `json:"parent_category_id"`
-	FullPath         string  `json:"full_path"`
-}
+func (r *InventoryRepository) GetAll(ctx context.Context) ([]Inventory, error) {
+	rows, err := querybuilder.New(r.db, "inventory").
+		Select("product_id", "warehouse_id", "quantity", "last_updated").
+		Query(ctx)
 
-type TopSeller struct {
-	ProductName string `json:"product_name"`
-	UnitsSold   int    `json:"units_sold"`
-}
-
-func GetInventory(ctx context.Context) ([]Inventory, error) {
-	db := database.GetDB()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	rows, err := db.QueryContext(ctx, `SELECT product_id, warehouse_id, quantity, last_updated FROM inventory`)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var inventoryList []Inventory
 	for rows.Next() {
@@ -59,15 +41,17 @@ func GetInventory(ctx context.Context) ([]Inventory, error) {
 		}
 		inventoryList = append(inventoryList, i)
 	}
+
 	return inventoryList, nil
 }
 
-func GetStockLevels(ctx context.Context) ([]StockInfo, error) {
-	db := database.GetDB()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+type StockInfo struct {
+	ProductName string `json:"product_name"`
+	Inventory
+}
 
-	rows, err := db.QueryContext(ctx, `
+func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]StockInfo, error) {
+	rows, err := r.db.QueryContext(ctx, `
 		SELECT p.name, i.product_id, i.warehouse_id, i.quantity, i.last_updated
 		FROM inventory i
 		JOIN products p ON i.product_id = p.product_id
@@ -76,7 +60,7 @@ func GetStockLevels(ctx context.Context) ([]StockInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var results []StockInfo
 	for rows.Next() {
@@ -86,16 +70,19 @@ func GetStockLevels(ctx context.Context) ([]StockInfo, error) {
 		}
 		results = append(results, s)
 	}
+
 	return results, nil
 }
 
-func GetAllCustomerCLV(ctx context.Context) ([]CustomerCLV, error) {
-	db := database.GetDB()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+type CustomerCLV struct {
+	CustomerID    string  `json:"customer_id"`
+	OrderCount    int     `json:"order_count"`
+	LifetimeValue float64 `json:"lifetime_value"`
+}
 
-	rows, err := db.QueryContext(ctx, `
-		SELECT customer_id, COUNT(order_id) as order_count, COALESCE(SUM(total_amount), 0) as total_spent
+func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]CustomerCLV, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT customer_id, COUNT(order_id) as order_count, SUM(total_amount) as total_spent
 		FROM orders
 		GROUP BY customer_id
 		ORDER BY total_spent DESC
@@ -103,33 +90,41 @@ func GetAllCustomerCLV(ctx context.Context) ([]CustomerCLV, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var stats []CustomerCLV
 	for rows.Next() {
-		var c CustomerCLV
-		if err := rows.Scan(&c.CustomerID, &c.OrderCount, &c.LifetimeValue); err != nil {
+		var clv CustomerCLV
+		if err := rows.Scan(&clv.CustomerID, &clv.OrderCount, &clv.LifetimeValue); err != nil {
 			return nil, err
 		}
-		stats = append(stats, c)
+		stats = append(stats, clv)
 	}
+
 	return stats, nil
 }
 
-func GetCategoryTree(ctx context.Context) ([]CategoryTreeNode, error) {
-	db := database.GetDB()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+type CategoryTreeNode struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	ParentID *string `json:"parent_id"`
+	FullPath string  `json:"full_path"`
+}
 
-	rows, err := db.QueryContext(ctx, `
+func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]CategoryTreeNode, error) {
+	rows, err := r.db.QueryContext(ctx, `
 		WITH RECURSIVE category_path AS (
 			SELECT category_id, name, parent_category_id, name AS path
 			FROM categories
 			WHERE parent_category_id IS NULL
+
 			UNION ALL
-			SELECT c.category_id, c.name, c.parent_category_id, cp.path || ' > ' || c.name
+
+			SELECT c.category_id, c.name, c.parent_category_id,
+			       cp.path || ' > ' || c.name
 			FROM categories c
-			JOIN category_path cp ON cp.category_id = c.parent_category_id
+			JOIN category_path cp
+			    ON cp.category_id = c.parent_category_id
 		)
 		SELECT category_id, name, parent_category_id, path
 		FROM category_path
@@ -138,44 +133,47 @@ func GetCategoryTree(ctx context.Context) ([]CategoryTreeNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tree []CategoryTreeNode
 	for rows.Next() {
 		var node CategoryTreeNode
-		if err := rows.Scan(&node.CategoryID, &node.Name, &node.ParentCategoryID, &node.FullPath); err != nil {
+		if err := rows.Scan(&node.ID, &node.Name, &node.ParentID, &node.FullPath); err != nil {
 			return nil, err
 		}
 		tree = append(tree, node)
 	}
+
 	return tree, nil
 }
 
-func GetTopSellers(ctx context.Context, limit int) ([]TopSeller, error) {
-	db := database.GetDB()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+type TopSeller struct {
+	Product   string `json:"product"`
+	UnitsSold int    `json:"units_sold"`
+}
 
-	rows, err := db.QueryContext(ctx, `
+func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]TopSeller, error) {
+	rows, err := r.db.QueryContext(ctx, `
 		SELECT p.name, SUM(oi.quantity) as total_sold
 		FROM order_items oi
 		JOIN products p ON oi.product_id = p.product_id
 		GROUP BY p.product_id, p.name
 		ORDER BY total_sold DESC
-		LIMIT $1
-	`, limit)
+		LIMIT 10
+	`)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var topProducts []TopSeller
 	for rows.Next() {
-		var s TopSeller
-		if err := rows.Scan(&s.ProductName, &s.UnitsSold); err != nil {
+		var top TopSeller
+		if err := rows.Scan(&top.Product, &top.UnitsSold); err != nil {
 			return nil, err
 		}
-		topProducts = append(topProducts, s)
+		topProducts = append(topProducts, top)
 	}
+
 	return topProducts, nil
 }

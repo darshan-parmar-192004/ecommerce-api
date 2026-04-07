@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"backend/internal/services"
+	"backend/internal/cache"
 )
 
-func StoreSession(r *services.RedisService, token string, customer any) error {
-	if r.Client == nil {
-		return nil
-	}
+func StoreSession(r *cache.RedisService, token string, customer any) error {
 
 	key := "session:" + token
 
@@ -20,35 +17,29 @@ func StoreSession(r *services.RedisService, token string, customer any) error {
 	}
 
 	return r.Client.Set(
-		services.Ctx,
+		cache.Ctx,
 		key,
 		data,
 		time.Hour,
 	).Err()
 }
 
-func GetSession(r *services.RedisService, token string) ([]byte, error) {
-	if r.Client == nil {
-		return nil, nil
-	}
+func GetSession(r *cache.RedisService, token string) ([]byte, error) {
 
 	key := "session:" + token
 
 	return r.Client.Get(
-		services.Ctx,
+		cache.Ctx,
 		key,
 	).Bytes()
 }
 
-func DeleteSession(r *services.RedisService, token string) error {
-	if r.Client == nil {
-		return nil
-	}
+func DeleteSession(r *cache.RedisService, token string) error {
 
 	key := "session:" + token
 
 	return r.Client.Del(
-		services.Ctx,
+		cache.Ctx,
 		key,
 	).Err()
 }

@@ -1,7 +1,7 @@
 package stats
 
 import (
-	"backend/internal/services"
+	"backend/internal/cache"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -13,22 +13,15 @@ func NewHandler() *Handler {
 }
 
 func (h *Handler) CacheStats(c fiber.Ctx) error {
-
-	hits, misses, total := services.GetStats()
-
-	hitRate := float64(0)
-	missRate := float64(0)
-
+	hits, misses, total := cache.GetStats()
+	var hitRate float64
 	if total > 0 {
-		hitRate = float64(hits) / float64(total)
-		missRate = float64(misses) / float64(total)
+		hitRate = float64(hits) / float64(total) * 100
 	}
-
-	return c.JSON(fiber.Map{
-		"hits":           hits,
-		"misses":         misses,
-		"total_requests": total,
-		"hit_rate":       hitRate,
-		"miss_rate":      missRate,
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"hits":     hits,
+		"misses":   misses,
+		"total":    total,
+		"hit_rate": hitRate,
 	})
 }

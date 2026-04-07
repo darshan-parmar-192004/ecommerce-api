@@ -2,9 +2,10 @@ package models
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
-	"backend/internal/database"
+	"backend/internal/querybuilder"
 )
 
 type Role string
@@ -26,23 +27,20 @@ type Customer struct {
 	Role         Role      `json:"role"`
 }
 
-type CustomerUpdate struct {
-	Name    string `json:"name"`
-	Country string `json:"country"`
-	Phone   string `json:"phone"`
+type CustomerRepository struct {
+	db *sql.DB
 }
 
-func GetCustomerByID(ctx context.Context, customerID string) (*Customer, error) {
-	db := database.GetDB()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+func NewCustomerRepository(db *sql.DB) *CustomerRepository {
+	return &CustomerRepository{db: db}
+}
 
+func (r *CustomerRepository) GetByID(ctx context.Context, customerID string) (*Customer, error) {
 	var customer Customer
-	err := db.QueryRowContext(ctx, `
-		SELECT customer_id, email, name, country, phone, created_at, status
-		FROM customers
-		WHERE customer_id = $1
-	`, customerID).Scan(
+	err := querybuilder.New(r.db, "customers").
+		Select("customer_id", "email", "name", "country", "phone", "created_at", "status", "role").
+		Where("customer_id", customerID).
+		QueryRow(ctx).Scan(
 		&customer.CustomerID,
 		&customer.Email,
 		&customer.Name,
@@ -50,74 +48,88 @@ func GetCustomerByID(ctx context.Context, customerID string) (*Customer, error) 
 		&customer.Phone,
 		&customer.CreatedAt,
 		&customer.Status,
+		&customer.Role,
 	)
-	if err != nil {
-		return nil, err
-	}
-	return &customer, nil
+	return &customer, err
 }
 
-func UpdateCustomer(ctx context.Context, customerID string, update CustomerUpdate) (*Customer, error) {
-	db := database.GetDB()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	_, err := db.ExecContext(ctx, `
-		UPDATE customers
-		SET name = COALESCE(NULLIF($1, ''), name),
-		    country = COALESCE(NULLIF($2, ''), country),
-		    phone = COALESCE(NULLIF($3, ''), phone)
-		WHERE customer_id = $4
-	`, update.Name, update.Country, update.Phone, customerID)
-	if err != nil {
-		return nil, err
-	}
-
-	return GetCustomerByID(ctx, customerID)
+func (r *CustomerRepository) GetByEmail(ctx context.Context, email string) (*Customer, error) {
+	var customer Customer
+	err := querybuilder.New(r.db, "customers").
+		Select("customer_id", "email", "name", "country", "phone", "created_at", "status", "password_hash", "role").
+		Where("email", email).
+		QueryRow(ctx).Scan(
+		&customer.CustomerID,
+		&customer.Email,
+		&customer.Name,
+		&customer.Country,
+		&customer.Phone,
+		&customer.CreatedAt,
+		&customer.Status,
+		&customer.PasswordHash,
+		&customer.Role,
+	)
+	return &customer, err
 }
 
-func GetCustomerOrders(ctx context.Context, customerID string) ([]Order, error) {
-	db := database.GetDB()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+func (r *CustomerRepository) Update(ctx context.Context, customerID, name, country, phone string) error {
+	updateBuilder := querybuilder.NewUpdate(r.db, "customers").
+		Set("name", name).
+		Set("country", country).
+		Set("phone", phone).
+		Where("customer_id", customerID)
 
-	rows, err := db.QueryContext(ctx, `
-		SELECT order_id, customer_id, order_date, status, total_amount, shipping_address
-		FROM orders
-		WHERE customer_id = $1
-		ORDER BY order_date DESC
-	`, customerID)
+	_, err := updateBuilder.Exec(ctx)
+	return err
+}
+
+func (r *CustomerRepository) Create(ctx context.Context, customerID, email, name, country, phone, passwordHash string, createdAt time.Time) error {
+	_, err := querybuilder.NewInsert(r.db, "customers").
+		Columns("customer_id", "email", "name", "country", "phone", "created_at", "status", "password_hash", "role").
+		Values(customerID, email, name, country, phone, createdAt, "active", passwordHash, "customer").
+		Exec(ctx)
+	return err
+}
+
+func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID string) ([]Order, error) {
+	rows, err := querybuilder.New(r.db, "orders").
+		Select("order_id", "customer_id", "order_date", "status", "total_amount", "shipping_address").
+		Where("customer_id", customerID).
+		OrderBy("order_date DESC").
+		Query(ctx)
+
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var orders []Order
 	for rows.Next() {
 		var o Order
-		if err := rows.Scan(&o.OrderID, &o.CustomerID, &o.OrderDate, &o.Status, &o.TotalAmount, &o.ShippingAddress); err != nil {
+		if err := rows.Scan(
+			&o.OrderID,
+			&o.CustomerID,
+			&o.OrderDate,
+			&o.Status,
+			&o.TotalAmount,
+			&o.ShippingAddress,
+		); err != nil {
 			return nil, err
 		}
 		orders = append(orders, o)
 	}
+
 	return orders, nil
 }
 
-func GetCustomerLifetimeValue(ctx context.Context, customerID string) (int, float64, error) {
-	db := database.GetDB()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
+func (r *CustomerRepository) GetCustomerLifetimeValue(ctx context.Context, customerID string) (int, float64, error) {
 	var totalOrders int
 	var totalValue float64
 
-	err := db.QueryRowContext(ctx, `
-		SELECT COUNT(order_id), COALESCE(SUM(total_amount),0)
-		FROM orders
-		WHERE customer_id = $1
-	`, customerID).Scan(&totalOrders, &totalValue)
-	if err != nil {
-		return 0, 0, err
-	}
-	return totalOrders, totalValue, nil
+	err := querybuilder.New(r.db, "orders").
+		Select("COUNT(order_id)", "COALESCE(SUM(total_amount), 0)").
+		Where("customer_id", customerID).
+		QueryRow(ctx).Scan(&totalOrders, &totalValue)
+
+	return totalOrders, totalValue, err
 }

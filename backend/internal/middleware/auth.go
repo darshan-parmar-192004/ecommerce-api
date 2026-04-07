@@ -24,10 +24,6 @@ func NewAuthMiddleware(secret string) *AuthMiddleware {
 	}
 }
 
-func (m *AuthMiddleware) GetJWTSecret() []byte {
-	return m.jwtSecret
-}
-
 func (m *AuthMiddleware) Authenticate(c fiber.Ctx) error {
 	token := c.Get("Authorization")
 	if token == "" {
