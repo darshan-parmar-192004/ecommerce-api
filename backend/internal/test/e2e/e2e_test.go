@@ -185,7 +185,7 @@ func (s *E2ETestSuite) TestE2E_CustomerRegistrationAndLogin() {
 				"phone": "+1234567890"
 			}`
 
-			s.mock.ExpectExec("INSERT INTO customers").
+			s.mock.ExpectExec(`INSERT INTO "customers"`).
 				WithArgs(sqlmock.AnyArg(), "newuser@example.com", "New User", "US", "+1234567890", sqlmock.AnyArg(), sqlmock.AnyArg(), "active", "customer").
 				WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -236,7 +236,7 @@ func (s *E2ETestSuite) TestE2E_AdminProductManagement() {
 	s.T().Run("admin login → create product → update product → delete product", func(t *testing.T) {
 		// Step 1: Admin creates a product
 		t.Run("Step 1: Admin creates product", func(t *testing.T) {
-			s.mock.ExpectExec("INSERT INTO products").
+			s.mock.ExpectExec(`INSERT INTO "products"`).
 				WithArgs(sqlmock.AnyArg(), "Test Product", s.categoryID, 29.99, sqlmock.AnyArg(), sqlmock.AnyArg()).
 				WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -273,7 +273,7 @@ func (s *E2ETestSuite) TestE2E_AdminProductManagement() {
 				WithArgs(s.productID).
 				WillReturnRows(sqlmock.NewRows([]string{"created_at"}).AddRow(time.Now()))
 
-			s.mock.ExpectExec("UPDATE products").
+			s.mock.ExpectExec(`UPDATE "products"`).
 				WithArgs("Updated Product", s.categoryID, 39.99, sqlmock.AnyArg(), s.productID).
 				WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -295,7 +295,7 @@ func (s *E2ETestSuite) TestE2E_AdminProductManagement() {
 
 		// Step 3: Admin deletes the product
 		t.Run("Step 3: Admin deletes product", func(t *testing.T) {
-			s.mock.ExpectExec("DELETE FROM products").
+			s.mock.ExpectExec(`DELETE FROM "products"`).
 				WithArgs(s.productID).
 				WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -381,9 +381,9 @@ func (s *E2ETestSuite) TestE2E_CustomerOrderFlow() {
 		// Step 3: Create order (authenticated)
 		t.Run("Step 3: Create order", func(t *testing.T) {
 			s.mock.ExpectBegin()
-			s.mock.ExpectExec("INSERT INTO orders").
+			s.mock.ExpectExec(`INSERT INTO "orders"`).
 				WillReturnResult(sqlmock.NewResult(0, 1))
-			s.mock.ExpectExec("INSERT INTO order_items").
+			s.mock.ExpectExec(`INSERT INTO "order_items"`).
 				WillReturnResult(sqlmock.NewResult(0, 1))
 			s.mock.ExpectCommit()
 
@@ -467,7 +467,7 @@ func (s *E2ETestSuite) TestE2E_CustomerProfileManagement() {
 
 		// Step 2: Update own profile
 		t.Run("Step 2: Update own profile", func(t *testing.T) {
-			s.mock.ExpectExec("UPDATE customers").
+			s.mock.ExpectExec(`UPDATE "customers"`).
 				WithArgs("Updated Name", "UK", "+44", s.customerID).
 				WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -595,7 +595,7 @@ func (s *E2ETestSuite) TestE2E_AdminInventoryManagement() {
 				AddRow("CAT-root", "Root", nil, "Root").
 				AddRow("CAT-child", "Child", "CAT-root", "Root > Child")
 
-			s.mock.ExpectQuery("WITH RECURSIVE").
+			s.mock.ExpectQuery(`SELECT "category_id"`).
 				WillReturnRows(treeRows)
 
 			req := httptest.NewRequest(http.MethodGet, "/inventory/hierarchy", nil)
@@ -682,7 +682,7 @@ func (s *E2ETestSuite) TestE2E_CategoryBrowsing() {
 				AddRow("CAT-child1", "Child 1", "CAT-root").
 				AddRow("CAT-child2", "Child 2", "CAT-root")
 
-			s.mock.ExpectQuery("WITH RECURSIVE").
+			s.mock.ExpectQuery(`SELECT "category_id"`).
 				WillReturnRows(hierarchyRows)
 
 			req := httptest.NewRequest(http.MethodGet, "/categories/hierarchy", nil)

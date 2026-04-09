@@ -73,21 +73,11 @@ func (r *CategoryRepository) GetCategoryProducts(ctx context.Context, categoryID
 }
 
 func (r *CategoryRepository) GetHierarchy(ctx context.Context) ([]Category, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		WITH RECURSIVE category_tree AS (
-			SELECT category_id, name, parent_category_id
-			FROM categories
-			WHERE parent_category_id IS NULL
+	rows, err := querybuilder.New(r.db, "categories").
+		Select("category_id", "name", "parent_category_id").
+		OrderBy("name").
+		Query(ctx)
 
-			UNION ALL
-
-			SELECT c.category_id, c.name, c.parent_category_id
-			FROM categories c
-			INNER JOIN category_tree ct
-			ON ct.category_id = c.parent_category_id
-		)
-		SELECT * FROM category_tree
-	`)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"backend/internal/errors"
 	"backend/internal/middleware"
 	"backend/internal/models"
+	"backend/internal/querybuilder"
 	"context"
 	"database/sql"
 	"strings"
@@ -142,10 +143,10 @@ func (h *Handler) Register(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	_, err = db.ExecContext(ctx, `
-		INSERT INTO customers (customer_id, email, name, country, phone, created_at, status, password_hash, role)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer")
+	_, err = querybuilder.NewInsert(db, "customers").
+		Columns("customer_id", "email", "name", "country", "phone", "created_at", "status", "password_hash", "role").
+		Values(customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer").
+		Exec(ctx)
 
 	if err != nil {
 		return errors.SendError(
