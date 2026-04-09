@@ -17,7 +17,12 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async setAuth(data) {
       this.token = data.token
-      this.user = data.customer
+      this.user = {
+        customer_id: data.data?.customer_id || data.customer_id || data.customer?.customer_id,
+        email: data.data?.email || data.email || data.customer?.email,
+        name: data.data?.name || data.customer?.name,
+        role: data.data?.role || data.customer?.role
+      }
       this.persistAuth()
 
       if (import.meta.client) {
@@ -123,7 +128,12 @@ export const useAuthStore = defineStore('auth', {
 
         if (response.ok) {
           const data = await response.json()
-          this.user = data.data || data.customer || data
+          this.user = {
+            customer_id: data.data?.customer_id || data.customer_id,
+            email: data.data?.email || data.email,
+            name: data.data?.name || data.name,
+            role: data.data?.role || data.role
+          }
           this.persistAuth()
           return true
         } else {

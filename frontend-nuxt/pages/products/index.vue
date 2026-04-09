@@ -284,13 +284,13 @@ useSeoMeta({
                     >
                       {{ p }}
                     </button>
-                    <span v-else-if="p === page - 2 || p === page + 2" class="text-outline">...</span>
+                    <span v-else-if="p === currentPage - 2 || p === currentPage + 2" class="text-outline">...</span>
                   </template>
                 </div>
                 
                 <button 
-                  :disabled="page >= pagination.total_pages"
-                  @click="goToPage(page + 1)"
+                  :disabled="currentPage >= pagination.total_pages"
+                  @click="goToPage(currentPage + 1)"
                   class="px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-on_surface"
                 >
                   Next
