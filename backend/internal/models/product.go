@@ -33,6 +33,8 @@ func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, m
 	var args []interface{}
 	argIndex := 1
 
+	fmt.Printf("[DEBUG] GetAll called: category=%q, minPrice=%q, maxPrice=%q, search=%q, page=%d, limit=%d\n", category, minPriceStr, maxPriceStr, search, page, limit)
+
 	if category != "" {
 		filters = append(filters, fmt.Sprintf("category_id = $%d", argIndex))
 		args = append(args, category)

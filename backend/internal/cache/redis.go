@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -34,10 +33,7 @@ func NewRedis() *RedisService {
 	addr := host + ":" + port
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr:         addr,
-		DialTimeout:  2 * time.Second,
-		ReadTimeout:  2 * time.Second,
-		WriteTimeout: 2 * time.Second,
+		Addr: addr,
 	})
 
 	if err := rdb.Ping(Ctx).Err(); err != nil {
