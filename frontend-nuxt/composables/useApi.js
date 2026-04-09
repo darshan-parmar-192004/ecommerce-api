@@ -1,7 +1,14 @@
+import { useAuthStore } from '~/stores/auth'
+
 export const useApi = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase
   const authStore = useAuthStore()
+
+  const getToken = () => {
+    const tokenCookie = useCookie('auth_token')
+    return tokenCookie.value || authStore.token
+  }
 
   const fetchJson = async (url, options = {}) => {
     const headers = {
@@ -9,8 +16,9 @@ export const useApi = () => {
       ...(options.headers || {})
     }
 
-    if (authStore.token) {
-      headers['Authorization'] = `Bearer ${authStore.token}`
+    const token = getToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
     }
 
     try {
@@ -78,7 +86,9 @@ export const useApi = () => {
       }
       
       if (result.token) {
-        authStore.setAuth({
+        const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 })
+        tokenCookie.value = result.token
+        await authStore.setAuth({
           token: result.token,
           customer: result.data?.customer || result.customer
         })
@@ -98,7 +108,9 @@ export const useApi = () => {
       }
       
       if (result.token) {
-        authStore.setAuth({
+        const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 })
+        tokenCookie.value = result.token
+        await authStore.setAuth({
           token: result.token,
           customer: result.customer
         })
@@ -106,13 +118,17 @@ export const useApi = () => {
       return result
     },
     logout: async () => {
+      const token = getToken()
       try {
-        const headers = {}
-        if (authStore.token) {
-          headers['Authorization'] = `Bearer ${authStore.token}`
+        if (token) {
+          await fetch(`${apiBase}/auth/logout`, { 
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
         }
-        await fetch(`${apiBase}/auth/logout`, { method: 'POST', headers })
       } finally {
+        const tokenCookie = useCookie('auth_token')
+        tokenCookie.value = null
         authStore.clearAuth()
       }
     },

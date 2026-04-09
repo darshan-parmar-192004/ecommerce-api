@@ -1,49 +1,30 @@
 export default defineNuxtConfig({
   ssr: true,
-  devtools: { enabled: true },
+
+  devtools: { enabled: false },
 
   experimental: {
-    payloadExtraction: false,
-    inlineSSGStyles: false,
-    renderJsonPayloads: false,
+    ownMiddlewareResolution: true,
+    payloadExtraction: true,
+    inlineSSRStyles: false,
+    appManifest: false,
   },
 
   nitro: {
-    openAPI: false,
-    preCompression: false,
-  },
-
-  routeRules: {
-    "/api/**": { cors: true },
-    "/**": { ssr: true },
-  },
-
-  runtimeConfig: {
-    public: {
-      apiBase:
-        process.env.NUXT_PUBLIC_API_BASE ||
-        process.env.API_BASE_URL ||
-        "http://localhost:8080",
+    serveStatic: {
+      strict: false,
     },
+    compressPublicAssets: true,
   },
 
   modules: ["@pinia/nuxt", "@nuxtjs/tailwindcss"],
 
-  app: {
-    head: {
-      title: "E-Commerce Store",
-      meta: [
-        { charset: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1" },
-        {
-          name: "description",
-          content: "Modern e-commerce store built with Nuxt 3",
-        },
-      ],
-      link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
-    },
-    errorPage: "/error",
-    pageTransition: { name: 'page', mode: 'out-in' }
+  pinia: {
+    storesDirs: ["./stores/**"],
+  },
+
+  imports: {
+    dirs: ["./composables"],
   },
 
   css: ["~/assets/css/main.css"],
@@ -53,8 +34,29 @@ export default defineNuxtConfig({
     configPath: "tailwind.config.js",
   },
 
-  pinia: {
-    storesDirs: ["./stores/**"],
+  app: {
+    head: {
+      title: "E-Commerce Store",
+      meta: [
+        { charset: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { name: "description", content: "Modern e-commerce store" },
+      ],
+      link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
+    },
+    pageTransition: { name: "page", mode: "out-in" },
+  },
+
+  nitro: {
+    serveStatic: {
+      strict: false,
+    },
+  },
+
+  runtimeConfig: {
+    public: {
+      apiBase: "http://127.0.0.1:8080",
+    },
   },
 
   compatibilityDate: "2024-04-03",

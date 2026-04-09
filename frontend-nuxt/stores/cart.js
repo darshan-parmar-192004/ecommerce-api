@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth'
+import { shallowRef } from 'vue'
 
 const TAX_RATE = 0.08
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
-    items: [],
-    isOpen: false
+    items: shallowRef([]),
+    isOpen: false,
+    _loaded: false
   }),
 
   getters: {
@@ -23,16 +24,11 @@ export const useCartStore = defineStore('cart', {
 
   actions: {
     addItem(product, quantity = 1) {
-      const authStore = useAuthStore()
-      if (!authStore.isAuthenticated) {
-        return
-      }
-      
       const existing = this.items.find(item => item.product.product_id === product.product_id)
       if (existing) {
         existing.quantity += quantity
       } else {
-        this.items.push({ product, quantity })
+        this.items = [...this.items, { product, quantity }]
       }
       this.persistCart()
     },
@@ -40,7 +36,7 @@ export const useCartStore = defineStore('cart', {
     removeItem(productId) {
       const index = this.items.findIndex(item => item.product.product_id === productId)
       if (index !== -1) {
-        this.items.splice(index, 1)
+        this.items = this.items.filter((_, i) => i !== index)
         this.persistCart()
       }
     },
@@ -52,6 +48,7 @@ export const useCartStore = defineStore('cart', {
           this.removeItem(productId)
         } else {
           item.quantity = quantity
+          this.items = [...this.items]
           this.persistCart()
         }
       }
@@ -75,32 +72,40 @@ export const useCartStore = defineStore('cart', {
     },
 
     persistCart() {
-      const authStore = useAuthStore()
-      if (!authStore.isAuthenticated) {
-        return
-      }
-      
       if (import.meta.client) {
         localStorage.setItem('cart', JSON.stringify(this.items))
+        useCookie('cart').value = JSON.stringify(this.items)
       }
     },
 
     loadCart() {
-      const authStore = useAuthStore()
-      if (!authStore.isAuthenticated) {
-        this.items = []
-        return
-      }
-      
-      if (import.meta.client) {
-        const stored = localStorage.getItem('cart')
+      if (import.meta.client && !this._loaded) {
+        let stored = localStorage.getItem('cart')
+        if (!stored) {
+          const cartCookie = useCookie('cart')
+          stored = cartCookie.value
+        }
         if (stored) {
           try {
-            this.items = JSON.parse(stored)
+            this.items = shallowRef(JSON.parse(stored))
           } catch {
-            this.items = []
+            this.items = shallowRef([])
           }
         }
+        this._loaded = true
+      }
+    },
+
+    reloadCart() {
+      if (import.meta.client) {
+        this._loaded = false
+        this.loadCart()
+      }
+    },
+
+    init() {
+      if (import.meta.client && !this._loaded) {
+        this.loadCart()
       }
     }
   }

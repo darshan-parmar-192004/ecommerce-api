@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useCartStore } from './cart'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -16,13 +15,16 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    setAuth(data) {
+    async setAuth(data) {
       this.token = data.token
       this.user = data.customer
       this.persistAuth()
-      
-      const cartStore = useCartStore()
-      cartStore.loadCart()
+
+      if (import.meta.client) {
+        const { useCartStore } = await import('./cart')
+        const cartStore = useCartStore()
+        cartStore.reloadCart()
+      }
     },
 
     setToken(token) {
@@ -76,27 +78,53 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    loadAuthFromCookie() {
+      const tokenCookie = useCookie('auth_token')
+      if (tokenCookie.value) {
+        this.token = tokenCookie.value
+      }
+      
+      const userStr = useCookie('auth_user')
+      if (userStr.value) {
+        try {
+          this.user = typeof userStr.value === 'string' ? JSON.parse(userStr.value) : userStr.value
+        } catch {
+          this.user = null
+        }
+      }
+    },
+
     clearAuthStorage() {
       if (import.meta.client) {
         document.cookie = 'auth_token=; path=/; max-age=0; samesite=lax'
         localStorage.removeItem('auth_token')
         localStorage.removeItem('auth_user')
       }
+      
+      const tokenCookie = useCookie('auth_token')
+      tokenCookie.value = null
+      
+      const userCookie = useCookie('auth_user')
+      userCookie.value = null
     },
 
     async verifyAuth() {
       if (!this.token) return false
-      
+
       try {
-        const response = await fetch('/api/auth/me', {
+        const config = useRuntimeConfig()
+        const apiBase = config.public.apiBase
+
+        const response = await fetch(`${apiBase}/auth/me`, {
           headers: {
             'Authorization': `Bearer ${this.token}`
           }
         })
-        
+
         if (response.ok) {
           const data = await response.json()
-          this.user = data.data || data
+          this.user = data.data || data.customer || data
+          this.persistAuth()
           return true
         } else {
           this.clearAuth()
@@ -104,6 +132,7 @@ export const useAuthStore = defineStore('auth', {
         }
       } catch (error) {
         console.error('Auth verification failed:', error)
+        this.clearAuth()
         return false
       }
     }

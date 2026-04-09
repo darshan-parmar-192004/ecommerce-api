@@ -1,17 +1,23 @@
 <script setup>
+import { useCartStore } from '~/stores/cart'
+import { useAuthStore } from '~/stores/auth'
+
 const cartStore = useCartStore()
 const authStore = useAuthStore()
 const route = useRoute()
 const isMenuOpen = ref(false)
 const isUserMenuOpen = ref(false)
+const layoutEl = ref(null)
 
 const { isAuthenticated, user } = storeToRefs(authStore)
 
-onMounted(async () => {
-  authStore.loadAuth()
-  if (authStore.token) {
-    await authStore.verifyAuth()
-    cartStore.loadCart()
+onMounted(() => {
+  if (layoutEl.value) {
+    layoutEl.value.addEventListener('mousemove', (e) => {
+      const rect = layoutEl.value.getBoundingClientRect()
+      layoutEl.value.style.setProperty('--x', `${e.clientX - rect.left}px`)
+      layoutEl.value.style.setProperty('--y', `${e.clientY - rect.top}px`)
+    })
   }
 })
 
@@ -25,167 +31,170 @@ const getUserInitial = (name) => {
   return name.charAt(0).toUpperCase()
 }
 
+const { auth } = useApi()
+
 const handleLogout = async () => {
   try {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    await auth.logout()
   } catch (e) {
     console.error('Logout error:', e)
+  } finally {
+    authStore.clearAuth()
+    cartStore.clearCart()
+    closeMenu()
+    navigateTo('/')
   }
-  authStore.clearAuth()
-  cartStore.clearCart()
-  closeMenu()
-  navigateTo('/')
 }
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-50">
+  <div ref="layoutEl" class="min-h-screen flex flex-col relative overflow-hidden bg-surface font-body text-on_surface">
+    <div class="pointer-events-none fixed inset-0 z-0" style="background: radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(62, 81, 251, 0.06), transparent 40%);"></div>
     <AnimatedGrid variant="minimal" />
     
-    <header class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-gray-100">
-      <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-          <div class="flex items-center gap-8">
-            <NuxtLink to="/" class="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent" @click="closeMenu">
-              Store
+    <header class="sticky top-0 z-40 glass border-b border-outline-variant/20">
+      <nav class="max-w-7xl mx-auto px-6 lg:px-8">
+        <div class="flex justify-between items-center h-20">
+          <div class="flex items-center gap-12">
+            <NuxtLink to="/" class="text-2xl font-bold tracking-tight font-display text-primary" @click="closeMenu">
+              The Curator
             </NuxtLink>
 
-            <div class="hidden md:flex items-center gap-6">
+            <div class="hidden md:flex items-center gap-8">
               <NuxtLink 
                 to="/products" 
-                class="text-gray-600 hover:text-primary-600 transition-colors font-medium"
-                active-class="text-primary-600"
+                class="text-xs font-semibold uppercase tracking-widest transition-colors duration-300 text-on_surface_variant"
+                active-class="text-primary"
               >
                 Products
               </NuxtLink>
               <NuxtLink 
                 to="/cart" 
-                class="text-gray-600 hover:text-primary-600 transition-colors font-medium"
-                active-class="text-primary-600"
+                class="text-xs font-semibold uppercase tracking-widest transition-colors duration-300 text-on_surface_variant"
+                active-class="text-primary"
               >
                 Cart
               </NuxtLink>
             </div>
           </div>
 
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-5">
             <button 
               @click="cartStore.toggleCart"
-              class="relative p-2 text-gray-600 hover:text-primary-600 transition-colors"
+              class="relative p-2.5 rounded-full transition-colors duration-300 hover:bg-surface-container text-on_surface_variant"
               aria-label="Shopping cart"
             >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
               </svg>
               <span 
                 v-if="cartStore.totalItems > 0"
-                class="absolute -top-1 -right-1 bg-primary-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-medium animate-bounce-subtle"
+                class="absolute -top-0.5 -right-0.5 text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold animate-bounce-subtle bg-gradient-to-r from-primary to-primary-container text-white"
               >
                 {{ cartStore.totalItems }}
               </span>
             </button>
 
             <template v-if="isAuthenticated">
-              <!-- User Dropdown -->
               <div class="relative">
                 <button 
                   @click="isUserMenuOpen = !isUserMenuOpen"
-                  class="flex items-center gap-2 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                  class="flex items-center gap-2 p-1 rounded-full transition-colors duration-300 hover:bg-surface-container"
                 >
-                  <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-gradient-to-r from-primary to-primary-container">
                     {{ getUserInitial(user?.name) }}
                   </div>
-                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 transition-transform duration-300 text-outline" :class="{ 'rotate-180': isUserMenuOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
                 <Transition
-                  enter-active-class="transition ease-out duration-200"
-                  enter-from-class="opacity-0 scale-95"
-                  enter-to-class="opacity-100 scale-100"
-                  leave-active-class="transition ease-in duration-150"
-                  leave-from-class="opacity-100 scale-100"
-                  leave-to-class="opacity-0 scale-95"
+                  enter-active-class="transition ease-out duration-300"
+                  enter-from-class="opacity-0 scale-95 -translate-y-1"
+                  enter-to-class="opacity-100 scale-100 translate-y-0"
+                  leave-active-class="transition ease-in duration-200"
+                  leave-from-class="opacity-100 scale-100 translate-y-0"
+                  leave-to-class="opacity-0 scale-95 -translate-y-1"
                 >
-                  <div v-if="isUserMenuOpen" class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
-                    <div class="px-4 py-3 border-b border-gray-100">
-                      <p class="text-sm font-medium text-gray-900">{{ user?.name || 'User' }}</p>
-                      <p class="text-xs text-gray-500">{{ user?.email || '' }}</p>
+                  <div v-if="isUserMenuOpen" class="absolute right-0 mt-3 w-64 rounded-2xl py-3 z-50 bg-surface-container-lowest shadow-ambient">
+                    <div class="px-5 py-4 border-b border-outline-variant/20">
+                      <p class="text-sm font-semibold text-on_surface">{{ user?.name || 'User' }}</p>
+                      <p class="text-xs text-outline">{{ user?.email || '' }}</p>
                     </div>
                     <NuxtLink 
                       to="/orders" 
-                      class="flex items-center gap-3 px-4 py-2 text-gray-600 hover:text-primary-600 hover:bg-gray-50 transition-colors"
+                      class="flex items-center gap-3 px-5 py-3 transition-colors duration-200 hover:bg-surface-container-low text-on_surface_variant"
                       @click="closeMenu"
                     >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
                       </svg>
-                      My Orders
+                      <span class="text-sm font-medium">My Orders</span>
                     </NuxtLink>
                     <button 
                       @click="handleLogout"
-                      class="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors"
+                      class="w-full flex items-center gap-3 px-5 py-3 transition-colors duration-200 hover:bg-error-container/30 text-error"
                     >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                       </svg>
-                      Logout
+                      <span class="text-sm font-medium">Logout</span>
                     </button>
                   </div>
                 </Transition>
               </div>
             </template>
             <template v-else>
-              <NuxtLink to="/auth/login" class="text-gray-600 hover:text-primary-600 font-medium hidden sm:block">
+              <NuxtLink to="/auth/login" class="text-sm font-medium transition-colors duration-300 hidden sm:block hover:text-primary text-on_surface_variant">
                 Login
               </NuxtLink>
-              <NuxtLink to="/auth/register" class="px-4 py-2 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-lg hover:from-primary-700 hover:to-accent-700 transition-all font-medium text-sm shadow-md shadow-primary-500/25 hover:shadow-lg">
+              <NuxtLink to="/auth/register" class="px-5 py-2.5 text-white rounded-md font-medium text-sm transition-all duration-300 bg-gradient-to-r from-primary to-primary-container shadow-glow hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
                 Register
               </NuxtLink>
             </template>
 
             <button 
               @click="isMenuOpen = !isMenuOpen"
-              class="md:hidden p-2 text-gray-600"
+              class="md:hidden p-2 rounded-full transition-colors duration-300 hover:bg-surface-container text-on_surface_variant"
             >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path v-if="!isMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                <path v-if="!isMenuOpen" stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                <path v-else stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
 
         <Transition
-          enter-active-class="transition duration-200 ease-out"
+          enter-active-class="transition duration-300 ease-out"
           enter-from-class="opacity-0 -translate-y-2"
           enter-to-class="opacity-100 translate-y-0"
-          leave-active-class="transition duration-150 ease-in"
+          leave-active-class="transition duration-200 ease-in"
           leave-from-class="opacity-100 translate-y-0"
           leave-to-class="opacity-0 -translate-y-2"
         >
-          <div v-if="isMenuOpen" class="md:hidden py-4 border-t">
-            <div class="flex flex-col gap-4">
-              <NuxtLink to="/products" class="text-gray-600 hover:text-primary-600 font-medium" @click="closeMenu">
+          <div v-if="isMenuOpen" class="md:hidden py-6 border-t border-outline-variant/20">
+            <div class="flex flex-col gap-5">
+              <NuxtLink to="/products" class="text-xs font-semibold uppercase tracking-widest transition-colors text-on_surface_variant" @click="closeMenu">
                 Products
               </NuxtLink>
-              <NuxtLink to="/cart" class="text-gray-600 hover:text-primary-600 font-medium" @click="closeMenu">
+              <NuxtLink to="/cart" class="text-xs font-semibold uppercase tracking-widest transition-colors text-on_surface_variant" @click="closeMenu">
                 Cart
               </NuxtLink>
               <template v-if="isAuthenticated">
-                <NuxtLink to="/orders" class="text-gray-600 hover:text-primary-600 font-medium" @click="closeMenu">
+                <NuxtLink to="/orders" class="text-xs font-semibold uppercase tracking-widest transition-colors text-on_surface_variant" @click="closeMenu">
                   My Orders
                 </NuxtLink>
-                <button @click="handleLogout" class="text-left text-red-600 hover:text-red-700 font-medium">
+                <button @click="handleLogout" class="text-left text-xs font-semibold uppercase tracking-widest transition-colors text-error">
                   Logout
                 </button>
               </template>
               <template v-else>
-                <NuxtLink to="/auth/login" class="text-gray-600 hover:text-primary-600 font-medium" @click="closeMenu">
+                <NuxtLink to="/auth/login" class="text-xs font-semibold uppercase tracking-widest transition-colors text-on_surface_variant" @click="closeMenu">
                   Login
                 </NuxtLink>
-                <NuxtLink to="/auth/register" class="text-primary-600 font-medium" @click="closeMenu">
+                <NuxtLink to="/auth/register" class="text-xs font-semibold uppercase tracking-widest text-primary" @click="closeMenu">
                   Register
                 </NuxtLink>
               </template>
@@ -199,11 +208,13 @@ const handleLogout = async () => {
       <slot />
     </main>
 
-    <footer class="bg-white border-t border-gray-200 mt-auto">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <p class="text-center text-gray-500 text-sm">
-          &copy; 2024 E-Commerce Store. All rights reserved.
-        </p>
+    <footer class="mt-auto bg-surface-container-low">
+      <div class="max-w-7xl mx-auto px-6 lg:px-8 py-16">
+        <div class="text-center">
+          <p class="text-xs uppercase tracking-widest text-outline font-body">
+            &copy; 2024 The Curator. All rights reserved.
+          </p>
+        </div>
       </div>
     </footer>
 
@@ -212,12 +223,12 @@ const handleLogout = async () => {
 </template>
 
 <style scoped>
-.animate-bounce-subtle {
-  animation: bounceSubtle 0.5s ease-out;
-}
-
 @keyframes bounceSubtle {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.15); }
+}
+
+.animate-bounce-subtle {
+  animation: bounceSubtle 0.5s ease-out;
 }
 </style>
