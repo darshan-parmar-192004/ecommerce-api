@@ -10,6 +10,8 @@ const props = defineProps({
 
 const cartStore = useCartStore()
 const isAdding = ref(false)
+const cardRef = ref(null)
+const tiltStyle = ref({})
 
 const addToCart = async () => {
   isAdding.value = true
@@ -19,10 +21,42 @@ const addToCart = async () => {
     isAdding.value = false
   }, 500)
 }
+
+const handleMouseMove = (e) => {
+  if (!cardRef.value) return
+  
+  const rect = cardRef.value.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const y = e.clientY - rect.top
+  
+  const centerX = rect.width / 2
+  const centerY = rect.height / 2
+  
+  const rotateX = (y - centerY) / 20
+  const rotateY = (centerX - x) / 20
+  
+  tiltStyle.value = {
+    transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`,
+    transition: 'transform 0.1s ease-out'
+  }
+}
+
+const resetTilt = () => {
+  tiltStyle.value = {
+    transform: 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)',
+    transition: 'transform 0.3s ease-out'
+  }
+}
 </script>
 
 <template>
-  <div class="group overflow-hidden rounded-lg bg-surface-container-lowest shadow-ambient transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+  <div 
+    ref="cardRef"
+    @mousemove="handleMouseMove"
+    @mouseleave="resetTilt"
+    class="group overflow-hidden rounded-lg bg-surface-container-lowest shadow-ambient transition-all duration-300 hover:shadow-xl"
+    :style="tiltStyle"
+  >
     <NuxtLink
       :to="`/products/${product.product_id}`"
       class="block aspect-[4/3] bg-surface-container relative overflow-hidden"

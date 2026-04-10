@@ -52,7 +52,7 @@ const handleLogout = async () => {
     <div class="pointer-events-none fixed inset-0 z-0" style="background: radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(62, 81, 251, 0.06), transparent 40%);"></div>
     <AnimatedGrid variant="minimal" />
     
-    <header class="sticky top-0 z-40 glass border-b border-outline-variant/20">
+    <header class="sticky top-0 z-40 glass backdrop-blur-xl bg-surface/70 border-b border-white/10">
       <nav class="max-w-7xl mx-auto px-6 lg:px-8">
         <div class="flex justify-between items-center h-20">
           <div class="flex items-center gap-12">

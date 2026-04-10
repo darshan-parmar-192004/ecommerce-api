@@ -10,6 +10,9 @@ import (
 
 type QueryBuilder struct {
 	db      *sql.DB
+	dbConn  queryable
+	rawSQL  string
+	rawArgs []interface{}
 	selects *goqu.SelectDataset
 }
 
@@ -18,6 +21,45 @@ func New(db *sql.DB, table string) *QueryBuilder {
 		db:      db,
 		selects: goqu.Dialect("postgres").From(table),
 	}
+}
+
+func NewWithDB(db queryable, table string) *QueryBuilder {
+	return &QueryBuilder{
+		db:      nil,
+		dbConn:  db,
+		selects: goqu.Dialect("postgres").From(table),
+	}
+}
+
+func NewFromSQL(db *sql.DB, sql string, args ...interface{}) *QueryBuilder {
+	return &QueryBuilder{
+		db:      db,
+		rawSQL:  sql,
+		rawArgs: args,
+	}
+}
+
+func (q *QueryBuilder) Query(ctx context.Context) (*sql.Rows, error) {
+	if q.rawSQL != "" {
+		if q.dbConn != nil {
+			return q.dbConn.QueryContext(ctx, q.rawSQL, q.rawArgs...)
+		}
+		return q.db.QueryContext(ctx, q.rawSQL, q.rawArgs...)
+	}
+	sqlStr, args, err := q.selects.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+	if q.dbConn != nil {
+		return q.dbConn.QueryContext(ctx, sqlStr, args...)
+	}
+	return q.db.QueryContext(ctx, sqlStr, args...)
+}
+
+type queryable interface {
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }
 
 func (q *QueryBuilder) Select(cols ...string) *QueryBuilder {
@@ -33,6 +75,46 @@ func (q *QueryBuilder) Select(cols ...string) *QueryBuilder {
 
 func (q *QueryBuilder) Where(field string, value interface{}) *QueryBuilder {
 	q.selects = q.selects.Where(goqu.C(field).Eq(value))
+	return q
+}
+
+func (q *QueryBuilder) WhereNotNull(field string) *QueryBuilder {
+	q.selects = q.selects.Where(goqu.C(field).IsNotNull())
+	return q
+}
+
+func (q *QueryBuilder) WhereIn(field string, values ...interface{}) *QueryBuilder {
+	q.selects = q.selects.Where(goqu.C(field).In(values...))
+	return q
+}
+
+func (q *QueryBuilder) WhereLike(field string, pattern string) *QueryBuilder {
+	q.selects = q.selects.Where(goqu.C(field).Like(pattern))
+	return q
+}
+
+func (q *QueryBuilder) WhereGte(field string, value interface{}) *QueryBuilder {
+	q.selects = q.selects.Where(goqu.C(field).Gte(value))
+	return q
+}
+
+func (q *QueryBuilder) WhereLte(field string, value interface{}) *QueryBuilder {
+	q.selects = q.selects.Where(goqu.C(field).Lte(value))
+	return q
+}
+
+func (q *QueryBuilder) WhereOr(conditions ...interface{}) *QueryBuilder {
+	if len(conditions) > 0 {
+		var exps []goqu.Expression
+		for _, c := range conditions {
+			if exp, ok := c.(goqu.Expression); ok {
+				exps = append(exps, exp)
+			}
+		}
+		if len(exps) > 0 {
+			q.selects = q.selects.Where(goqu.Or(exps...))
+		}
+	}
 	return q
 }
 
@@ -56,16 +138,36 @@ func (q *QueryBuilder) Offset(offset int) *QueryBuilder {
 	return q
 }
 
-func (q *QueryBuilder) Query(ctx context.Context) (*sql.Rows, error) {
-	sqlStr, args, err := q.selects.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, err
+func (q *QueryBuilder) GroupBy(fields ...string) *QueryBuilder {
+	if len(fields) > 0 {
+		var exps []interface{}
+		for _, f := range fields {
+			exps = append(exps, f)
+		}
+		q.selects = q.selects.GroupBy(exps...)
 	}
-	return q.db.QueryContext(ctx, sqlStr, args...)
+	return q
+}
+
+func (q *QueryBuilder) From(table string) *QueryBuilder {
+	q.selects = q.selects.From(table)
+	return q
+}
+
+func (q *QueryBuilder) OrderByField(field, direction string) *QueryBuilder {
+	if direction == "DESC" {
+		q.selects = q.selects.Order(goqu.C(field).Desc())
+	} else {
+		q.selects = q.selects.Order(goqu.C(field).Asc())
+	}
+	return q
 }
 
 func (q *QueryBuilder) QueryRow(ctx context.Context) *sql.Row {
 	sqlStr, args, _ := q.selects.Prepared(true).ToSQL()
+	if q.dbConn != nil {
+		return q.dbConn.QueryRowContext(ctx, sqlStr, args...)
+	}
 	return q.db.QueryRowContext(ctx, sqlStr, args...)
 }
 
@@ -74,24 +176,40 @@ func (q *QueryBuilder) Exec(ctx context.Context) (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	if q.dbConn != nil {
+		return q.dbConn.ExecContext(ctx, sqlStr, args...)
+	}
 	return q.db.ExecContext(ctx, sqlStr, args...)
 }
 
 func (q *QueryBuilder) Count(ctx context.Context) (int, error) {
 	var count int
 	sqlStr, args, _ := q.selects.Prepared(true).Select(goqu.COUNT(goqu.C("*"))).ToSQL()
+	if q.dbConn != nil {
+		err := q.dbConn.QueryRowContext(ctx, sqlStr, args...).Scan(&count)
+		return count, err
+	}
 	err := q.db.QueryRowContext(ctx, sqlStr, args...).Scan(&count)
 	return count, err
 }
 
 type InsertBuilder struct {
 	db      *sql.DB
+	dbConn  queryable
 	inserts *goqu.InsertDataset
 }
 
 func NewInsert(db *sql.DB, table string) *InsertBuilder {
 	return &InsertBuilder{
 		db:      db,
+		inserts: goqu.Dialect("postgres").Insert(table),
+	}
+}
+
+func NewInsertWithDB(db queryable, table string) *InsertBuilder {
+	return &InsertBuilder{
+		db:      nil,
+		dbConn:  db,
 		inserts: goqu.Dialect("postgres").Insert(table),
 	}
 }
@@ -120,6 +238,9 @@ func (i *InsertBuilder) Exec(ctx context.Context) (sql.Result, error) {
 	sqlStr, args, err := i.inserts.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, err
+	}
+	if i.dbConn != nil {
+		return i.dbConn.ExecContext(ctx, sqlStr, args...)
 	}
 	return i.db.ExecContext(ctx, sqlStr, args...)
 }

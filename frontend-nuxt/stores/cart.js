@@ -6,6 +6,7 @@ const TAX_RATE = 0.08
 export const useCartStore = defineStore('cart', {
   state: () => ({
     items: shallowRef([]),
+    savedForLater: shallowRef([]),
     isOpen: false,
     _loaded: false
   }),
@@ -19,7 +20,8 @@ export const useCartStore = defineStore('cart', {
     total() {
       return this.subtotal + this.tax
     },
-    isEmpty: (state) => state.items.length === 0
+    isEmpty: (state) => state.items.length === 0,
+    savedCount: (state) => state.savedForLater.length
   },
 
   actions: {
@@ -59,6 +61,29 @@ export const useCartStore = defineStore('cart', {
       this.persistCart()
     },
 
+    saveForLater(productId) {
+      const index = this.items.findIndex(item => item.product.product_id === productId)
+      if (index !== -1) {
+        const [item] = this.items.splice(index, 1)
+        this.savedForLater = [...this.savedForLater, item]
+        this.persistCart()
+      }
+    },
+
+    moveToCart(productId) {
+      const index = this.savedForLater.findIndex(item => item.product.product_id === productId)
+      if (index !== -1) {
+        const [item] = this.savedForLater.splice(index, 1)
+        this.items = [...this.items, item]
+        this.persistCart()
+      }
+    },
+
+    removeFromSaved(productId) {
+      this.savedForLater = this.savedForLater.filter(item => item.product.product_id !== productId)
+      this.persistCart()
+    },
+
     toggleCart() {
       this.isOpen = !this.isOpen
     },
@@ -74,6 +99,7 @@ export const useCartStore = defineStore('cart', {
     persistCart() {
       if (import.meta.client) {
         localStorage.setItem('cart', JSON.stringify(this.items))
+        localStorage.setItem('savedForLater', JSON.stringify(this.savedForLater))
         useCookie('cart').value = JSON.stringify(this.items)
       }
     },
@@ -90,6 +116,15 @@ export const useCartStore = defineStore('cart', {
             this.items = shallowRef(JSON.parse(stored))
           } catch {
             this.items = shallowRef([])
+          }
+        }
+
+        const savedStored = localStorage.getItem('savedForLater')
+        if (savedStored) {
+          try {
+            this.savedForLater = shallowRef(JSON.parse(savedStored))
+          } catch {
+            this.savedForLater = shallowRef([])
           }
         }
         this._loaded = true

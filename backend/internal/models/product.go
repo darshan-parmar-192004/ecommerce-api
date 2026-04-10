@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"backend/internal/querybuilder"
+
+	"github.com/doug-martin/goqu/v9"
 )
 
 type Product struct {
@@ -29,66 +31,50 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 }
 
 func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]Product, int, error) {
-	var filters []string
-	var args []interface{}
-	argIndex := 1
-
 	fmt.Printf("[DEBUG] GetAll called: category=%q, minPrice=%q, maxPrice=%q, search=%q, page=%d, limit=%d\n", category, minPriceStr, maxPriceStr, search, page, limit)
 
+	qb := querybuilder.New(r.db, "products")
+
 	if category != "" {
-		filters = append(filters, fmt.Sprintf("category_id = $%d", argIndex))
-		args = append(args, category)
-		argIndex++
+		qb = qb.Where("category_id", category)
 	}
 
 	if minPriceStr != "" {
 		minPrice, err := strconv.ParseFloat(minPriceStr, 64)
 		if err == nil {
-			filters = append(filters, fmt.Sprintf("price >= $%d", argIndex))
-			args = append(args, minPrice)
-			argIndex++
+			qb = qb.WhereGte("price", minPrice)
 		}
 	}
 
 	if maxPriceStr != "" {
 		maxPrice, err := strconv.ParseFloat(maxPriceStr, 64)
 		if err == nil {
-			filters = append(filters, fmt.Sprintf("price <= $%d", argIndex))
-			args = append(args, maxPrice)
-			argIndex++
+			qb = qb.WhereLte("price", maxPrice)
 		}
 	}
 
 	if search != "" {
-		filters = append(filters, fmt.Sprintf("(LOWER(name) LIKE $%d OR LOWER(description) LIKE $%d)", argIndex, argIndex+1))
 		searchPattern := "%" + strings.ToLower(search) + "%"
-		args = append(args, searchPattern, searchPattern)
-		argIndex += 2
+		qb = qb.WhereOr(
+			goqu.C("name").Like(searchPattern),
+			goqu.C("description").Like(searchPattern),
+		)
 	}
 
-	whereClause := ""
-	if len(filters) > 0 {
-		whereClause = "WHERE " + strings.Join(filters, " AND ")
-	}
-
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM products %s", whereClause)
-	var totalItems int
-	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalItems); err != nil {
+	totalItems, err := qb.Select("COUNT(*)").Count(ctx)
+	if err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * limit
 
-	query := fmt.Sprintf(`
-		SELECT product_id, name, category_id, price::float8, description, created_at
-		FROM products
-		%s
-		ORDER BY created_at DESC
-		LIMIT $%d OFFSET $%d
-	`, whereClause, argIndex, argIndex+1)
-	args = append(args, limit, offset)
+	rows, err := qb.
+		Select("product_id", "name", "category_id", "price", "description", "created_at").
+		OrderByDesc("created_at").
+		Limit(limit).
+		Offset(offset).
+		Query(ctx)
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}

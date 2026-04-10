@@ -3,6 +3,7 @@ package middleware
 import (
 	"backend/internal/database"
 	apperrors "backend/internal/errors"
+	"backend/internal/querybuilder"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -109,7 +110,11 @@ func ValidateOrderOwnership(db database.Service) fiber.Handler {
 		}
 
 		var orderOwnerID string
-		err := db.DB().QueryRow("SELECT customer_id FROM orders WHERE order_id = $1", orderID).Scan(&orderOwnerID)
+		ctx := c.Context()
+		err := querybuilder.New(db.DB(), "orders").
+			Select("customer_id").
+			Where("order_id", orderID).
+			QueryRow(ctx).Scan(&orderOwnerID)
 		if err != nil {
 			return apperrors.SendError(
 				c,

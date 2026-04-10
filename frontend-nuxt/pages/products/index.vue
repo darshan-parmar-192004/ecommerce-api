@@ -10,8 +10,83 @@ const maxPrice = ref(route.query.max_price || '')
 const selectedCategory = ref(route.query.category || '')
 const currentPage = ref(Number(route.query.page) || 1)
 
+const showSuggestions = ref(false)
+const searchSuggestions = ref([])
+const recentSearches = ref([])
+const focusedSuggestion = ref(0)
+
 const debouncedSearch = ref('')
 let searchTimeout = null
+
+const RECENT_SEARCHES_KEY = 'recent_searches'
+
+const loadRecentSearches = () => {
+  if (import.meta.client) {
+    const stored = localStorage.getItem(RECENT_SEARCHES_KEY)
+    if (stored) {
+      try {
+        recentSearches.value = JSON.parse(stored)
+      } catch (e) {
+        recentSearches.value = []
+      }
+    }
+  }
+}
+
+const saveRecentSearch = (searchTerm) => {
+  if (!searchTerm || searchTerm.length < 2) return
+  const updated = [searchTerm, ...recentSearches.value.filter(s => s !== searchTerm)].slice(0, 5)
+  recentSearches.value = updated
+  if (import.meta.client) {
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated))
+  }
+}
+
+const clearRecentSearches = () => {
+  recentSearches.value = []
+  if (import.meta.client) {
+    localStorage.removeItem(RECENT_SEARCHES_KEY)
+  }
+}
+
+onMounted(() => {
+  loadRecentSearches()
+})
+
+const fetchSuggestions = async (query) => {
+  if (!query || query.length < 2) {
+    searchSuggestions.value = []
+    return
+  }
+  try {
+    const data = await $fetch(`/api/products?search=${encodeURIComponent(query)}&limit=5`)
+    searchSuggestions.value = data.data || data || []
+  } catch (e) {
+    searchSuggestions.value = []
+  }
+}
+
+const handleSearchInput = (e) => {
+  const value = e.target.value
+  search.value = value
+  
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    fetchSuggestions(value)
+  }, 300)
+}
+
+const selectSuggestion = (product) => {
+  saveRecentSearch(product.name)
+  router.push(`/products/${product.product_id}`)
+  showSuggestions.value = false
+}
+
+const selectRecentSearch = (term) => {
+  search.value = term
+  applyFilters()
+  showSuggestions.value = false
+}
 
 watch(() => route.query, (newQuery) => {
   search.value = newQuery.search || ''
@@ -60,6 +135,9 @@ const pagination = computed(() => productsData.value?.pagination || { page: 1, t
 const categories = computed(() => categoriesData.value?.data || categoriesData.value || [])
 
 const applyFilters = () => {
+  if (search.value) {
+    saveRecentSearch(search.value)
+  }
   router.push({
     query: {
       page: 1,
@@ -123,7 +201,7 @@ useSeoMeta({
 
       <div class="flex flex-col lg:flex-row gap-8">
         <aside class="w-full lg:w-72 flex-shrink-0">
-          <div class="bg-surface-container-lowest rounded-xl p-6 sticky top-24 shadow-ambient transition-all duration-300 hover:shadow-lg">
+          <div class="bg-surface-container-lowest/80 backdrop-blur-sm rounded-xl p-6 sticky top-24 shadow-ambient transition-all duration-300 hover:shadow-lg border border-white/5">
             <div class="flex items-center justify-between mb-6">
               <h3 class="font-semibold text-on_surface">Filters</h3>
               <button @click="clearFilters" class="text-sm text-primary hover:text-primary/80">
@@ -140,11 +218,63 @@ useSeoMeta({
                     v-model="search"
                     placeholder="Search products..."
                     class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-transparent rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary text-on_surface placeholder:text-outline"
+                    @input="handleSearchInput"
+                    @focus="showSuggestions = true"
+                    @blur="setTimeout(() => showSuggestions = false, 200)"
                     @keyup.enter="applyFilters"
+                    @keydown.down.prevent="focusedSuggestion = Math.min(focusedSuggestion + 1, searchSuggestions.length + recentSearches.length)"
+                    @keydown.up.prevent="focusedSuggestion = Math.max(focusedSuggestion - 1, 0)"
+                    @keydown.enter.prevent="focusedSuggestion > 0 && (
+                      focusedSuggestion <= searchSuggestions.length 
+                        ? selectSuggestion(searchSuggestions[focusedSuggestion - 1])
+                        : selectRecentSearch(recentSearches[focusedSuggestion - searchSuggestions.length - 1])
+                    )"
                   />
                   <svg class="absolute left-3 top-3 w-5 h-5 text-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
+                  
+                  <Transition name="fade">
+                    <div 
+                      v-if="showSuggestions && (searchSuggestions.length > 0 || recentSearches.length > 0)" 
+                      class="absolute z-50 w-full mt-2 bg-surface-container-lowest rounded-lg shadow-xl border border-outline-variant/20 overflow-hidden"
+                    >
+                      <div v-if="searchSuggestions.length > 0" class="py-2">
+                        <p class="px-3 py-1 text-xs font-semibold text-on_surface_variant uppercase">Products</p>
+                        <button
+                          v-for="(product, idx) in searchSuggestions"
+                          :key="product.product_id"
+                          @mousedown="selectSuggestion(product)"
+                          class="w-full px-3 py-2 text-left hover:bg-surface-container flex items-center gap-3 transition-colors"
+                        >
+                          <svg class="w-5 h-5 text-outline flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-on_surface truncate">{{ product.name }}</p>
+                            <p class="text-xs text-primary font-medium">₹{{ Number(product.price).toFixed(2) }}</p>
+                          </div>
+                        </button>
+                      </div>
+                      
+                      <div v-if="recentSearches.length > 0" class="border-t border-outline-variant/20 py-2">
+                        <div class="flex items-center justify-between px-3 py-1">
+                          <p class="text-xs font-semibold text-on_surface_variant uppercase">Recent Searches</p>
+                          <button @mousedown="clearRecentSearches" class="text-xs text-primary hover:text-primary/80">Clear</button>
+                        </div>
+                        <button
+                          v-for="(term, idx) in recentSearches"
+                          @mousedown="selectRecentSearch(term)"
+                          class="w-full px-3 py-2 text-left hover:bg-surface-container flex items-center gap-3 transition-colors"
+                        >
+                          <svg class="w-4 h-4 text-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span class="text-on_surface">{{ term }}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </Transition>
                 </div>
               </div>
               
@@ -180,7 +310,7 @@ useSeoMeta({
                 </div>
               </div>
 
-              <button @click="applyFilters" class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-white rounded-lg hover:opacity-90 transition-opacity font-medium">
+              <button @click="applyFilters" class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-white rounded-lg hover:opacity-90 hover:shadow-lg hover:shadow-primary/20 transition-all font-medium">
                 Apply Filters
               </button>
             </div>
@@ -217,7 +347,7 @@ useSeoMeta({
                     'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300',
                     selectedCategory === '' 
                       ? 'bg-gradient-to-r from-primary to-primary-container text-white shadow-lg shadow-primary/25' 
-                      : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high'
+                      : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high hover:scale-105'
                   ]"
                 >
                   All
@@ -230,7 +360,7 @@ useSeoMeta({
                     'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300',
                     selectedCategory === cat.category_id 
                       ? 'bg-gradient-to-r from-primary to-primary-container text-white shadow-lg shadow-primary/25' 
-                      : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high'
+                      : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high hover:scale-105'
                   ]"
                 >
                   {{ cat.name }}
@@ -258,6 +388,7 @@ useSeoMeta({
                   :product="product"
                   :class="['animate-fade-in-up']"
                   :style="{ animationDelay: `${index * 50}ms` }"
+                  loading="lazy"
                 />
               </div>
 

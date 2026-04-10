@@ -17,9 +17,55 @@ useSeoMeta({
 
 const currentStep = ref(1)
 const loading = ref(false)
+const processingPayment = ref(false)
 const error = ref('')
 const success = ref(false)
 const paymentError = ref('')
+
+const selectedPaymentMethod = ref('razorpay')
+const paymentMethods = [
+  { id: 'razorpay', name: 'Pay with Razorpay', icon: 'credit-card', description: 'Instant payment' },
+  { id: 'upi', name: 'UPI', icon: 'smartphone', description: 'Pay via UPI app' },
+  { id: 'wallet', name: 'Wallet', icon: 'wallet', description: 'Paytm, PhonePe, etc.' },
+  { id: 'cod', name: 'Cash on Delivery', icon: 'cash', description: 'Pay when you receive' }
+]
+
+const promoCode = ref('')
+const promoApplied = ref(false)
+const promoDiscount = ref(0)
+const promoError = ref('')
+
+const applyPromoCode = () => {
+  promoError.value = ''
+  const code = promoCode.value.trim().toUpperCase()
+  
+  const promoCodes = {
+    'SAVE10': 10,
+    'FLAT20': 20,
+    'FIRST50': 50
+  }
+  
+  if (promoCodes[code]) {
+    promoDiscount.value = promoCodes[code]
+    promoApplied.value = true
+  } else {
+    promoError.value = 'Invalid promo code'
+  }
+}
+
+const removePromo = () => {
+  promoCode.value = ''
+  promoDiscount.value = 0
+  promoApplied.value = false
+}
+
+const discountAmount = computed(() => {
+  return (cartStore.subtotal * promoDiscount.value) / 100
+})
+
+const discountedTotal = computed(() => {
+  return cartStore.total - discountAmount.value
+})
 
 const shippingForm = reactive({
   fullName: '',
@@ -30,15 +76,7 @@ const shippingForm = reactive({
   phone: ''
 })
 
-const paymentForm = reactive({
-  cardNumber: '',
-  expiry: '',
-  cvv: '',
-  nameOnCard: ''
-})
-
 const shippingErrors = reactive({})
-const paymentErrors = reactive({})
 
 const validateShipping = () => {
   shippingErrors.fullName = !shippingForm.fullName.trim() ? 'Full name is required' : ''
@@ -51,15 +89,6 @@ const validateShipping = () => {
   return !Object.values(shippingErrors).some(e => e)
 }
 
-const validatePayment = () => {
-  paymentErrors.nameOnCard = !paymentForm.nameOnCard.trim() ? 'Name on card is required' : ''
-  paymentErrors.cardNumber = !paymentForm.cardNumber.trim() ? 'Card number is required' : ''
-  paymentErrors.expiry = !paymentForm.expiry.trim() ? 'Expiry date is required' : ''
-  paymentErrors.cvv = !paymentForm.cvv.trim() ? 'CVV is required' : ''
-  
-  return !Object.values(paymentErrors).some(e => e)
-}
-
 const goToShipping = () => {
   currentStep.value = 1
 }
@@ -70,22 +99,29 @@ const goToPayment = () => {
   }
 }
 
-const processPayment = async () => {
-  if (!validatePayment()) return
-  
-  loading.value = true
+const mockRazorpayPayment = async () => {
+  processingPayment.value = true
   paymentError.value = ''
+  error.value = ''
   
-  await new Promise(resolve => setTimeout(resolve, 1500))
-  
-  const lastFour = paymentForm.cardNumber.slice(-4)
-  if (lastFour === '0000') {
-    paymentError.value = 'Payment declined. Please try a different card.'
-    loading.value = false
-    return
+  try {
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    const mockSuccess = true
+    
+    if (!mockSuccess) {
+      paymentError.value = 'Payment failed. Please try again.'
+      processingPayment.value = false
+      return
+    }
+    
+    await handleSubmit()
+  } catch (err) {
+    console.error('Payment error:', err)
+    paymentError.value = err.message || 'Payment failed. Please try again.'
+  } finally {
+    processingPayment.value = false
   }
-  
-  await handleSubmit()
 }
 
 const handleSubmit = async () => {
@@ -113,7 +149,11 @@ const handleSubmit = async () => {
       }))
     }
 
+    console.log('Creating order with data:', JSON.stringify(orderData, null, 2))
+    
     const result = await ordersApi.create(orderData)
+    
+    console.log('Order created successfully:', result)
 
     cartStore.clearCart()
     success.value = true
@@ -122,25 +162,11 @@ const handleSubmit = async () => {
       router.push(`/orders/${result.order_id || result.data?.order_id}`)
     }, 1500)
   } catch (err) {
+    console.error('Order creation error:', err)
     error.value = err.message || 'Failed to create order. Please try again.'
   } finally {
     loading.value = false
   }
-}
-
-const formatCardNumber = (e) => {
-  let value = e.target.value.replace(/\D/g, '')
-  value = value.substring(0, 16)
-  paymentForm.cardNumber = value.replace(/(\d{4})(?=\d)/g, '$1 ')
-}
-
-const formatExpiry = (e) => {
-  let value = e.target.value.replace(/\D/g, '')
-  value = value.substring(0, 4)
-  if (value.length >= 2) {
-    value = value.substring(0, 2) + '/' + value.substring(2)
-  }
-  paymentForm.expiry = value
 }
 </script>
 
@@ -308,6 +334,13 @@ const formatExpiry = (e) => {
           <div v-if="currentStep === 2" class="bg-surface-container-lowest rounded-xl shadow-ambient p-6">
             <h2 class="text-lg font-semibold text-on_surface font-display mb-4">Payment Information</h2>
             
+            <div v-if="error" class="bg-error-container text-error p-3 rounded-lg text-sm mb-4 flex items-start gap-2">
+              <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ error }}
+            </div>
+
             <div v-if="paymentError" class="bg-error-container text-error p-3 rounded-lg text-sm mb-4 flex items-start gap-2">
               <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -315,73 +348,111 @@ const formatExpiry = (e) => {
               {{ paymentError }}
             </div>
 
-            <form @submit.prevent="processPayment" class="space-y-4">
-              <div>
-                <label for="nameOnCard" class="block text-sm font-medium text-on_surface_variant mb-2">
-                  Name on Card <span class="text-error">*</span>
-                </label>
-                <input
-                  id="nameOnCard"
-                  v-model="paymentForm.nameOnCard"
-                  type="text"
-                  required
-                  class="w-full px-4 py-3 bg-surface-container border border-transparent rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary text-on_surface placeholder:text-outline"
-                  placeholder="John Doe"
-                />
-                <p v-if="paymentErrors.nameOnCard" class="text-error text-xs mt-1">{{ paymentErrors.nameOnCard }}</p>
-              </div>
-
-              <div>
-                <label for="cardNumber" class="block text-sm font-medium text-on_surface_variant mb-2">
-                  Card Number <span class="text-error">*</span>
-                </label>
-                <input
-                  id="cardNumber"
-                  :value="paymentForm.cardNumber"
-                  @input="formatCardNumber"
-                  type="text"
-                  required
-                  class="w-full px-4 py-3 bg-surface-container border border-transparent rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary text-on_surface placeholder:text-outline"
-                  placeholder="1234 5678 9012 3456"
-                />
-                <p v-if="paymentErrors.cardNumber" class="text-error text-xs mt-1">{{ paymentErrors.cardNumber }}</p>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label for="expiry" class="block text-sm font-medium text-on_surface_variant mb-2">
-                    Expiry Date <span class="text-error">*</span>
-                  </label>
-                  <input
-                    id="expiry"
-                    :value="paymentForm.expiry"
-                    @input="formatExpiry"
-                    type="text"
-                    required
-                    class="w-full px-4 py-3 bg-surface-container border border-transparent rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary text-on_surface placeholder:text-outline"
-                    placeholder="MM/YY"
-                  />
-                  <p v-if="paymentErrors.expiry" class="text-error text-xs mt-1">{{ paymentErrors.expiry }}</p>
+            <!-- Promo Code Section -->
+            <div class="mb-6 p-4 bg-surface-container rounded-lg">
+              <label class="block text-sm font-medium text-on_surface_variant mb-2">Promo Code</label>
+              <div v-if="promoApplied" class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span class="text-green-600 font-medium">{{ promoCode.value }} applied (-{{ promoDiscount.value }}%)</span>
                 </div>
+                <button @click="removePromo" class="text-sm text-error hover:text-error/80">Remove</button>
+              </div>
+              <div v-else class="flex gap-2">
+                <input 
+                  v-model="promoCode"
+                  type="text"
+                  placeholder="Enter promo code"
+                  class="flex-1 px-4 py-2 bg-surface-container-low border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-on_surface placeholder:text-outline"
+                  @keyup.enter="applyPromoCode"
+                />
+                <button 
+                  @click="applyPromoCode"
+                  class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+              <p v-if="promoError" class="text-error text-xs mt-2">{{ promoError }}</p>
+              <p class="text-xs text-outline mt-2">Try: SAVE10, FLAT20, FIRST50</p>
+            </div>
 
-                <div>
-                  <label for="cvv" class="block text-sm font-medium text-on_surface_variant mb-2">
-                    CVV <span class="text-error">*</span>
-                  </label>
-                  <input
-                    id="cvv"
-                    v-model="paymentForm.cvv"
-                    type="text"
-                    maxlength="4"
-                    required
-                    class="w-full px-4 py-3 bg-surface-container border border-transparent rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary text-on_surface placeholder:text-outline"
-                    placeholder="123"
-                  />
-                  <p v-if="paymentErrors.cvv" class="text-error text-xs mt-1">{{ paymentErrors.cvv }}</p>
+            <!-- Payment Method Selection -->
+            <div class="mb-6">
+              <label class="block text-sm font-medium text-on_surface_variant mb-3">Payment Method</label>
+              <div class="grid grid-cols-2 gap-3">
+                <button
+                  v-for="method in paymentMethods"
+                  :key="method.id"
+                  @click="selectedPaymentMethod = method.id"
+                  :class="[
+                    'p-4 rounded-lg border-2 text-left transition-all duration-200',
+                    selectedPaymentMethod === method.id 
+                      ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20' 
+                      : 'border-outline-variant/30 hover:border-primary/50 bg-surface-container'
+                  ]"
+                >
+                  <div class="flex items-center gap-3">
+                    <div :class="[
+                      'w-10 h-10 rounded-full flex items-center justify-center',
+                      selectedPaymentMethod === method.id ? 'bg-primary text-white' : 'bg-surface-container-high text-on_surface_variant'
+                    ]">
+                      <svg v-if="method.icon === 'credit-card'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h4m1 4l-4-4m0 0l4-4m-4 4h10" />
+                      </svg>
+                      <svg v-else-if="method.icon === 'smartphone'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <svg v-else-if="method.icon === 'wallet'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="font-semibold text-on_surface text-sm">{{ method.name }}</p>
+                      <p class="text-xs text-on_surface_variant">{{ method.description }}</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="text-center py-4">
+              <div class="bg-surface-container rounded-lg p-4 mb-6 text-left">
+                <div class="flex justify-between items-center py-2 border-b border-outline-variant/20">
+                  <span class="text-on_surface_variant">Order Total</span>
+                  <span class="text-xl font-bold text-primary">₹ {{ discountedTotal.toFixed(2) }}</span>
+                </div>
+                <div v-if="promoApplied" class="flex justify-between items-center py-2 border-b border-outline-variant/20 text-green-600">
+                  <span>Discount ({{ promoDiscount.value }}%)</span>
+                  <span>-₹ {{ discountAmount.toFixed(2) }}</span>
+                </div>
+                <div class="flex justify-between items-center py-2 text-sm">
+                  <span class="text-on_surface_variant">Payment Method</span>
+                  <span class="text-on_surface capitalize">{{ paymentMethods.find(m => m.id === selectedPaymentMethod)?.name }}</span>
                 </div>
               </div>
 
-              <div class="pt-4 flex gap-3">
+              <button 
+                @click="mockRazorpayPayment"
+                :disabled="processingPayment"
+                class="w-full py-4 bg-gradient-to-r from-primary to-primary-container text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 font-semibold shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+              >
+                <svg v-if="processingPayment" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h4m1 4l-4-4m0 0l4-4m-4 4h10" />
+                </svg>
+                {{ processingPayment ? 'Processing Payment...' : `Pay ₹${discountedTotal.toFixed(2)}` }}
+              </button>
+
+              <div class="flex gap-3 mt-4">
                 <button 
                   type="button"
                   @click="goToShipping"
@@ -392,19 +463,15 @@ const formatExpiry = (e) => {
                   </svg>
                   Back
                 </button>
-                <button 
-                  type="submit"
-                  :disabled="loading"
-                  class="flex-1 py-4 bg-gradient-to-r from-primary to-primary-container text-white rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 font-semibold shadow-lg shadow-primary/25"
-                >
-                  <svg v-if="loading" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  {{ loading ? 'Processing...' : 'Place Order' }}
-                </button>
               </div>
-            </form>
+
+              <p class="text-xs text-on_surface_variant mt-6">
+                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                This is a demo payment. No real money will be charged.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -440,13 +507,17 @@ const formatExpiry = (e) => {
                 <span>Subtotal</span>
                 <span class="font-medium text-on_surface">₹ {{ cartStore.subtotal.toFixed(2) }}</span>
               </div>
+              <div v-if="promoApplied" class="flex justify-between text-sm text-green-600">
+                <span>Discount ({{ promoDiscount.value }}%)</span>
+                <span>-₹ {{ discountAmount.toFixed(2) }}</span>
+              </div>
               <div class="flex justify-between text-sm text-on_surface_variant">
                 <span>Tax (8%)</span>
                 <span class="font-medium text-on_surface">₹ {{ cartStore.tax.toFixed(2) }}</span>
               </div>
               <div class="flex justify-between text-base pt-2 border-t border-outline-variant/20">
                 <span class="font-semibold text-on_surface">Total</span>
-                <span class="font-bold text-xl text-primary">₹ {{ cartStore.total.toFixed(2) }}</span>
+                <span class="font-bold text-xl text-primary">₹ {{ discountedTotal.toFixed(2) }}</span>
               </div>
             </div>
           </div>

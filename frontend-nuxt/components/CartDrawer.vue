@@ -29,11 +29,11 @@ const formatPrice = (price) => {
         @keyup.escape="cartStore.toggleCart"
       >
         <div
-          class="absolute inset-0 bg-on_surface/30 backdrop-blur-sm"
+          class="absolute inset-0 bg-on_surface/30 backdrop-blur-md"
           @click="cartStore.toggleCart"
         />
 
-        <div class="absolute inset-y-0 right-0 max-w-md w-full bg-surface-container-lowest shadow-ambient flex flex-col">
+        <div class="absolute inset-y-0 right-0 max-w-md w-full bg-surface-container-lowest/95 backdrop-blur-xl shadow-ambient flex flex-col border-l border-white/10">
           <!-- Header -->
           <div class="flex items-center justify-between p-6 border-b border-outline-variant/20">
             <div>
@@ -44,7 +44,7 @@ const formatPrice = (price) => {
             </div>
             <button
               @click="cartStore.toggleCart"
-              class="p-2 rounded-full hover:bg-surface-container transition-colors"
+              class="p-2 rounded-full hover:bg-surface-container transition-all duration-200 hover:scale-110 active:scale-95"
             >
               <svg class="w-6 h-6 text-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12" />
@@ -56,7 +56,7 @@ const formatPrice = (price) => {
           <div class="flex-1 overflow-y-auto p-6">
             <template v-if="cartStore.isEmpty">
               <div class="h-full flex flex-col items-center justify-center text-center">
-                <div class="w-24 h-24 rounded-full bg-surface-container flex items-center justify-center mb-6">
+                <div class="w-24 h-24 rounded-full bg-surface-container flex items-center justify-center mb-6 animate-bounce-slow">
                   <svg class="w-12 h-12 text-outline/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
                   </svg>
@@ -73,54 +73,56 @@ const formatPrice = (price) => {
             </template>
             <template v-else>
               <div class="space-y-4">
-                <div
-                  v-for="item in cartStore.items"
-                  :key="item.product.product_id"
-                  class="flex gap-4 p-4 rounded-xl bg-surface-container-low transition-all duration-300 hover:bg-surface-container"
-                >
-                  <div class="w-24 h-24 bg-surface-container rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
-                    <svg class="w-12 h-12 text-outline/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
+                <TransitionGroup name="cart-item">
+                  <div
+                    v-for="item in cartStore.items"
+                    :key="item.product.product_id"
+                    class="flex gap-4 p-4 rounded-xl bg-surface-container-low/80 backdrop-blur-sm transition-all duration-300 hover:bg-surface-container hover:shadow-lg group"
+                  >
+                    <div class="w-24 h-24 bg-surface-container rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center shadow-inner">
+                      <svg class="w-12 h-12 text-outline/30 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
 
-                  <div class="flex-1 min-w-0">
-                    <h3 class="font-semibold text-on_surface font-display truncate">
-                      {{ item.product.name }}
-                    </h3>
-                    <p class="text-primary font-bold mt-1 font-display">
-                      {{ formatPrice(item.product.price) }}
-                    </p>
+                    <div class="flex-1 min-w-0">
+                      <h3 class="font-semibold text-on_surface font-display truncate group-hover:text-primary transition-colors duration-200">
+                        {{ item.product.name }}
+                      </h3>
+                      <p class="text-primary font-bold mt-1 font-display">
+                        {{ formatPrice(item.product.price) }}
+                      </p>
 
-                    <div class="flex items-center gap-2 mt-3">
-                      <button
-                        @click="cartStore.updateQuantity(item.product.product_id, item.quantity - 1)"
-                        class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center transition-colors text-on_surface font-semibold"
-                      >
-                        -
-                      </button>
-                      <span class="w-10 text-center font-medium text-on_surface">{{ item.quantity }}</span>
-                      <button
-                        @click="cartStore.updateQuantity(item.product.product_id, item.quantity + 1)"
-                        class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center transition-colors text-on_surface font-semibold"
-                      >
-                        +
-                      </button>
-                      <button
-                        @click="cartStore.removeItem(item.product.product_id)"
-                        class="ml-auto text-error hover:text-error/80 transition-colors text-sm font-medium"
-                      >
-                        Remove
-                      </button>
+                      <div class="flex items-center gap-2 mt-3">
+                        <button
+                          @click="cartStore.updateQuantity(item.product.product_id, item.quantity - 1)"
+                          class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 text-on_surface font-semibold"
+                        >
+                          -
+                        </button>
+                        <span class="w-10 text-center font-medium text-on_surface bg-surface-container-low rounded">{{ item.quantity }}</span>
+                        <button
+                          @click="cartStore.updateQuantity(item.product.product_id, item.quantity + 1)"
+                          class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 text-on_surface font-semibold"
+                        >
+                          +
+                        </button>
+                        <button
+                          @click="cartStore.removeItem(item.product.product_id)"
+                          class="ml-auto text-error hover:text-error/80 transition-all duration-200 hover:scale-105 text-sm font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </TransitionGroup>
               </div>
             </template>
           </div>
 
           <!-- Footer -->
-          <div v-if="!cartStore.isEmpty" class="border-t border-outline-variant/20 p-6 space-y-4 bg-surface-container-low">
+          <div v-if="!cartStore.isEmpty" class="border-t border-outline-variant/20 p-6 space-y-4 bg-surface-container-low/80 backdrop-blur-md">
             <div class="space-y-2">
               <div class="flex justify-between text-sm text-on_surface_variant">
                 <span>Subtotal</span>
@@ -137,7 +139,7 @@ const formatPrice = (price) => {
             </div>
             <button
               @click="checkout"
-              class="w-full py-4 px-6 bg-gradient-to-r from-primary to-primary-container text-white font-semibold rounded-xl hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/25"
+              class="w-full py-4 px-6 bg-gradient-to-r from-primary to-primary-container text-white font-semibold rounded-xl hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/25"
             >
               Checkout
             </button>
@@ -167,5 +169,52 @@ const formatPrice = (price) => {
 .slide-enter-from > div:last-child,
 .slide-leave-to > div:last-child {
   transform: translateX(100%);
+}
+
+.cart-item-enter-active {
+  animation: slideInCart 0.4s ease-out;
+}
+
+.cart-item-leave-active {
+  animation: slideOutCart 0.3s ease-in;
+}
+
+.cart-item-move {
+  transition: transform 0.4s ease;
+}
+
+@keyframes slideInCart {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutCart {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
 }
 </style>

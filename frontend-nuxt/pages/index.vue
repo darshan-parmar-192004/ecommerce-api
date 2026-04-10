@@ -12,15 +12,72 @@ useSeoMeta({
 })
 
 const products = computed(() => data.value?.data || [])
+
+const parallaxOffset = ref(0)
+
+const handleScroll = () => {
+  if (typeof window !== 'undefined') {
+    parallaxOffset.value = window.scrollY * 0.15
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
+const floatingProducts = computed(() => products.value.slice(0, 3))
 </script>
 
 <template>
   <div>
     <!-- Hero Section -->
-    <section class="relative overflow-hidden bg-surface-container-low">
-      <div class="absolute inset-0 overflow-hidden">
-        <div class="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full blur-3xl animate-float opacity-20" style="background: radial-gradient(circle, #3e51fb, transparent);"></div>
-        <div class="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full blur-3xl animate-float opacity-15" style="background: radial-gradient(circle, #1c31e3, transparent); animation-delay: -3s;"></div>
+    <section class="relative overflow-hidden bg-surface-container-low min-h-[85vh] flex items-center">
+      <!-- Parallax Background Orbs -->
+      <div 
+        class="absolute inset-0 overflow-hidden pointer-events-none"
+        :style="{ transform: `translateY(${parallaxOffset}px)` }"
+      >
+        <div 
+          class="absolute -top-20 -right-20 w-[600px] h-[600px] rounded-full blur-3xl opacity-20" 
+          style="background: radial-gradient(circle, #3e51fb, transparent); animation: float 8s ease-in-out infinite;"
+        ></div>
+        <div 
+          class="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full blur-3xl opacity-15" 
+          style="background: radial-gradient(circle, #1c31e3, transparent); animation: float 10s ease-in-out infinite reverse;"
+        ></div>
+        <div 
+          class="absolute top-1/2 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full blur-3xl opacity-10" 
+          style="background: radial-gradient(circle, #6366f1, transparent); animation: pulse-glow 6s ease-in-out infinite;"
+        ></div>
+      </div>
+
+      <!-- Floating Product Cards -->
+      <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div 
+          v-for="(product, index) in floatingProducts" 
+          :key="product.product_id"
+          class="absolute hidden lg:block w-40 h-48 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/20 overflow-hidden animate-float-delayed"
+          :style="{
+            top: `${15 + index * 25}%`,
+            right: `${8 + index * 5}%`,
+            animationDelay: `${index * 2}s`,
+            transform: `translateY(${parallaxOffset * 0.5}px)`,
+          }"
+        >
+          <div class="aspect-[4/3] bg-surface-container flex items-center justify-center">
+            <svg class="w-12 h-12 text-outline/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <div class="p-2 text-center">
+            <p class="text-xs font-medium text-on_surface truncate">{{ product.name }}</p>
+            <p class="text-xs text-primary font-bold">₹{{ Number(product.price).toFixed(0) }}</p>
+          </div>
+        </div>
       </div>
 
       <div class="relative max-w-7xl mx-auto px-6 lg:px-8 py-28 md:py-40">
@@ -38,16 +95,17 @@ const products = computed(() => data.value?.data || [])
           <div class="flex flex-wrap gap-4 animate-fade-in-up" style="animation-delay: 300ms;">
             <NuxtLink 
               to="/products" 
-              class="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-8 py-4 rounded-md font-semibold transition-all duration-400 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/25"
+              class="group relative inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-8 py-4 rounded-md font-semibold transition-all duration-400 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-[0.98]"
             >
-              Shop Now
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+              <span class="relative z-10">Shop Now</span>
+              <svg class="w-5 h-5 relative z-10 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
               </svg>
+              <span class="absolute inset-0 rounded-md bg-white/20 scale-0 group-hover:scale-100 transition-transform duration-300"></span>
             </NuxtLink>
             <NuxtLink 
               to="/cart" 
-              class="inline-flex items-center gap-2 px-8 py-4 rounded-md font-semibold transition-all duration-300 hover:bg-surface-container-high bg-surface-container-highest text-on_surface"
+              class="inline-flex items-center gap-2 px-8 py-4 rounded-md font-semibold transition-all duration-300 hover:bg-surface-container-high bg-surface-container-highest text-on_surface hover:scale-105 active:scale-[0.98]"
             >
               View Cart
             </NuxtLink>
@@ -206,12 +264,36 @@ const products = computed(() => data.value?.data || [])
     transform: translateY(0) scale(1);
   }
   50% {
-    transform: translateY(-20px) scale(1.05);
+    transform: translateY(-25px) scale(1.02);
+  }
+}
+
+@keyframes float-delayed {
+  0%, 100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(3deg);
   }
 }
 
 .animate-float {
   animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 8s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.2;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
 }
 
 @keyframes shimmer {
