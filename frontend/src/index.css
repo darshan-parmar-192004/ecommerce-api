@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .toast-success {
+    background-color: #22c55e;
+  }
+  
+  .toast-error {
+    background-color: #ef4444;
+  }
+  
+  .toast-info {
+    background-color: #4f46e5;
+  }
+  
+  .toast-warning {
+    background-color: #eab308;
+  }
+}
+
 @layer base {
   body {
     margin: 0;
@@ -36,10 +54,6 @@
   }
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -47,10 +61,6 @@
   50% {
     opacity: 0.5;
   }
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @keyframes fadeIn {
@@ -62,6 +72,14 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .animate-fadeIn {

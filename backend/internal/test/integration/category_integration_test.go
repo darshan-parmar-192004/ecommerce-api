@@ -84,7 +84,7 @@ func (c *CategoryIntegrationTest) TestGetHierarchy(t *testing.T) {
 		AddRow("CAT-root", "Root", nil).
 		AddRow("CAT-child", "Child", "CAT-root")
 
-	mock.ExpectQuery("WITH RECURSIVE").WillReturnRows(rows)
+	mock.ExpectQuery(`SELECT "category_id"`).WillReturnRows(rows)
 
 	app := fiber.New()
 	app.Get("/categories/hierarchy", ctrl.GetHierarchy)

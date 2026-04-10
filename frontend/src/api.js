@@ -1,30 +1,28 @@
 const API_BASE = "http://127.0.0.1:8080";
 
-let authToken = null;
-
-export function setAuthToken(token) {
-  authToken = token;
-  if (token) {
-    localStorage.setItem("auth_token", token);
-  } else {
-    localStorage.removeItem("auth_token");
-  }
-}
-
-export function getAuthToken() {
-  if (!authToken) {
-    authToken = localStorage.getItem("auth_token");
-  }
-  return authToken;
-}
-
-export function clearAuth() {
-  authToken = null;
-  localStorage.removeItem("auth_token");
-}
+let _isAuthenticated = false;
+let _authCheckDone = false;
 
 export function isAuthenticated() {
-  return !!getAuthToken();
+  return _isAuthenticated;
+}
+
+export async function checkAuth() {
+  try {
+    await fetchJSON("/auth/me", { method: "GET" });
+    window._isAuthenticated = true;
+  } catch (err) {
+    window._isAuthenticated = false;
+  }
+  window._authCheckDone = true
+  return window._isAuthenticated;
+}
+
+export function resetAuthState() {
+  _isAuthenticated = false;
+  _authCheckDone = false;
+  window._isAuthenticated = false;
+  window._authCheckDone = false;
 }
 
 export class ApiError extends Error {
@@ -68,15 +66,11 @@ async function fetchJSON(url, options = {}) {
     ...options.headers,
   };
 
-  const token = getAuthToken();
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
   try {
     const response = await fetch(`${API_BASE}${url}`, {
       ...options,
       headers,
+      credentials: "include",
     });
 
     const data = await response.json().catch(() => ({}));
@@ -95,7 +89,6 @@ async function fetchJSON(url, options = {}) {
       }
 
       if (response.status === 401) {
-        clearAuth();
         window.dispatchEvent(new CustomEvent("auth:change"));
       }
 
@@ -133,31 +126,21 @@ export const api = {
     products: (id) => fetchJSON(`/categories/${id}/products`),
   },
   auth: {
-    register: async (data) => {
-      const response = await fetchJSON("/auth/register", {
+    register: (data) =>
+      fetchJSON("/auth/register", {
         method: "POST",
         body: JSON.stringify(data),
-      });
-      if (response.token) {
-        setAuthToken(response.token);
-      }
-      return response;
-    },
-    login: async (data) => {
-      const response = await fetchJSON("/auth/login", {
+      }),
+    login: (data) =>
+      fetchJSON("/auth/login", {
         method: "POST",
         body: JSON.stringify(data),
-      });
-      if (response.token) {
-        setAuthToken(response.token);
-      }
-      return response;
-    },
+      }),
     logout: async () => {
       try {
         await fetchJSON("/auth/logout", { method: "POST" });
       } finally {
-        clearAuth();
+        window.dispatchEvent(new CustomEvent("auth:change"));
       }
     },
     me: () => fetchJSON("/auth/me"),

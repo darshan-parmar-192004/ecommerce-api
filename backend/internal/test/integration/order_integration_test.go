@@ -31,8 +31,8 @@ func (o *OrderIntegrationTest) TestCreateOrder(t *testing.T) {
 	ctrl := controllers.NewOrderController(service)
 
 	mock.ExpectBegin()
-	mock.ExpectExec("INSERT INTO orders").WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectExec("INSERT INTO order_items").WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec(`INSERT INTO "orders"`).WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec(`INSERT INTO "order_items"`).WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
 	app := fiber.New()
