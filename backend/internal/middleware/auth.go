@@ -25,28 +25,31 @@ func NewAuthMiddleware(secret string) *AuthMiddleware {
 }
 
 func (m *AuthMiddleware) Authenticate(c fiber.Ctx) error {
-	token := c.Get("Authorization")
+	token := c.Cookies("auth_token")
 	if token == "" {
-		return apperrors.SendError(
-			c,
-			fiber.StatusUnauthorized,
-			apperrors.ErrUnauthorized,
-			"Authorization token required",
-			nil,
-		)
-	}
+		token = c.Get("Authorization")
+		if token == "" {
+			return apperrors.SendError(
+				c,
+				fiber.StatusUnauthorized,
+				apperrors.ErrUnauthorized,
+				"Authorization token required",
+				nil,
+			)
+		}
 
-	if len(token) < 8 || token[:7] != "Bearer " {
-		return apperrors.SendError(
-			c,
-			fiber.StatusUnauthorized,
-			apperrors.ErrUnauthorized,
-			"Invalid authorization header format",
-			nil,
-		)
-	}
+		if len(token) < 8 || token[:7] != "Bearer " {
+			return apperrors.SendError(
+				c,
+				fiber.StatusUnauthorized,
+				apperrors.ErrUnauthorized,
+				"Invalid authorization header format",
+				nil,
+			)
+		}
 
-	token = token[7:]
+		token = token[7:]
+	}
 
 	claims := &JWTClaims{}
 	t, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
