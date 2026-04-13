@@ -1,0 +1,1130 @@
+openapi: 3.0.3
+info:
+  title: Ecommerce API
+  description: |
+    A production-ready RESTful e-commerce backend API built with Go Fiber, featuring 
+    PostgreSQL for data persistence, Redis for caching and session management, and 
+    JWT-based authentication.
+    
+    ## Authentication
+    
+    This API uses JWT-based authentication with two methods:
+    
+    1. **Bearer Token** (Recommended): Include the JWT token in the Authorization header
+       ```
+       Authorization: Bearer <your-jwt-token>
+       ```
+    
+    2. **Cookie**: The API also sets an HTTP-only `auth_token` cookie for web clients
+    
+    ## Rate Limiting
+    
+    - Login endpoint: 5 requests per minute per IP
+    - General endpoints: 100 requests per minute
+    
+    ## Error Responses
+    
+    All endpoints may return standard error responses:
+    - `400` - Bad Request (validation errors)
+    - `401` - Unauthorized (invalid or missing token)
+    - `403` - Forbidden (insufficient permissions)
+    - `404` - Not Found (resource doesn't exist)
+    - `429` - Too Many Requests (rate limit exceeded)
+    - `500` - Internal Server Error
+  version: 1.0.0
+  contact:
+    name: API Support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: {BASE_URL}
+    description: Production server
+
+tags:
+  - name: Products
+    description: Product management endpoints
+  - name: Categories
+    description: Category and hierarchy endpoints
+  - name: Customers
+    description: Customer profile and order management
+  - name: Orders
+    description: Order processing endpoints
+  - name: Inventory
+    description: Inventory and analytics (admin only)
+  - name: Auth
+    description: Authentication endpoints
+  - name: Health
+    description: Health check and stats
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Returns the health status of the API
+      operationId: getHealth
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+
+  /stats/cache:
+    get:
+      tags:
+        - Health
+      summary: Cache statistics
+      description: Returns Redis cache statistics
+      operationId: getCacheStats
+      responses:
+        '200':
+          description: Cache statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hits:
+                    type: integer
+                  misses:
+                    type: integer
+              example:
+                hits: 150
+                misses: 23
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: List all products
+      description: |
+        Returns a paginated list of products. Supports filtering by category and price range.
+        Results are cached in Redis for 5 minutes.
+      operationId: getProducts
+      parameters:
+        - name: page
+          in: query
+          description: Page number (default: 1)
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page (default: 20, max: 100)
+          schema:
+            type: integer
+            default: 20
+        - name: category_id
+          in: query
+          description: Filter by category ID
+          schema:
+            type: string
+        - name: min_price
+          in: query
+          description: Minimum price filter
+          schema:
+            type: number
+        - name: max_price
+          in: query
+          description: Maximum price filter
+          schema:
+            type: number
+        - name: search
+          in: query
+          description: Search in product name and description
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Products
+      summary: Create a new product
+      description: Create a new product (admin only)
+      operationId: createProduct
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get product by ID
+      description: Returns a single product by its ID
+      operationId: getProductById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Products
+      summary: Update a product
+      description: Update an existing product (admin only)
+      operationId: updateProduct
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Products
+      summary: Delete a product
+      description: Delete a product (admin only)
+      operationId: deleteProduct
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Product deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /categories:
+    get:
+      tags:
+        - Categories
+      summary: List all categories
+      description: Returns all categories
+      operationId: getCategories
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+  /categories/{id}/products:
+    get:
+      tags:
+        - Categories
+      summary: Get products in category
+      description: Returns products belonging to a specific category
+      operationId: getCategoryProducts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Category ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of products in category
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /categories/hierarchy:
+    get:
+      tags:
+        - Categories
+      summary: Get category hierarchy
+      description: Returns the full category tree structure
+      operationId: getCategoryHierarchy
+      responses:
+        '200':
+          description: Category hierarchy
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryTree'
+
+  /customers/me:
+    get:
+      tags:
+        - Customers
+      summary: Get current user profile
+      description: Returns the profile of the currently authenticated user
+      operationId: getMe
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Customer profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Customers
+      summary: Update current user profile
+      description: Update the profile of the currently authenticated user
+      operationId: updateMe
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /customers/{id}/orders:
+    get:
+      tags:
+        - Customers
+      summary: Get customer orders
+      description: Returns orders for a specific customer (admin or self)
+      operationId: getCustomerOrders
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /customers/{id}/lifetime-value:
+    get:
+      tags:
+        - Customers
+      summary: Get customer lifetime value
+      description: Calculate and return the customer's lifetime value (admin only)
+      operationId: getCustomerLifetimeValue
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Customer ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customer lifetime value
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                  lifetime_value:
+                    type: number
+              example:
+                customer_id: "cust-123"
+                lifetime_value: 15420.50
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /orders/{id}:
+    get:
+      tags:
+        - Orders
+      summary: Get order by ID
+      description: Returns a single order. Only the order owner or an admin can access.
+      operationId: getOrder
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Order ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders:
+    post:
+      tags:
+        - Orders
+      summary: Create a new order
+      description: Create a new order for the authenticated customer
+      operationId: createOrder
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /inventory:
+    get:
+      tags:
+        - Inventory
+      summary: Get all inventory
+      description: Returns all inventory records (admin only)
+      operationId: getInventory
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of inventory records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Inventory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /inventory/stock:
+    get:
+      tags:
+        - Inventory
+      summary: Get stock levels
+      description: Returns stock levels by warehouse (admin only)
+      operationId: getStockLevels
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Stock levels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    product_id:
+                      type: string
+                    total_quantity:
+                      type: integer
+                    warehouses:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          warehouse_id:
+                            type: string
+                          quantity:
+                            type: integer
+
+  /inventory/customer-lifetime-value:
+    get:
+      tags:
+        - Inventory
+      summary: Get customer CLV statistics
+      description: Returns aggregated customer lifetime value stats (admin only)
+      operationId: getCustomerCLVStats
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Customer CLV statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_customers:
+                    type: integer
+                  average_lifetime_value:
+                    type: number
+                  top_customers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        customer_id:
+                          type: string
+                        lifetime_value:
+                          type: number
+
+  /inventory/hierarchy:
+    get:
+      tags:
+        - Inventory
+      summary: Get category tree
+      description: Returns the category tree for inventory (admin only)
+      operationId: getCategoryTree
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Category tree
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryTree'
+
+  /inventory/top-sellers:
+    get:
+      tags:
+        - Inventory
+      summary: Get top selling products
+      description: Returns the top selling products by revenue (admin only)
+      operationId: getTopSellers
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Number of products to return (default: 10)
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Top selling products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    product_id:
+                      type: string
+                    product_name:
+                      type: string
+                    total_sold:
+                      type: integer
+                    total_revenue:
+                      type: number
+
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      description: |
+        Register a new customer account.
+        
+        Password requirements:
+        - Minimum 8 characters
+        - At least one uppercase letter
+        - At least one lowercase letter
+        - At least one digit
+        - At least one special character
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: User already exists
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login user
+      description: |
+        Authenticate user and receive JWT token.
+        Rate limited to 5 requests per minute per IP.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: auth_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Secure; SameSite=Lax; Path=/
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid credentials
+        '429':
+          description: Too many requests
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout user
+      description: Invalidate the current session
+      operationId: logout
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "Logged out successfully"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Validate token
+      description: Validate the current JWT token and return user info
+      operationId: validateToken
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenValidationResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from /auth/login or /auth/register.
+        Include in the Authorization header: `Authorization: Bearer <token>`
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+
+    Product:
+      type: object
+      properties:
+        product_id:
+          type: string
+          example: "prod-001"
+        name:
+          type: string
+          example: "Wireless Mouse"
+        category_id:
+          type: string
+          example: "cat-electronics"
+        price:
+          type: number
+          format: decimal
+          example: 29.99
+        description:
+          type: string
+          example: "Ergonomic wireless mouse with precision tracking"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+
+    ProductList:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        total:
+          type: integer
+          example: 42
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+        - category_id
+        - price
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category_id:
+          type: string
+        price:
+          type: number
+          format: decimal
+          minimum: 0.01
+        description:
+          type: string
+          maxLength: 1000
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category_id:
+          type: string
+        price:
+          type: number
+          format: decimal
+          minimum: 0.01
+        description:
+          type: string
+          maxLength: 1000
+
+    Category:
+      type: object
+      properties:
+        category_id:
+          type: string
+          example: "cat-electronics"
+        name:
+          type: string
+          example: "Electronics"
+        parent_category_id:
+          type: string
+          nullable: true
+          example: null
+
+    CategoryTree:
+      type: object
+      properties:
+        category_id:
+          type: string
+        name:
+          type: string
+        parent_category_id:
+          type: string
+          nullable: true
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryTree'
+
+    Customer:
+      type: object
+      properties:
+        customer_id:
+          type: string
+          example: "cust-001"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        name:
+          type: string
+          example: "John Doe"
+        country:
+          type: string
+          nullable: true
+          example: "USA"
+        phone:
+          type: string
+          nullable: true
+          example: "+1-555-0123"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        status:
+          type: string
+          example: "active"
+        role:
+          type: string
+          enum:
+            - customer
+            - admin
+
+    UpdateCustomerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        country:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 50
+
+    Order:
+      type: object
+      properties:
+        order_id:
+          type: string
+          example: "ord-001"
+        customer_id:
+          type: string
+          example: "cust-001"
+        order_date:
+          type: string
+          format: date-time
+          example: "2024-01-20T14:30:00Z"
+        status:
+          type: string
+          example: "pending"
+        total_amount:
+          type: number
+          format: decimal
+          example: 149.99
+        shipping_address:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    OrderItem:
+      type: object
+      properties:
+        order_item_id:
+          type: string
+        order_id:
+          type: string
+        product_id:
+          type: string
+        quantity:
+          type: integer
+          minimum: 1
+        unit_price:
+          type: number
+          format: decimal
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - product_id
+              - quantity
+            properties:
+              product_id:
+                type: string
+              quantity:
+                type: integer
+                minimum: 1
+        shipping_address:
+          type: string
+          maxLength: 500
+
+    Inventory:
+      type: object
+      properties:
+        product_id:
+          type: string
+        warehouse_id:
+          type: string
+        quantity:
+          type: integer
+        last_updated:
+          type: string
+          format: date-time
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 72
+          description: |
+            Password must contain:
+            - At least 8 characters
+            - At least one uppercase letter
+            - At least one lowercase letter
+            - At least one digit
+            - At least one special character
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        country:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 50
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        customer:
+          $ref: '#/components/schemas/Customer'
+
+    TokenValidationResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        customer:
+          $ref: '#/components/schemas/Customer'
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Invalid request parameters"
+            code: "BAD_REQUEST"
+
+    Unauthorized:
+      description: Unauthorized - Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Invalid or expired token"
+            code: "UNAUTHORIZED"
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Admin access required"
+            code: "FORBIDDEN"
+
+    NotFound:
+      description: Not Found - Resource doesn't exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Resource not found"
+            code: "NOT_FOUND"
+
+    InternalError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal server error"
+            code: "INTERNAL_ERROR"

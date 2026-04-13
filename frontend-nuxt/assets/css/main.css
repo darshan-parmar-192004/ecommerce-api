@@ -1,0 +1,141 @@
+/* Design System Colors - Stitch */
+:root {
+  /* Surface Colors */
+  --surface: #f9f9fc;
+  --surface-container: #eeeef0;
+  --surface-container-low: #f3f3f6;
+  --surface-container-lowest: #ffffff;
+  --surface-container-high: #e8e8ea;
+  --surface-container-highest: #e2e2e5;
+
+  /* Primary Colors */
+  --primary: #1c31e3;
+  --primary-container: #3e51fb;
+  --on-primary: #ffffff;
+  --on-primary-container: #e6e6ff;
+
+  /* Secondary Colors */
+  --secondary: #5f5e5e;
+  --secondary-container: #e5e2e1;
+  --on-secondary: #ffffff;
+
+  /* Error Colors */
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error: #ffffff;
+
+  /* Text Colors */
+  --on-surface: #1a1c1e;
+  --on-surface-variant: #444656;
+  --outline: #757688;
+  --outline-variant: #c5c5d9;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--surface);
+    color: var(--on-surface);
+  }
+
+/* Button Styles */
+  .btn-primary {
+    background: linear-gradient(to right, var(--primary), var(--primary-container));
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 300ms;
+    box-shadow: 0 4px 16px rgba(28, 49, 227, 0.25);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 10px 25px rgba(28, 49, 227, 0.35);
+    transform: scale(1.02);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary {
+    background-color: var(--surface-container-highest);
+    color: var(--on-surface);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 300ms;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--surface-container-high);
+  }
+
+  /* Input Styles */
+  .input-field {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: var(--surface-container-low);
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    color: var(--on-surface);
+    transition: all 200ms;
+  }
+
+  .input-field::placeholder {
+    color: rgba(117, 118, 136, 0.6);
+  }
+
+  .input-field:focus {
+    outline: none;
+    background-color: var(--surface-container-lowest);
+    box-shadow: 0 0 0 2px rgba(28, 49, 227, 0.2);
+    border-color: var(--primary);
+  }
+
+  /* Card Styles */
+  .card {
+    background-color: var(--surface-container-lowest);
+    border-radius: 0.75rem;
+    box-shadow: 0px 12px 32px -4px rgba(26, 28, 30, 0.06);
+    overflow: hidden;
+    transition: all 300ms;
+  }
+
+  .card:hover {
+    box-shadow: 0 10px 40px -4px rgba(26, 28, 30, 0.1);
+  }
+
+  /* Glass Effect */
+  .glass {
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    background-color: rgba(249, 249, 252, 0.9);
+  }
+
+/* Page Transitions */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Fade Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}

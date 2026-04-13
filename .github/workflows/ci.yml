@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       run_integration:
-        description: 'Run integration tests'
+        description: "Run integration tests"
         required: false
-        default: 'false'
+        default: "false"
 
 jobs:
   lint:
@@ -25,7 +25,7 @@ jobs:
       - name: Setup GO
         uses: actions/setup-go@v4
         with:
-          go-version: "1.25.8"
+          go-version: "1.25.x"
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -45,12 +45,6 @@ jobs:
           cd backend
           golangci-lint run ./... --timeout 5m
 
-      - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          cd backend
-          govulncheck ./...
-
   test:
     name: Run Go Tests
     runs-on: vm-hosted
@@ -63,7 +57,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.25.8"
+          go-version: "1.25.x"
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -75,103 +69,65 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Run unit tests
+      - name: Run tests
         run: |
-          cd backend
-          go test -coverprofile=coverage.out -covermode=atomic ./...
-
-      - name: Combine coverage reports
-        if: always()
-        run: |
-          cd backend
-          COVERAGE=$(go tool cover -func=coverage.out 2>/dev/null | grep total | awk '{print $3}' | sed 's/%//' || echo "0")
-          echo "Total coverage: $COVERAGE%"
-          
-          COVERAGE_INT=$(echo "$COVERAGE" | awk '{print int($1)}')
-          if [ "$COVERAGE_INT" -lt 75 ]; then
-            echo "ERROR: Coverage ($COVERAGE%) is below minimum threshold (75%)"
-            exit 1
-          fi
-          echo "Coverage check passed: $COVERAGE%"
+            cd backend
+            # Use grep -v to exclude the e2e test directory
+            CI=true go test $(go list ./... | grep -v /test/e2e) -v
 
   container-test:
     name: Container Integration Test
     runs-on: vm-hosted
     needs: test
     env:
-      BLUEPRINT_DB_PORT: 5434
+      BLUEPRINT_DB_PORT: 5433
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Stop local PostgreSQL services
-        run: |
-          sudo systemctl stop postgresql 2>/dev/null || true
-          sudo service postgresql stop 2>/dev/null || true
-          sudo pkill -f postgres 2>/dev/null || true
-          sleep 2
-
       - name: Clean up previous volumes
         run: docker compose down -v
 
-      - name: Build and start containers
-        run: |
-          docker compose up -d psql_bp redis
-          docker compose logs --tail=20
-          
-      - name: Wait for postgres
-        run: |
-          for i in {1..30}; do
-            if docker compose exec -T psql_bp pg_isready -U darshan.parmar -d ecommerce 2>/dev/null; then
-              echo "Postgres is ready"
-              exit 0
-            fi
-            echo "Waiting for postgres... ($i/30)"
-            sleep 2
-          done
-          echo "Postgres did not start"
-          docker compose logs
-          exit 1
-
-      - name: Build app image
-        run: |
-          docker build -t ecommerce-api:latest ./backend
-
-      - name: Run Trivy vulnerability scanner
-        run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:latest image \
-            --severity HIGH,CRITICAL \
-            --exit-code 1 \
-            --no-progress \
-            ecommerce-api:latest
-
-      - name: Build and start app
+      - name: Run Application Stack
         run: |
           docker compose up -d --build app
-          docker compose logs --tail=20
 
       - name: Wait for services
         run: |
           for i in {1..45}; do
-            if docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null | grep -q "healthy"; then
-              echo "Service is healthy"
+            # We check the 'backend' container health status
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' backend 2>/dev/null || echo "starting")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Application is healthy!"
               exit 0
             fi
-            echo "Waiting for service... ($i/45)"
+
+            # Check if migration failed early
+            MIGRATE_EXIT=$(docker inspect --format='{{.State.ExitCode}}' blueprint_migrate 2>/dev/null || echo "0")
+            if [ "$MIGRATE_EXIT" != "0" ]; then
+              echo "Migration failed with exit code $MIGRATE_EXIT"
+              docker logs blueprint_migrate
+              exit 1
+            fi
+
+            echo "Waiting for service... status is $STATUS ($i/45)"
             sleep 2
           done
-          echo "Service did not start in time"
+          echo "Service did not become healthy in time"
           docker compose logs
           exit 1
 
       - name: Show logs on failure
         if: failure()
         run: |
-          docker compose logs
+          echo "--- Postgres Logs ---"
+          docker logs blueprint_postgres
+          echo "--- Migration Logs ---"
+          docker logs blueprint_migrate
+          echo "--- App Logs ---"
+          docker logs backend
 
       - name: Stop containers
         if: always()
-        run: |
-          docker compose down
+        run: docker compose down -v

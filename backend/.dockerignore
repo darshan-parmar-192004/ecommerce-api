@@ -3,3 +3,6 @@
 node_modules
 *.md
 .air.toml
+frontend
+frontend-nuxt
+vue-prototype

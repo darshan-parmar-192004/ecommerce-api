@@ -1,7 +1,7 @@
 import { api } from '../api.js'
 
-export async function renderLoginPage(container, { navigate, showToast, isAuthenticated }) {
-  if (isAuthenticated()) {
+export async function renderLoginPage(container, { navigate, showToast }) {
+  if (window._isAuthenticated) {
     navigate('/')
     return
   }
@@ -61,7 +61,7 @@ export async function renderLoginPage(container, { navigate, showToast, isAuthen
         
         <p class="mt-6 text-center text-gray-600">
           Don't have an account? 
-          <a href="#/register" class="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-1">
+          <a href="/register" class="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-1">
             Register
           </a>
         </p>
@@ -97,10 +97,14 @@ export async function renderLoginPage(container, { navigate, showToast, isAuthen
     errorEl.classList.add('hidden')
 
     try {
-      await api.auth.login({ email, password })
+      const response = await api.auth.login({ email, password })
+      
+      window._isAuthenticated = true
+      window._userName = response.customer?.name || email.split('@')[0]
+      window._welcomeShown = true
       
       window.dispatchEvent(new CustomEvent('auth:change'))
-      showToast('Login successful!', 'success')
+      showToast(`Welcome back, ${window._userName}!`, 'success')
       navigate('/')
     } catch (err) {
       errorText.textContent = err.message
@@ -112,8 +116,8 @@ export async function renderLoginPage(container, { navigate, showToast, isAuthen
   })
 }
 
-export async function renderRegisterPage(container, { navigate, showToast, isAuthenticated }) {
-  if (isAuthenticated()) {
+export async function renderRegisterPage(container, { navigate, showToast }) {
+  if (window._isAuthenticated) {
     navigate('/')
     return
   }
@@ -199,7 +203,7 @@ export async function renderRegisterPage(container, { navigate, showToast, isAut
         
         <p class="mt-6 text-center text-gray-600">
           Already have an account? 
-          <a href="#/login" class="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-1">
+          <a href="/login" class="text-indigo-600 hover:text-indigo-800 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-1">
             Sign in
           </a>
         </p>
@@ -249,10 +253,14 @@ export async function renderRegisterPage(container, { navigate, showToast, isAut
     errorEl.classList.add('hidden')
 
     try {
-      await api.auth.register({ name, email, password })
+      const response = await api.auth.register({ name, email, password })
+      
+      window._isAuthenticated = true
+      window._userName = name
+      window._welcomeShown = true
       
       window.dispatchEvent(new CustomEvent('auth:change'))
-      showToast('Account created successfully!', 'success')
+      showToast(`Welcome, ${name}! Your account has been created.`, 'success')
       navigate('/')
     } catch (err) {
       errorText.textContent = err.message
