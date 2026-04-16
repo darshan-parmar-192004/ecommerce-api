@@ -25,7 +25,7 @@ func (c *CategoryIntegrationTest) Run(t *testing.T) {
 
 func (c *CategoryIntegrationTest) TestGetAllCategories(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewCategoryRepository(db)
 	service := services.NewCategoryService(repo, nil)
@@ -50,7 +50,7 @@ func (c *CategoryIntegrationTest) TestGetAllCategories(t *testing.T) {
 
 func (c *CategoryIntegrationTest) TestGetCategoryProducts(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewCategoryRepository(db)
 	service := services.NewCategoryService(repo, nil)
@@ -74,7 +74,7 @@ func (c *CategoryIntegrationTest) TestGetCategoryProducts(t *testing.T) {
 
 func (c *CategoryIntegrationTest) TestGetHierarchy(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewCategoryRepository(db)
 	service := services.NewCategoryService(repo, nil)

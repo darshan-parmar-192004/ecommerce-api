@@ -6,6 +6,7 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 COPY go.mod go.sum ./
+COPY docs/ ./docs/
 
 RUN go mod download
 
@@ -44,6 +45,7 @@ COPY --from=build /app/internal/migrations ./migrations
 
 # FIX: Added wildcard to prevent "not found" crash
 COPY --from=build /app/internal/data* ./datasets/
+COPY --from=build /app/docs ./docs
 
 RUN chown -R appuser:appgroup /app
 USER appuser

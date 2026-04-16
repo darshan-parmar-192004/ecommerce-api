@@ -25,7 +25,7 @@ func (i *InventoryIntegrationTest) Run(t *testing.T) {
 
 func (i *InventoryIntegrationTest) TestGetAll(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewInventoryRepository(db)
 	service := services.NewInventoryService(repo)
@@ -49,7 +49,7 @@ func (i *InventoryIntegrationTest) TestGetAll(t *testing.T) {
 
 func (i *InventoryIntegrationTest) TestGetStockLevels(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewInventoryRepository(db)
 	service := services.NewInventoryService(repo)
@@ -73,7 +73,7 @@ func (i *InventoryIntegrationTest) TestGetStockLevels(t *testing.T) {
 
 func (i *InventoryIntegrationTest) TestGetTopSellers(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewInventoryRepository(db)
 	service := services.NewInventoryService(repo)

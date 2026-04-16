@@ -30,7 +30,7 @@ func (p *ProductIntegrationTest) Run(t *testing.T) {
 
 func (p *ProductIntegrationTest) TestGetAllWithFilters(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewProductRepository(db)
 	service := services.NewProductService(repo, nil)
@@ -57,7 +57,7 @@ func (p *ProductIntegrationTest) TestGetAllWithFilters(t *testing.T) {
 
 func (p *ProductIntegrationTest) TestGetByIdSuccess(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewProductRepository(db)
 	service := services.NewProductService(repo, nil)
@@ -81,7 +81,7 @@ func (p *ProductIntegrationTest) TestGetByIdSuccess(t *testing.T) {
 
 func (p *ProductIntegrationTest) TestGetByIdNotFound(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewProductRepository(db)
 	service := services.NewProductService(repo, nil)
@@ -102,7 +102,7 @@ func (p *ProductIntegrationTest) TestGetByIdNotFound(t *testing.T) {
 
 func (p *ProductIntegrationTest) TestCreateProduct(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewProductRepository(db)
 	service := services.NewProductService(repo, nil)
@@ -126,7 +126,7 @@ func (p *ProductIntegrationTest) TestCreateProduct(t *testing.T) {
 
 func (p *ProductIntegrationTest) TestUpdateProduct(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewProductRepository(db)
 	service := services.NewProductService(repo, nil)
@@ -152,7 +152,7 @@ func (p *ProductIntegrationTest) TestUpdateProduct(t *testing.T) {
 
 func (p *ProductIntegrationTest) TestDeleteProduct(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewProductRepository(db)
 	service := services.NewProductService(repo, nil)

@@ -24,7 +24,7 @@ func (o *OrderIntegrationTest) Run(t *testing.T) {
 
 func (o *OrderIntegrationTest) TestCreateOrder(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewOrderRepository(db)
 	service := services.NewOrderService(repo)
@@ -51,7 +51,7 @@ func (o *OrderIntegrationTest) TestCreateOrder(t *testing.T) {
 
 func (o *OrderIntegrationTest) TestGetOrder(t *testing.T) {
 	db, mock, _ := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	repo := models.NewOrderRepository(db)
 	service := services.NewOrderService(repo)
