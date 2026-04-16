@@ -19,17 +19,23 @@ func NewStore() *Store {
 }
 
 func (s *Store) LoadCSV(path string) error {
-	data, err := os.ReadFile(path)
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	dec, err := csvutil.NewDecoder(reader)
 	if err != nil {
 		return err
 	}
 
-	var rows []ProductRow
-	if err := csvutil.Unmarshal(data, &rows); err != nil {
-		return err
-	}
-
-	for _, p := range rows {
+	for {
+		var p models.Product
+		if err := dec.Decode(&p); err != nil {
+			break
+		}
 		product := models.Product{
 			ProductID:   p.ProductID,
 			Name:        p.Name,
@@ -41,13 +47,4 @@ func (s *Store) LoadCSV(path string) error {
 		s.Products[product.ProductID] = product
 	}
 	return nil
-}
-
-type ProductRow struct {
-	ProductID   string  `csv:"product_id"`
-	Name        string  `csv:"name"`
-	CategoryID  string  `csv:"category_id"`
-	Price       float64 `csv:"price"`
-	Description string  `csv:"description"`
-	CreatedAt   string  `csv:"created_at"`
 }
