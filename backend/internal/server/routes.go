@@ -24,4 +24,5 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	handler := product.NewHandler(store)
 
 	s.App.Get("/products", handler.GetAll)
+	s.App.Get("/products/:id", handler.GetById)
 }
