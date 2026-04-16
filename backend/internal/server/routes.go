@@ -27,4 +27,5 @@ func (s *FiberServer) RegisterFiberRoutes() {
 	s.App.Get("/products/:id", handler.GetById)
 	s.App.Post("/products", handler.Create)
 	s.App.Put("/products/:id", handler.Update)
+	s.App.Delete("/products/:id", handler.Delete)
 }
