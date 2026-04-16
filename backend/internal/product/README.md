@@ -357,8 +357,6 @@ Server: backend
     "error": "Product to be deleted not found"
 }
 ```
-<<<<<<< Updated upstream
-=======
 
 ---
 
@@ -683,4 +681,3 @@ The job fails if:
 - Verifies the Dockerfile builds successfully
 
 ---
->>>>>>> Stashed changes
