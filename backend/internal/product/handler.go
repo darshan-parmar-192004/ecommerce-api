@@ -66,14 +66,15 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	product.ProductID = GeneratemodelsProductId()
 	product.CreatedAt = time.Now()
 
-	if product.Name == "" || product.Price == 0 || product.CategoryID == "" {
+	if validationErrors, status, code := validateProductInput(product); validationErrors != nil {
 		return sendError(
 			c,
-			fiber.StatusPartialContent,
-			ErrMissingField,
+			status,
+			code,
 			"any fields should not be empty in order to create product",
 			nil,
 		)
+
 	}
 
 	h.Store.Products[product.ProductID] = product
@@ -117,14 +118,15 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		)
 	}
 
-	if input.Name == "" || input.Price == 0 || input.CategoryID == "" {
+	if validationErrors, status, code := validateProductInput(input); validationErrors != nil {
 		return sendError(
 			c,
-			fiber.StatusPartialContent,
-			ErrMissingField,
+			status,
+			code,
 			"all fields must be filled in order to update the product",
 			nil,
 		)
+
 	}
 
 	input.ProductID = existing.ProductID
