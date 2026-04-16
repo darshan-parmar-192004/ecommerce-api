@@ -33,7 +33,7 @@ func (s *Store) LoadCSV(path string) error {
 	}
 
 	for {
-		var p ProductRow
+		var p models.Product
 		if err := dec.Decode(&p); err != nil {
 			break
 		}
