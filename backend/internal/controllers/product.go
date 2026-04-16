@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -22,8 +24,152 @@ func NewProductController(service *services.ProductService) *ProductController {
 }
 
 func (h *ProductController) GetAll(c fiber.Ctx) error {
+
+	category := c.Query("category")
+	MinPriceStr := c.Query("min_price")
+	MaxPriceStr := c.Query("max_price")
+	search := c.Query("search")
+
+	pageStr := c.Query("page", "1")
+	limitStr := c.Query("limit", "10")
+
+	var page, limit int
+	var err error
+
+	if pageStr != "" {
+		page, err = strconv.Atoi(pageStr)
+		if err != nil || page < 1 {
+			return sendError(
+				c,
+				fiber.StatusBadRequest,
+				ErrInvalidInput,
+				"page must be positive integer",
+				nil,
+			)
+		}
+
+	}
+
+	if limitStr != "" {
+		limit, err = strconv.Atoi(limitStr)
+
+		if err != nil || limit < 1 {
+			return sendError(
+				c,
+				fiber.StatusBadRequest,
+				ErrInvalidInput,
+				"limit must be posiitive integer",
+				nil,
+			)
+		}
+	}
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	var minPrice, maxPrice float64
+
+	if MinPriceStr != "" {
+		minPrice, err = strconv.ParseFloat(MinPriceStr, 64)
+		if err != nil {
+			return sendError(
+				c,
+				fiber.StatusBadRequest,
+				ErrInvalidInput,
+				"min_price must be valid number",
+				nil,
+			)
+		}
+	}
+
+	if MaxPriceStr != "" {
+		maxPrice, err = strconv.ParseFloat(MaxPriceStr, 64)
+		if err != nil {
+			return sendError(
+				c,
+				fiber.StatusBadRequest,
+				ErrInvalidInput,
+				"max_price must be valid number",
+				nil,
+			)
+		}
+	}
+
+	if MinPriceStr != "" && MaxPriceStr != "" && minPrice > maxPrice {
+		return sendError(
+			c,
+			fiber.StatusBadRequest,
+			ErrInvalidInput,
+			"min_price cannot be empty than max_price",
+			nil,
+		)
+	}
+
 	list := h.Service.GetAll()
-	return c.JSON(list)
+	filtered := []models.Product{}
+
+	for _, p := range list {
+
+		if MinPriceStr != "" && p.Price < minPrice {
+			continue
+		}
+
+		if MaxPriceStr != "" && p.Price > maxPrice {
+			continue
+		}
+
+		if category != "" && p.CategoryID != category {
+			continue
+		}
+
+		if search != "" {
+			searchLower := strings.ToLower(search)
+			nameMatch := strings.Contains(strings.ToLower(p.Name), searchLower)
+			descMatch := strings.Contains(strings.ToLower(p.Description), searchLower)
+
+			if !nameMatch && !descMatch {
+				continue
+			}
+		}
+		filtered = append(filtered, p)
+
+	}
+	totalItems := len(filtered)
+	totalPages := (totalItems + limit - 1) / limit
+
+	if page > totalPages && totalItems > 0 {
+		return sendError(
+			c,
+			fiber.StatusBadRequest,
+			ErrInvalidInput,
+			"page exceeds total page",
+			nil,
+		)
+	}
+
+	start := (page - 1) * limit
+	end := start + limit
+
+	if start > totalItems {
+		start = totalItems
+	}
+
+	if end > totalItems {
+		end = totalItems
+	}
+
+	paginated := filtered[start:end]
+
+	return c.JSON(fiber.Map{
+		"data": paginated,
+		"pagination": fiber.Map{
+			"page":        page,
+			"limit":       limit,
+			"total_items": totalItems,
+			"total_pages": totalPages,
+		},
+	})
 }
 
 func (h *ProductController) GetById(c fiber.Ctx) error {
@@ -94,17 +240,6 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 func (h *ProductController) Update(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	existing, exists := h.Service.GetByID(id)
-	if !exists {
-		return sendError(
-			c,
-			fiber.StatusNotFound,
-			ErrProductNotFound,
-			"Product with ID "+id+" not found",
-			nil,
-		)
-	}
-
 	var input models.Product
 
 	if err := c.Bind().Body(&input); err != nil {
@@ -113,6 +248,17 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 			fiber.StatusBadRequest,
 			ErrInvalidInput,
 			"Invalid JSON format/malformed JSON",
+			nil,
+		)
+	}
+
+	existing, exists := h.Service.GetByID(id)
+	if !exists {
+		return sendError(
+			c,
+			fiber.StatusNotFound,
+			ErrProductNotFound,
+			"Product with ID "+id+" not found",
 			nil,
 		)
 	}
