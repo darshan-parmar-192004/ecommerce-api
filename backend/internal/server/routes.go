@@ -1,6 +1,9 @@
 package server
 
 import (
+	"backend/internal/product"
+	"log"
+
 	"github.com/gofiber/fiber/v3/middleware/cors"
 )
 
@@ -13,4 +16,12 @@ func (s *FiberServer) RegisterFiberRoutes() {
 		MaxAge:           300,
 	}))
 
+	store := product.NewStore()
+	err := store.LoadCSV("./datasets/ecommerce/products.csv")
+	if err != nil {
+		log.Fatalf("failed to load csv: %v", err)
+	}
+	handler := product.NewHandler(store)
+
+	s.App.Get("/products", handler.GetAll)
 }
