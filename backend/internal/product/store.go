@@ -33,7 +33,7 @@ func (s *Store) LoadCSV(path string) error {
 	}
 
 	for {
-		var p ProductRow
+		var p models.Product
 		if err := dec.Decode(&p); err != nil {
 			break
 		}
@@ -48,13 +48,4 @@ func (s *Store) LoadCSV(path string) error {
 		s.Products[product.ProductID] = product
 	}
 	return nil
-}
-
-type ProductRow struct {
-	ProductID   string  `csv:"product_id"`
-	Name        string  `csv:"name"`
-	CategoryID  string  `csv:"category_id"`
-	Price       float64 `csv:"price"`
-	Description string  `csv:"description"`
-	CreatedAt   string  `csv:"created_at"`
 }
