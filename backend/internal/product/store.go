@@ -69,45 +69,57 @@ type ProductCSVRow struct {
 }
 
 func (s *Store) AppendToCSV(path string, product models.Product) error {
-	data, err := csvutil.Marshal([]ProductCSVRow{{
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	enc := csvutil.NewEncoder(csv.NewWriter(file))
+	csvRow := ProductCSVRow{
 		ProductID:   product.ProductID,
 		Name:        product.Name,
 		CategoryID:  product.CategoryID,
 		Price:       product.Price,
 		Description: product.Description,
 		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
-	}})
-	if err != nil {
+	}
+
+	if err := enc.Encode(csvRow); err != nil {
 		return err
 	}
 
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.Write(data)
-	return err
+	return nil
 }
 
 func (s *Store) RewriteCSV(path string) error {
-	rows := make([]ProductCSVRow, 0, len(s.Products))
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	enc := csvutil.NewEncoder(csv.NewWriter(file))
+
+	header := []string{"product_id", "name", "category_id", "price", "description", "created_at"}
+	if err := enc.Encode(header); err != nil {
+		return err
+	}
+
 	for _, p := range s.Products {
-		rows = append(rows, ProductCSVRow{
+		csvRow := ProductCSVRow{
 			ProductID:   p.ProductID,
 			Name:        p.Name,
 			CategoryID:  p.CategoryID,
 			Price:       p.Price,
 			Description: p.Description,
 			CreatedAt:   p.CreatedAt.Format(time.RFC3339),
-		})
+		}
+
+		if err := enc.Encode(csvRow); err != nil {
+			return err
+		}
 	}
 
-	data, err := csvutil.Marshal(rows)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(path, data, 0644)
+	return nil
 }
