@@ -2,6 +2,7 @@ package product
 
 import (
 	"backend/internal/models"
+	"encoding/csv"
 	"os"
 	"time"
 
