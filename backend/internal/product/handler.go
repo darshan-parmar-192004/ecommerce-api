@@ -26,7 +26,7 @@ func (h *Handler) GetAll(c fiber.Ctx) error {
 	for _, p := range h.Store.Products {
 		list = append(list, p)
 	}
-	return c.JSON(list)
+	return c.JSON(list[0:0])
 }
 
 func (h *Handler) GetById(c fiber.Ctx) error {
@@ -34,7 +34,7 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 
 	product, exists := h.Store.Products[id]
 	if !exists {
-		return c.Status(404).JSON(fiber.Map{"error": "models.Product not found"})
+		return c.Status(404).JSON(fiber.Map{"error": "Product not found"})
 	}
 	return c.JSON(product)
 }
@@ -54,6 +54,10 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	product.ProductID = GeneratemodelsProductId()
 	product.CreatedAt = time.Now()
 
+	if product.Name == "" || product.Price == 0 || product.CategoryID == "" {
+		return c.Status(206).JSON(fiber.Map{"error": "all Product fields required to be filled for Product creation"})
+	}
+
 	h.Store.Products[product.ProductID] = product
 	err := h.Store.AppendToCSV("./datasets/ecommerce/models.Products.csv", product)
 	if err != nil {
@@ -70,7 +74,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 
 	existing, exists := h.Store.Products[id]
 	if !exists {
-		return c.Status(404).JSON(fiber.Map{"error": "models.Product not found"})
+		return c.Status(404).JSON(fiber.Map{"error": "Product not found"})
 	}
 
 	var input models.Product
@@ -80,7 +84,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	}
 
 	if input.Name == "" || input.Price == 0 || input.CategoryID == "" {
-		return c.Status(206).JSON(fiber.Map{"error": "all models.Product fields required to be filled for models.Product update "})
+		return c.Status(206).JSON(fiber.Map{"error": "all Product fields required to be filled for Product update "})
 	}
 
 	input.ProductID = existing.ProductID
@@ -101,7 +105,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 
 	if _, exists := h.Store.Products[id]; !exists {
-		return c.Status(404).JSON(fiber.Map{"error": "models.Product to be deleted not found"})
+		return c.Status(404).JSON(fiber.Map{"error": "Product to be deleted not found"})
 	}
 
 	delete(h.Store.Products, id)
