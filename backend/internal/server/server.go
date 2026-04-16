@@ -1,9 +1,10 @@
 package server
 
 import (
-	"github.com/gofiber/fiber/v3"
-
 	"backend/internal/database"
+	"backend/internal/views"
+
+	"github.com/gofiber/fiber/v3"
 )
 
 type FiberServer struct {
@@ -21,6 +22,8 @@ func New() *FiberServer {
 
 		db: database.New(),
 	}
+
+	views.RegisterRoutes(server.App)
 
 	return server
 }

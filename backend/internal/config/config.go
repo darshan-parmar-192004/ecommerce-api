@@ -10,7 +10,7 @@ type AppConfig struct {
 }
 
 func Load() (*AppConfig, error) {
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	var cfg AppConfig
 	err := envconfig.Process("app", &cfg)

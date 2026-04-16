@@ -1,4 +1,4 @@
-package product
+package services
 
 import (
 	"backend/internal/models"
@@ -9,32 +9,31 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
-type Store struct {
+type ProductService struct {
 	Products           map[string]models.Product
 	DisablePersistance bool
 }
 
-func NewStore() *Store {
-	return &Store{
+func NewProductService() *ProductService {
+	return &ProductService{
 		Products: make(map[string]models.Product),
 	}
 }
 
-func (s *Store) LoadCSV(path string) error {
+func (s *ProductService) LoadCSV(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = file.Close() }()
 
-	reader := csv.NewReader(file)
-	dec, err := csvutil.NewDecoder(reader)
+	dec, err := csvutil.NewDecoder(csv.NewReader(file))
 	if err != nil {
 		return err
 	}
 
 	for {
-		var p models.Product
+		var p ProductRow
 		if err := dec.Decode(&p); err != nil {
 			break
 		}
@@ -51,7 +50,25 @@ func (s *Store) LoadCSV(path string) error {
 	return nil
 }
 
-func (s *Store) AppendToCSV(path string, product models.Product) error {
+type ProductRow struct {
+	ProductID   string  `csv:"product_id"`
+	Name        string  `csv:"name"`
+	CategoryID  string  `csv:"category_id"`
+	Price       float64 `csv:"price"`
+	Description string  `csv:"description"`
+	CreatedAt   string  `csv:"created_at"`
+}
+
+type ProductCSVRow struct {
+	ProductID   string  `csv:"product_id"`
+	Name        string  `csv:"name"`
+	CategoryID  string  `csv:"category_id"`
+	Price       float64 `csv:"price"`
+	Description string  `csv:"description"`
+	CreatedAt   string  `csv:"created_at"`
+}
+
+func (s *ProductService) AppendToCSV(path string, product models.Product) error {
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -59,13 +76,13 @@ func (s *Store) AppendToCSV(path string, product models.Product) error {
 	defer func() { _ = file.Close() }()
 
 	enc := csvutil.NewEncoder(csv.NewWriter(file))
-	csvRow := models.Product{
+	csvRow := ProductCSVRow{
 		ProductID:   product.ProductID,
 		Name:        product.Name,
 		CategoryID:  product.CategoryID,
 		Price:       product.Price,
 		Description: product.Description,
-		CreatedAt:   product.CreatedAt,
+		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
 	}
 
 	if err := enc.Encode(csvRow); err != nil {
@@ -75,7 +92,7 @@ func (s *Store) AppendToCSV(path string, product models.Product) error {
 	return nil
 }
 
-func (s *Store) RewriteCSV(path string) error {
+func (s *ProductService) RewriteCSV(path string) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
@@ -90,13 +107,13 @@ func (s *Store) RewriteCSV(path string) error {
 	}
 
 	for _, p := range s.Products {
-		csvRow := models.Product{
+		csvRow := ProductCSVRow{
 			ProductID:   p.ProductID,
 			Name:        p.Name,
 			CategoryID:  p.CategoryID,
 			Price:       p.Price,
 			Description: p.Description,
-			CreatedAt:   p.CreatedAt,
+			CreatedAt:   p.CreatedAt.Format(time.RFC3339),
 		}
 
 		if err := enc.Encode(csvRow); err != nil {
@@ -105,4 +122,29 @@ func (s *Store) RewriteCSV(path string) error {
 	}
 
 	return nil
+}
+
+func (s *ProductService) GetAll() []models.Product {
+	list := []models.Product{}
+	for _, p := range s.Products {
+		list = append(list, p)
+	}
+	return list
+}
+
+func (s *ProductService) GetByID(id string) (models.Product, bool) {
+	product, exists := s.Products[id]
+	return product, exists
+}
+
+func (s *ProductService) Create(product models.Product) {
+	s.Products[product.ProductID] = product
+}
+
+func (s *ProductService) Update(id string, product models.Product) {
+	s.Products[id] = product
+}
+
+func (s *ProductService) Delete(id string) {
+	delete(s.Products, id)
 }

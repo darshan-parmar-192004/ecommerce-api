@@ -1,0 +1,50 @@
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+    environment:
+      APP_ENV: ${APP_ENV}
+      PORT: ${PORT}
+      BLUEPRINT_DB_HOST: ${BLUEPRINT_DB_HOST}
+      BLUEPRINT_DB_PORT: ${BLUEPRINT_DB_PORT}
+      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
+      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
+    networks:
+      - blueprint
+    volume:
+      - ./backend/datasets:/app/datasets
+    # depends_on:
+    #   psql_bp:
+    #     condition: service_healthy
+
+#   psql_bp:
+#     image: postgres:16-alpine
+#     restart: unless-stopped
+#     environment:
+#       POSTGRES_DB: ${BLUEPRINT_DB_DATABASE}
+#       POSTGRES_USER: ${BLUEPR INT_DB_USERNAME}
+#       POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+#     ports:
+#       - "${BLUEPRINT_DB_PORT}:5432"
+#     volumes:
+#       - psql_volume_bp:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "sh -c 'pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}'"]
+#       interval: 5s
+#       timeout: 5s
+#       retries: 3
+#       start_period: 15s
+#     networks:
+#       - blueprint
+
+# volumes:
+#   psql_volume_bp:
+networks:
+  blueprint:

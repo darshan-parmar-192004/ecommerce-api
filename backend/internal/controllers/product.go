@@ -1,7 +1,8 @@
-package product
+package controllers
 
 import (
 	"backend/internal/models"
+	"backend/internal/services"
 	"fmt"
 	"log"
 	"math/rand/v2"
@@ -10,29 +11,25 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-type Handler struct {
-	Store *Store
+type ProductController struct {
+	Service *services.ProductService
 }
 
-func NewHandler(store *Store) *Handler {
-	return &Handler{
-		Store: store,
+func NewProductController(service *services.ProductService) *ProductController {
+	return &ProductController{
+		Service: service,
 	}
 }
 
-func (h *Handler) GetAll(c fiber.Ctx) error {
-	list := []models.Product{}
-
-	for _, p := range h.Store.Products {
-		list = append(list, p)
-	}
+func (h *ProductController) GetAll(c fiber.Ctx) error {
+	list := h.Service.GetAll()
 	return c.JSON(list)
 }
 
-func (h *Handler) GetById(c fiber.Ctx) error {
+func (h *ProductController) GetById(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	product, exists := h.Store.Products[id]
+	product, exists := h.Service.GetByID(id)
 	if !exists {
 		return sendError(
 			c,
@@ -45,11 +42,11 @@ func (h *Handler) GetById(c fiber.Ctx) error {
 	return c.JSON(product)
 }
 
-func GeneratemodelsProductId() string {
+func generateProductID() string {
 	return fmt.Sprintf("PROD-%08d", rand.IntN(100000000))
 }
 
-func (h *Handler) Create(c fiber.Ctx) error {
+func (h *ProductController) Create(c fiber.Ctx) error {
 
 	var product models.Product
 
@@ -63,7 +60,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		)
 	}
 
-	product.ProductID = GeneratemodelsProductId()
+	product.ProductID = generateProductID()
 	product.CreatedAt = time.Now()
 
 	if validationErrors, status, code := validateProductInput(product); validationErrors != nil {
@@ -77,9 +74,9 @@ func (h *Handler) Create(c fiber.Ctx) error {
 
 	}
 
-	h.Store.Products[product.ProductID] = product
-	if !h.Store.DisablePersistance {
-		err := h.Store.AppendToCSV("./datasets/ecommerce/products.csv", product)
+	h.Service.Create(product)
+	if !h.Service.DisablePersistance {
+		err := h.Service.AppendToCSV("./datasets/ecommerce/products.csv", product)
 		if err != nil {
 			return sendError(
 				c,
@@ -94,10 +91,10 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(product)
 }
 
-func (h *Handler) Update(c fiber.Ctx) error {
+func (h *ProductController) Update(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	existing, exists := h.Store.Products[id]
+	existing, exists := h.Service.GetByID(id)
 	if !exists {
 		return sendError(
 			c,
@@ -134,15 +131,16 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	input.ProductID = existing.ProductID
 	input.CreatedAt = existing.CreatedAt
 
-	h.Store.Products[id] = input
+	h.Service.Update(id, input)
 
 	return c.JSON(input)
 }
 
-func (h *Handler) Delete(c fiber.Ctx) error {
+func (h *ProductController) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	if _, exists := h.Store.Products[id]; !exists {
+	_, exists := h.Service.GetByID(id)
+	if !exists {
 		return sendError(
 			c,
 			fiber.StatusNotFound,
@@ -152,11 +150,11 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 		)
 	}
 
-	delete(h.Store.Products, id)
+	h.Service.Delete(id)
 
 	log.Println("Deleting ID:", id)
-	log.Println("Map size before delete:", len(h.Store.Products))
-	err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
+	log.Println("Map size before delete:", len(h.Service.Products))
+	err := h.Service.RewriteCSV("./datasets/ecommerce/products.csv")
 	if err != nil {
 		return sendError(
 			c,

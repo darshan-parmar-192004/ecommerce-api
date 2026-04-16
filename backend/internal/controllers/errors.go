@@ -1,4 +1,4 @@
-package product
+package controllers
 
 import "github.com/gofiber/fiber/v3"
 
