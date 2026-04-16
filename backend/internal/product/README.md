@@ -577,8 +577,6 @@ Validation applies to **POST** and **PUT** operations.
 | Product not found | 404 Not Found |
 | Unexpected error | 500 Internal Server Error |
 
----
-
 
 # Phase 3: HTTP Status Codes, Error Handling & Validation
 

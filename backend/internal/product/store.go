@@ -10,7 +10,8 @@ import (
 )
 
 type Store struct {
-	Products map[string]models.Product
+	Products           map[string]models.Product
+	DisablePersistance bool
 }
 
 func NewStore() *Store {
