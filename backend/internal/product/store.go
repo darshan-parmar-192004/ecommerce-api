@@ -50,24 +50,6 @@ func (s *Store) LoadCSV(path string) error {
 	return nil
 }
 
-type ProductRow struct {
-	ProductID   string  `csv:"product_id"`
-	Name        string  `csv:"name"`
-	CategoryID  string  `csv:"category_id"`
-	Price       float64 `csv:"price"`
-	Description string  `csv:"description"`
-	CreatedAt   string  `csv:"created_at"`
-}
-
-type ProductCSVRow struct {
-	ProductID   string  `csv:"product_id"`
-	Name        string  `csv:"name"`
-	CategoryID  string  `csv:"category_id"`
-	Price       float64 `csv:"price"`
-	Description string  `csv:"description"`
-	CreatedAt   string  `csv:"created_at"`
-}
-
 func (s *Store) AppendToCSV(path string, product models.Product) error {
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -76,13 +58,13 @@ func (s *Store) AppendToCSV(path string, product models.Product) error {
 	defer file.Close()
 
 	enc := csvutil.NewEncoder(csv.NewWriter(file))
-	csvRow := ProductCSVRow{
+	csvRow := models.Product{
 		ProductID:   product.ProductID,
 		Name:        product.Name,
 		CategoryID:  product.CategoryID,
 		Price:       product.Price,
 		Description: product.Description,
-		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
+		CreatedAt:   product.CreatedAt,
 	}
 
 	if err := enc.Encode(csvRow); err != nil {
@@ -107,13 +89,13 @@ func (s *Store) RewriteCSV(path string) error {
 	}
 
 	for _, p := range s.Products {
-		csvRow := ProductCSVRow{
+		csvRow := models.Product{
 			ProductID:   p.ProductID,
 			Name:        p.Name,
 			CategoryID:  p.CategoryID,
 			Price:       p.Price,
 			Description: p.Description,
-			CreatedAt:   p.CreatedAt.Format(time.RFC3339),
+			CreatedAt:   p.CreatedAt,
 		}
 
 		if err := enc.Encode(csvRow); err != nil {
