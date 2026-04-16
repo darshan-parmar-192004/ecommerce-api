@@ -577,6 +577,9 @@ Validation applies to **POST** and **PUT** operations.
 | Product not found | 404 Not Found |
 | Unexpected error | 500 Internal Server Error |
 
+<<<<<<< HEAD
+---
+=======
 ---
 
 
@@ -681,3 +684,4 @@ The job fails if:
 - Verifies the Dockerfile builds successfully
 
 ---
+>>>>>>> eb24fdaf93525cb7c7273cae334311fd31b7420f

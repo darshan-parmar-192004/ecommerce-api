@@ -78,15 +78,17 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	}
 
 	h.Store.Products[product.ProductID] = product
-	err := h.Store.AppendToCSV("./datasets/ecommerce/products.csv", product)
-	if err != nil {
-		return sendError(
-			c,
-			fiber.StatusInternalServerError,
-			ErrInternal,
-			"Failed to persist product",
-			nil,
-		)
+	if !h.Store.DisablePersistance {
+		err := h.Store.AppendToCSV("./datasets/ecommerce/products.csv", product)
+		if err != nil {
+			return sendError(
+				c,
+				fiber.StatusInternalServerError,
+				ErrInternal,
+				"Failed to persist product",
+				nil,
+			)
+		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(product)
@@ -133,16 +135,6 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	input.CreatedAt = existing.CreatedAt
 
 	h.Store.Products[id] = input
-	err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
-	if err != nil {
-		return sendError(
-			c,
-			fiber.StatusInternalServerError,
-			ErrInternal,
-			"Failed to update storage",
-			nil,
-		)
-	}
 
 	return c.JSON(input)
 }
@@ -164,7 +156,6 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 
 	log.Println("Deleting ID:", id)
 	log.Println("Map size before delete:", len(h.Store.Products))
-
 	err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
 	if err != nil {
 		return sendError(
