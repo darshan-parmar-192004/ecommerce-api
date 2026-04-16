@@ -27,7 +27,8 @@ func (s *Store) LoadCSV(path string) error {
 	}
 	defer file.Close()
 
-	dec, err := csvutil.NewDecoder(csv.NewReader(file))
+	reader := csv.NewReader(file)
+	dec, err := csvutil.NewDecoder(reader)
 	if err != nil {
 		return err
 	}

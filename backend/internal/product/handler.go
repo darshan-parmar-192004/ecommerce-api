@@ -97,6 +97,17 @@ func (h *Handler) Create(c fiber.Ctx) error {
 func (h *Handler) Update(c fiber.Ctx) error {
 	id := c.Params("id")
 
+	existing, exists := h.Store.Products[id]
+	if !exists {
+		return sendError(
+			c,
+			fiber.StatusNotFound,
+			ErrProductNotFound,
+			"Product with ID "+id+" not found",
+			nil,
+		)
+	}
+
 	var input models.Product
 
 	if err := c.Bind().Body(&input); err != nil {
@@ -105,17 +116,6 @@ func (h *Handler) Update(c fiber.Ctx) error {
 			fiber.StatusBadRequest,
 			ErrInvalidInput,
 			"Invalid JSON format/malformed JSON",
-			nil,
-		)
-	}
-
-	existing, exists := h.Store.Products[id]
-	if !exists {
-		return sendError(
-			c,
-			fiber.StatusNotFound,
-			ErrProductNotFound,
-			"Product with ID "+id+" not found",
 			nil,
 		)
 	}
@@ -135,16 +135,6 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	input.CreatedAt = existing.CreatedAt
 
 	h.Store.Products[id] = input
-	// err := h.Store.RewriteCSV("./datasets/ecommerce/products.csv")
-	// if err != nil {
-	// 	return sendError(
-	// 		c,
-	// 		fiber.StatusInternalServerError,
-	// 		ErrInternal,
-	// 		"Failed to update storage",
-	// 		nil,
-	// 	)
-	// }
 
 	return c.JSON(input)
 }

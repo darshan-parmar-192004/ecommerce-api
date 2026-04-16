@@ -577,4 +577,111 @@ Validation applies to **POST** and **PUT** operations.
 | Product not found | 404 Not Found |
 | Unexpected error | 500 Internal Server Error |
 
+<<<<<<< HEAD
 ---
+=======
+---
+
+
+# Phase 3: HTTP Status Codes, Error Handling & Validation
+
+# Running with Containers
+
+## Build the Image
+
+Build the application container locally:
+```bash
+podman build -t ecommerce-api:dev .
+```
+
+---
+
+## Run with Compose
+
+Start the API and PostgreSQL services:
+```bash
+podman-compose up --build
+```
+
+This will:
+- Build the API image
+- Start the database service
+- Expose the API on `http://localhost:8080`
+
+---
+
+## Verify the API
+
+Check the health endpoint:
+```bash
+curl http://localhost:8080/health
+```
+
+If successful, it should return HTTP 200.
+
+---
+
+# Environment Variables
+
+The application is configured using the following environment variables:
+
+| Variable | Description |
+|----------|------------|
+| PORT | Port on which the API runs |
+| DB_HOST | Database host |
+| DB_PORT | Database port |
+| DB_USER | Database username |
+| DB_PASSWORD | Database password |
+| DB_NAME | Database name |
+
+These variables are defined in `podman-compose.yml` for local development.
+
+---
+
+# CI Pipeline
+
+The CI pipeline is located at:
+```
+.github/workflows/ci.yml
+```
+
+## Triggers
+
+The pipeline runs:
+- On push to `main`
+- On pull request to `main`
+
+---
+
+## Pipeline Stages
+
+### 1. Lint
+
+Runs static code analysis using:
+- `golangci-lint` (Go projects)
+The job fails if lint errors are detected.
+
+---
+
+### 2. Test
+
+- Sets up test environment
+- Runs unit tests
+- Runs integration tests
+- Generates coverage report
+
+Minimum required coverage: **70%**
+
+The job fails if:
+- Any test fails
+- Coverage is below 70%
+
+---
+
+### 3. Build
+
+- Builds the container image
+- Verifies the Dockerfile builds successfully
+
+---
+>>>>>>> eb24fdaf93525cb7c7273cae334311fd31b7420f

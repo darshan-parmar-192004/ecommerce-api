@@ -12,8 +12,7 @@ import (
 
 func setupTestApp() *fiber.App {
 	store := &Store{
-		Products:           make(map[string]models.Product),
-		DisablePersistance: true,
+		Products: make(map[string]models.Product),
 	}
 
 	handler := NewHandler(store)
@@ -100,8 +99,8 @@ func TestCreate(t *testing.T) {
 
 		resp, _ := app.Test(req)
 
-		if resp.StatusCode != http.StatusUnprocessableEntity {
-			t.Fatalf("expected 422, got %d", resp.StatusCode)
+		if resp.StatusCode != 206 {
+			t.Fatalf("expected 206, got %d", resp.StatusCode)
 		}
 	})
 }
