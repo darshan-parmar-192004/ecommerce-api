@@ -2,6 +2,7 @@ package views
 
 import (
 	"backend/internal/controllers"
+	"backend/internal/middleware"
 	"backend/internal/services"
 	"log"
 
@@ -11,6 +12,10 @@ import (
 )
 
 func RegisterRoutes(app *fiber.App) {
+
+	app.Use(middleware.RequestID())
+	app.Use(middleware.Logging())
+	app.Use(middleware.Recovery())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
