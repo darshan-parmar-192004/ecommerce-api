@@ -94,6 +94,17 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 func (h *ProductController) Update(c fiber.Ctx) error {
 	id := c.Params("id")
 
+	existing, exists := h.Service.GetByID(id)
+	if !exists {
+		return sendError(
+			c,
+			fiber.StatusNotFound,
+			ErrProductNotFound,
+			"Product with ID "+id+" not found",
+			nil,
+		)
+	}
+
 	var input models.Product
 
 	if err := c.Bind().Body(&input); err != nil {
@@ -102,17 +113,6 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 			fiber.StatusBadRequest,
 			ErrInvalidInput,
 			"Invalid JSON format/malformed JSON",
-			nil,
-		)
-	}
-
-	existing, exists := h.Service.GetByID(id)
-	if !exists {
-		return sendError(
-			c,
-			fiber.StatusNotFound,
-			ErrProductNotFound,
-			"Product with ID "+id+" not found",
 			nil,
 		)
 	}
