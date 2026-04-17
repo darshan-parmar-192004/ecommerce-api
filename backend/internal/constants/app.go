@@ -49,7 +49,7 @@ const (
 	ProductIDPrefix = "PROD-"
 	ProductIDFormat = "%08d"
 
-	CSVProductsPath = "./datasets/ecommerce/products.csv"
+	CSVProductsPath = "./internal/datasets/ecommerce/products.csv"
 
 	ErrInternalServer = "internal_server_error"
 	MsgSomethingWrong = "Something went wrong"

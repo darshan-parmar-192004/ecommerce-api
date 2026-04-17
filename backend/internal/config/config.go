@@ -6,70 +6,79 @@ import (
 	"strconv"
 
 	"github.com/joho/godotenv"
-	"github.com/kelseyhightower/envconfig"
 )
 
 type AppConfig struct {
-	Server ServerConfig `envconfig:"SERVER"`
-	DB     DBConfig     `envconfig:"DB"`
-}
-
-type ServerConfig struct {
-	Port int `envconfig:"PORT"`
-}
-
-type DBConfig struct {
-	Database string `envconfig:"DB_DATABASE"`
-	Password string `envconfig:"DB_PASSWORD"`
-	Username string `envconfig:"DB_USERNAME"`
-	Port     string `envconfig:"DB_PORT"`
-	Host     string `envconfig:"DB_HOST"`
-	Schema   string `envconfig:"DB_SCHEMA"`
-}
-
-type TestConfig struct {
-	DB DBConfig
+	Port     int    `envconfig:"APP_PORT"`
+	DBHost   string `envconfig:"APP_DB_HOST"`
+	DBPort   string `envconfig:"APP_DB_PORT"`
+	DBName   string `envconfig:"APP_DB_NAME"`
+	DBUser   string `envconfig:"APP_DB_USER"`
+	DBPass   string `envconfig:"APP_DB_PASS"`
+	DBSchema string `envconfig:"APP_DB_SCHEMA"`
 }
 
 func Load() (*AppConfig, error) {
 	_ = godotenv.Load()
 
-	var cfg AppConfig
-	err := envconfig.Process("", &cfg)
-	if err != nil {
-		return nil, err
+	cfg := &AppConfig{
+		Port:     constants.DefaultPort,
+		DBSchema: "public",
 	}
 
-	if cfg.Server.Port == 0 {
-		cfg.Server.Port = constants.DefaultPort
+	if v := os.Getenv("APP_PORT"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil {
+			cfg.Port = p
+		}
+	}
+	if v := os.Getenv("APP_DB_HOST"); v != "" {
+		cfg.DBHost = v
+	}
+	if v := os.Getenv("APP_DB_PORT"); v != "" {
+		cfg.DBPort = v
+	}
+	if v := os.Getenv("APP_DB_NAME"); v != "" {
+		cfg.DBName = v
+	}
+	if v := os.Getenv("APP_DB_USER"); v != "" {
+		cfg.DBUser = v
+	}
+	if v := os.Getenv("APP_DB_PASS"); v != "" {
+		cfg.DBPass = v
+	}
+	if v := os.Getenv("APP_DB_SCHEMA"); v != "" {
+		cfg.DBSchema = v
 	}
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 func LoadTest(dbHost, dbPort, dbName, dbUser, dbPwd string) (*AppConfig, error) {
 	return &AppConfig{
-		Server: ServerConfig{Port: constants.DefaultPort},
-		DB: DBConfig{
-			Host:     dbHost,
-			Port:     dbPort,
-			Database: dbName,
-			Username: dbUser,
-			Password: dbPwd,
-			Schema:   "public",
-		},
+		Port:     constants.DefaultPort,
+		DBHost:   dbHost,
+		DBPort:   dbPort,
+		DBName:   dbName,
+		DBUser:   dbUser,
+		DBPass:   dbPwd,
+		DBSchema: "public",
 	}, nil
 }
 
 func (c *AppConfig) GetDSN() string {
-	return "postgres://" + c.DB.Username + ":" + c.DB.Password + "@" + c.DB.Host + ":" + c.DB.Port + "/" + c.DB.Database + "?sslmode=disable&search_path=" + c.DB.Schema
+	return "postgres://" + c.DBUser + ":" + c.DBPass + "@" + c.DBHost + ":" + c.DBPort + "/" + c.DBName + "?sslmode=disable&search_path=" + c.DBSchema
 }
 
 func GetPort() int {
-	_ = godotenv.Load()
-	port, _ := strconv.Atoi(os.Getenv("PORT"))
-	if port == 0 {
-		return constants.DefaultPort
+	if v := os.Getenv("APP_PORT"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			return p
+		}
 	}
-	return port
+	if v := os.Getenv("PORT"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil && p > 0 {
+			return p
+		}
+	}
+	return constants.DefaultPort
 }

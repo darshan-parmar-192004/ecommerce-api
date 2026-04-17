@@ -71,7 +71,9 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	if testDB != nil {
-		testDB.Close()
+		if err := testDB.Close(); err != nil {
+			log.Fatalf("failed to close test db: %v", err)
+		}
 	}
 
 	if teardown != nil && teardown(context.Background()) != nil {

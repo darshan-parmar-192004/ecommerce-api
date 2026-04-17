@@ -1,4 +1,4 @@
-package views
+package server
 
 import (
 	"backend/internal/constants"
@@ -30,6 +30,7 @@ func RegisterRoutes(app *fiber.App) {
 	if err != nil {
 		logger.Log.Fatalf("failed to load csv: %v", err)
 	}
+	logger.Log.Infof("loaded %d products from CSV", len(productService.Store.Products))
 	productController := controllers.NewProductController(productService)
 
 	app.Get(constants.RouteProducts, productController.GetAll)

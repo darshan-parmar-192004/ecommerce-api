@@ -3,10 +3,9 @@ package utils
 import (
 	"backend/internal/models"
 	"encoding/csv"
+	"fmt"
 	"os"
 	"time"
-
-	"github.com/jszwec/csvutil"
 )
 
 type ProductStore struct {
@@ -28,27 +27,61 @@ func (s *ProductStore) LoadCSV(path string) error {
 	defer func() { _ = file.Close() }()
 
 	reader := csv.NewReader(file)
-	dec, err := csvutil.NewDecoder(reader)
+
+	// Read header row
+	header, err := reader.Read()
 	if err != nil {
 		return err
 	}
 
+	// Create column index map
+	colIndex := make(map[string]int)
+	for i, col := range header {
+		colIndex[col] = i
+	}
+
 	for {
-		var p models.Product
-		if err := dec.Decode(&p); err != nil {
+		record, err := reader.Read()
+		if err != nil {
 			break
 		}
+
 		product := models.Product{
-			ProductID:   p.ProductID,
-			Name:        p.Name,
-			CategoryID:  p.CategoryID,
-			Price:       p.Price,
-			Description: p.Description,
-			CreatedAt:   time.Now(),
+			ProductID:   getColumn(record, colIndex, "product_id"),
+			Name:        getColumn(record, colIndex, "name"),
+			CategoryID:  getColumn(record, colIndex, "category_id"),
+			Price:       parseFloat(getColumn(record, colIndex, "price")),
+			Description: getColumn(record, colIndex, "description"),
+			CreatedAt:   parseTime(getColumn(record, colIndex, "created_at")),
 		}
 		s.Products[product.ProductID] = product
 	}
 	return nil
+}
+
+func getColumn(record []string, colIndex map[string]int, colName string) string {
+	if idx, ok := colIndex[colName]; ok && idx < len(record) {
+		return record[idx]
+	}
+	return ""
+}
+
+func parseFloat(s string) float64 {
+	var f float64
+	for _, r := range s {
+		if r >= '0' && r <= '9' || r == '.' {
+			f = f*10 + float64(r-'0')
+		}
+	}
+	return f
+}
+
+func parseTime(s string) time.Time {
+	t, err := time.Parse("2006-01-02T15:04:05", s)
+	if err != nil {
+		return time.Now()
+	}
+	return t
 }
 
 func (s *ProductStore) AppendToCSV(path string, product models.Product) error {
@@ -58,21 +91,19 @@ func (s *ProductStore) AppendToCSV(path string, product models.Product) error {
 	}
 	defer func() { _ = file.Close() }()
 
-	enc := csvutil.NewEncoder(csv.NewWriter(file))
-	csvRow := models.Product{
-		ProductID:   product.ProductID,
-		Name:        product.Name,
-		CategoryID:  product.CategoryID,
-		Price:       product.Price,
-		Description: product.Description,
-		CreatedAt:   product.CreatedAt,
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	record := []string{
+		product.ProductID,
+		product.Name,
+		product.CategoryID,
+		floatToString(product.Price),
+		product.Description,
+		product.CreatedAt.Format("2006-01-02T15:04:05"),
 	}
 
-	if err := enc.Encode(csvRow); err != nil {
-		return err
-	}
-
-	return nil
+	return writer.Write(record)
 }
 
 func (s *ProductStore) RewriteCSV(path string) error {
@@ -82,27 +113,33 @@ func (s *ProductStore) RewriteCSV(path string) error {
 	}
 	defer func() { _ = file.Close() }()
 
-	enc := csvutil.NewEncoder(csv.NewWriter(file))
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
 
+	// Write header
 	header := []string{"product_id", "name", "category_id", "price", "description", "created_at"}
-	if err := enc.Encode(header); err != nil {
+	if err := writer.Write(header); err != nil {
 		return err
 	}
 
+	// Write products
 	for _, p := range s.Products {
-		csvRow := models.Product{
-			ProductID:   p.ProductID,
-			Name:        p.Name,
-			CategoryID:  p.CategoryID,
-			Price:       p.Price,
-			Description: p.Description,
-			CreatedAt:   p.CreatedAt,
+		record := []string{
+			p.ProductID,
+			p.Name,
+			p.CategoryID,
+			floatToString(p.Price),
+			p.Description,
+			p.CreatedAt.Format("2006-01-02T15:04:05"),
 		}
-
-		if err := enc.Encode(csvRow); err != nil {
+		if err := writer.Write(record); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func floatToString(f float64) string {
+	return fmt.Sprintf("%.2f", f)
 }
