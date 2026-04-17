@@ -1,14 +1,16 @@
 package controllers
 
 import (
+	"backend/internal/constants"
 	"backend/internal/models"
 	"backend/internal/services"
 	"fmt"
-	"log"
 	"math/rand/v2"
 	"strconv"
 	"strings"
 	"time"
+
+	"backend/internal/logger"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -30,8 +32,8 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 	MaxPriceStr := c.Query("max_price")
 	search := c.Query("search")
 
-	pageStr := c.Query("page", "1")
-	limitStr := c.Query("limit", "10")
+	pageStr := c.Query("page", strconv.Itoa(constants.DefaultPage))
+	limitStr := c.Query("limit", strconv.Itoa(constants.DefaultLimit))
 
 	var page, limit int
 	var err error
@@ -42,8 +44,8 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 			return sendError(
 				c,
 				fiber.StatusBadRequest,
-				ErrInvalidInput,
-				"page must be positive integer",
+				constants.ErrInvalidInput,
+				constants.MsgPagePositive,
 				nil,
 			)
 		}
@@ -57,15 +59,15 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 			return sendError(
 				c,
 				fiber.StatusBadRequest,
-				ErrInvalidInput,
-				"limit must be posiitive integer",
+				constants.ErrInvalidInput,
+				constants.MsgLimitPositive,
 				nil,
 			)
 		}
 	}
 
-	if limit > 100 {
-		limit = 100
+	if limit > constants.MaxLimit {
+		limit = constants.MaxLimit
 	}
 
 	var minPrice, maxPrice float64
@@ -76,8 +78,8 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 			return sendError(
 				c,
 				fiber.StatusBadRequest,
-				ErrInvalidInput,
-				"min_price must be valid number",
+				constants.ErrInvalidInput,
+				constants.MsgMinPriceValid,
 				nil,
 			)
 		}
@@ -89,8 +91,8 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 			return sendError(
 				c,
 				fiber.StatusBadRequest,
-				ErrInvalidInput,
-				"max_price must be valid number",
+				constants.ErrInvalidInput,
+				constants.MsgMaxPriceValid,
 				nil,
 			)
 		}
@@ -100,8 +102,8 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 		return sendError(
 			c,
 			fiber.StatusBadRequest,
-			ErrInvalidInput,
-			"min_price cannot be empty than max_price",
+			constants.ErrInvalidInput,
+			constants.MsgMinMaxPrice,
 			nil,
 		)
 	}
@@ -142,7 +144,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 		return sendError(
 			c,
 			fiber.StatusBadRequest,
-			ErrInvalidInput,
+			constants.ErrInvalidInput,
 			"page exceeds total page",
 			nil,
 		)
@@ -162,12 +164,12 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 	paginated := filtered[start:end]
 
 	return c.JSON(fiber.Map{
-		"data": paginated,
-		"pagination": fiber.Map{
-			"page":        page,
-			"limit":       limit,
-			"total_items": totalItems,
-			"total_pages": totalPages,
+		constants.JSONFieldData: paginated,
+		constants.JSONFieldPagination: fiber.Map{
+			constants.JSONFieldPage:       page,
+			constants.JSONFieldLimit:      limit,
+			constants.JSONFieldTotalItems: totalItems,
+			constants.JSONFieldTotalPages: totalPages,
 		},
 	})
 }
@@ -180,8 +182,8 @@ func (h *ProductController) GetById(c fiber.Ctx) error {
 		return sendError(
 			c,
 			fiber.StatusNotFound,
-			ErrProductNotFound,
-			"Product with ID "+id+" does not exists",
+			constants.ErrProductNotFound,
+			fmt.Sprintf(constants.MsgProductNotFound, id),
 			nil,
 		)
 	}
@@ -189,7 +191,7 @@ func (h *ProductController) GetById(c fiber.Ctx) error {
 }
 
 func generateProductID() string {
-	return fmt.Sprintf("PROD-%08d", rand.IntN(100000000))
+	return fmt.Sprintf(constants.ProductIDPrefix+constants.ProductIDFormat, rand.IntN(100000000))
 }
 
 func (h *ProductController) Create(c fiber.Ctx) error {
@@ -200,8 +202,8 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 		return sendError(
 			c,
 			fiber.StatusBadRequest,
-			ErrInvalidInput,
-			"Malformed JSON request body",
+			constants.ErrInvalidInput,
+			constants.MsgMalformedJSON,
 			nil,
 		)
 	}
@@ -214,21 +216,21 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 			c,
 			status,
 			code,
-			"any fields should not be empty in order to create product",
+			constants.MsgValidationEmpty,
 			nil,
 		)
 
 	}
 
 	h.Service.Create(product)
-	if !h.Service.DisablePersistance {
-		err := h.Service.AppendToCSV("./datasets/ecommerce/products.csv", product)
+	if !h.Service.Store.DisablePersistance {
+		err := h.Service.AppendToCSV(constants.CSVProductsPath, product)
 		if err != nil {
 			return sendError(
 				c,
 				fiber.StatusInternalServerError,
-				ErrInternal,
-				"Failed to persist product",
+				constants.ErrInternal,
+				constants.MsgPersistFailed,
 				nil,
 			)
 		}
@@ -246,8 +248,8 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 		return sendError(
 			c,
 			fiber.StatusBadRequest,
-			ErrInvalidInput,
-			"Invalid JSON format/malformed JSON",
+			constants.ErrInvalidInput,
+			constants.MsgInvalidJSON,
 			nil,
 		)
 	}
@@ -257,8 +259,8 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 		return sendError(
 			c,
 			fiber.StatusNotFound,
-			ErrProductNotFound,
-			"Product with ID "+id+" not found",
+			constants.ErrProductNotFound,
+			fmt.Sprintf(constants.MsgProductNotFound2, id),
 			nil,
 		)
 	}
@@ -268,7 +270,7 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 			c,
 			status,
 			code,
-			"all fields must be filled in order to update the product",
+			constants.MsgValidationUpdate,
 			nil,
 		)
 
@@ -290,26 +292,26 @@ func (h *ProductController) Delete(c fiber.Ctx) error {
 		return sendError(
 			c,
 			fiber.StatusNotFound,
-			ErrProductNotFound,
-			"Product with ID "+id+" not found",
+			constants.ErrProductNotFound,
+			fmt.Sprintf(constants.MsgProductNotFound2, id),
 			nil,
 		)
 	}
 
 	h.Service.Delete(id)
 
-	log.Println("Deleting ID:", id)
-	log.Println("Map size before delete:", len(h.Service.Products))
-	err := h.Service.RewriteCSV("./datasets/ecommerce/products.csv")
+	logger.Log.Info("Deleting ID:", id)
+	logger.Log.Info("Map size before delete:", len(h.Service.Store.Products))
+	err := h.Service.RewriteCSV(constants.CSVProductsPath)
 	if err != nil {
 		return sendError(
 			c,
 			fiber.StatusInternalServerError,
-			ErrInternal,
-			"Failed to update storage",
+			constants.ErrInternal,
+			constants.MsgStorageFailed,
 			nil,
 		)
 	}
 
-	return c.JSON(fiber.Map{"message": "Deleted"})
+	return c.JSON(fiber.Map{constants.JSONFieldMessage: constants.ResponseMessageDeleted})
 }

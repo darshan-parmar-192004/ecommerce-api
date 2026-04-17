@@ -1,4 +1,4 @@
-package product
+package utils
 
 import (
 	"backend/internal/models"
@@ -9,18 +9,18 @@ import (
 	"github.com/jszwec/csvutil"
 )
 
-type Store struct {
+type ProductStore struct {
 	Products           map[string]models.Product
 	DisablePersistance bool
 }
 
-func NewStore() *Store {
-	return &Store{
+func NewProductStore() *ProductStore {
+	return &ProductStore{
 		Products: make(map[string]models.Product),
 	}
 }
 
-func (s *Store) LoadCSV(path string) error {
+func (s *ProductStore) LoadCSV(path string) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (s *Store) LoadCSV(path string) error {
 	return nil
 }
 
-func (s *Store) AppendToCSV(path string, product models.Product) error {
+func (s *ProductStore) AppendToCSV(path string, product models.Product) error {
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (s *Store) AppendToCSV(path string, product models.Product) error {
 	return nil
 }
 
-func (s *Store) RewriteCSV(path string) error {
+func (s *ProductStore) RewriteCSV(path string) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
