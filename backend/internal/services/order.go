@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"backend/models"
+	"backend/internal/models"
 )
 
 type OrderService struct {

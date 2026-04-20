@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"backend/internal/config"
+
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -102,17 +104,11 @@ func main() {
 }
 
 func buildDSN() string {
-	dsn := os.Getenv("BLUEPRINT_DB_DSN")
-	if dsn == "" {
-		dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-			os.Getenv("BLUEPRINT_DB_USERNAME"),
-			os.Getenv("BLUEPRINT_DB_PASSWORD"),
-			os.Getenv("BLUEPRINT_DB_HOST"),
-			os.Getenv("BLUEPRINT_DB_PORT"),
-			os.Getenv("BLUEPRINT_DB_DATABASE"),
-		)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
 	}
-	return dsn
+	return cfg.GetDSN()
 }
 
 func SeedDatabase(dsn string) error {
@@ -206,15 +202,15 @@ func SeedDatabase(dsn string) error {
 
 func dropAllConstraints(db *sql.DB) {
 	constraints := []string{
-		"ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_customer_id_fkey",
-		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_order_id_fkey",
-		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_product_id_fkey",
-		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_pkey",
-		"ALTER TABLE products DROP CONSTRAINT IF EXISTS products_category_id_fkey",
-		"ALTER TABLE inventory DROP CONSTRAINT IF EXISTS inventory_product_id_fkey",
-		"ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_pkey",
-		"ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_email_key",
-		"ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_pkey",
+		"ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_customer_id_fkey CASCADE",
+		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_order_id_fkey CASCADE",
+		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_product_id_fkey CASCADE",
+		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_pkey CASCADE",
+		"ALTER TABLE products DROP CONSTRAINT IF EXISTS products_category_id_fkey CASCADE",
+		"ALTER TABLE inventory DROP CONSTRAINT IF EXISTS inventory_product_id_fkey CASCADE",
+		"ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_pkey CASCADE",
+		"ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_email_key CASCADE",
+		"ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_pkey CASCADE",
 	}
 	for _, c := range constraints {
 		if _, err := db.Exec(c); err != nil {

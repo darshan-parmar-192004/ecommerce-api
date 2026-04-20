@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	apperrors "backend/errors"
-	"backend/models"
-	"backend/services"
+	"backend/internal/constants"
+	apperrors "backend/internal/errors"
+	"backend/internal/models"
+	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -26,19 +27,19 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 	maxPriceStr := c.Query("max_price")
 	search := c.Query("search")
 
-	pageStr := c.Query("page", "1")
-	limitStr := c.Query("limit", "10")
+	pageStr := c.Query("page", strconv.Itoa(constants.DefaultPage))
+	limitStr := c.Query("limit", strconv.Itoa(constants.DefaultLimit))
 
 	page, _ := strconv.Atoi(pageStr)
 	if page < 1 {
-		page = 1
+		page = constants.DefaultPage
 	}
 	limit, _ := strconv.Atoi(limitStr)
 	if limit < 1 {
-		limit = 10
+		limit = constants.DefaultLimit
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > constants.MaxLimit {
+		limit = constants.MaxLimit
 	}
 
 	products, pagination, err := h.Service.GetAll(c.Context(), category, minPriceStr, maxPriceStr, search, page, limit)

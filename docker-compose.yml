@@ -15,6 +15,10 @@ services:
       BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
       BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
       BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
+      BLUEPRINT_DB_DIALECT: pgx
+    volumes:
+      - ./backend/internal/datasets:/app/datasets
     networks:
       - blueprint
     depends_on:
@@ -36,17 +40,15 @@ services:
       - "8080:8080"
 
     environment:
-      APP_ENV: ${APP_ENV}
-      PORT: ${PORT}
+      BLUEPRINT_ENV: ${BLUEPRINT_ENV}
+      BLUEPRINT_PORT: ${BLUEPRINT_PORT}
       BLUEPRINT_DB_HOST: psql_bp
       BLUEPRINT_DB_PORT: 5432
       BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
       BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
       BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
       BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
-
-    volumes:
-      - ./backend/datasets:/app/datasets
+      BLUEPRINT_DB_DIALECT: pgx
 
     networks:
       - blueprint
@@ -58,7 +60,7 @@ services:
         condition: service_healthy
 
   psql_bp:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     container_name: blueprint_postgres
     restart: unless-stopped
 
@@ -66,6 +68,7 @@ services:
       POSTGRES_DB: ${BLUEPRINT_DB_DATABASE}
       POSTGRES_USER: ${BLUEPRINT_DB_USERNAME}
       POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      POSTGRES_HOST_AUTH_METHOD: trust
 
     ports:
       - "${BLUEPRINT_DB_PORT:-5432}:5432"
@@ -74,15 +77,10 @@ services:
       - psql_volume_bp:/var/lib/postgresql/data
 
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}"]
       interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
 
     networks:
       - blueprint

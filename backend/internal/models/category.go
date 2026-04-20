@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"backend/internal/querybuilder"
 )
 
 type CategoryRepository struct {
@@ -18,15 +20,19 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]map[string]interface
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT category_id, name, parent_category_id
-		FROM categories
-		ORDER BY name
-	`)
+	ds := querybuilder.From("categories").Select(
+		querybuilder.I("category_id"),
+		querybuilder.I("name"),
+		querybuilder.I("parent_category_id"),
+	).Order(querybuilder.I("name").Asc())
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	categories := []map[string]interface{}{}
 	for rows.Next() {
@@ -45,12 +51,18 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]map[string]interface
 }
 
 func (r *CategoryRepository) GetByID(ctx context.Context, categoryID string) (map[string]interface{}, error) {
-	query := "SELECT category_id, name, parent_category_id FROM categories WHERE category_id = $1"
+	ds := querybuilder.From("categories").Select(
+		querybuilder.I("category_id"),
+		querybuilder.I("name"),
+		querybuilder.I("parent_category_id"),
+	).Where(querybuilder.Ex(map[string]interface{}{"category_id": categoryID}))
+
+	sqlStr, args := querybuilder.ToSQL(ds)
 
 	var id, name sql.NullString
 	var parentID sql.NullString
 
-	err := r.db.QueryRowContext(ctx, query, categoryID).Scan(&id, &name, &parentID)
+	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&id, &name, &parentID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,16 +78,22 @@ func (r *CategoryRepository) GetCategoryProducts(ctx context.Context, categoryID
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT product_id, name, category_id, price, description, created_at
-		FROM products
-		WHERE category_id = $1
-		ORDER BY created_at DESC
-	`, categoryID)
+	ds := querybuilder.From("products").Select(
+		querybuilder.I("product_id"),
+		querybuilder.I("name"),
+		querybuilder.I("category_id"),
+		querybuilder.I("price"),
+		querybuilder.I("description"),
+		querybuilder.I("created_at"),
+	).Where(querybuilder.Ex(map[string]interface{}{"category_id": categoryID})).Order(querybuilder.I("created_at").Desc())
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	products := []map[string]interface{}{}
 	for rows.Next() {
@@ -102,15 +120,19 @@ func (r *CategoryRepository) GetHierarchy(ctx context.Context) ([]map[string]int
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT category_id, name, parent_category_id
-		FROM categories
-		ORDER BY category_id
-	`)
+	ds := querybuilder.From("categories").Select(
+		querybuilder.I("category_id"),
+		querybuilder.I("name"),
+		querybuilder.I("parent_category_id"),
+	).Order(querybuilder.I("category_id").Asc())
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	categories := []map[string]interface{}{}
 	for rows.Next() {

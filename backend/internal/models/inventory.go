@@ -4,6 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"backend/internal/querybuilder"
+
+	"github.com/doug-martin/goqu"
 )
 
 type InventoryRepository struct {
@@ -18,12 +22,20 @@ func (r *InventoryRepository) GetAll(ctx context.Context) ([]map[string]interfac
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	query := `SELECT product_id, warehouse_id, quantity, last_updated FROM inventory`
-	rows, err := r.db.QueryContext(ctx, query)
+	ds := querybuilder.From("inventory").Select(
+		querybuilder.I("product_id"),
+		querybuilder.I("warehouse_id"),
+		querybuilder.I("quantity"),
+		querybuilder.I("last_updated"),
+	)
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	inventory := []map[string]interface{}{}
 	for rows.Next() {
@@ -48,17 +60,24 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	query := `
-		SELECT p.name, i.product_id, i.warehouse_id, i.quantity, i.last_updated
-		FROM inventory i
-		JOIN products p ON i.product_id = p.product_id
-		ORDER BY i.quantity ASC`
+	ds := querybuilder.From("inventory").Select(
+		querybuilder.I("p.name"),
+		querybuilder.I("i.product_id"),
+		querybuilder.I("i.warehouse_id"),
+		querybuilder.I("i.quantity"),
+		querybuilder.I("i.last_updated"),
+	).Join(
+		goqu.I("products").As("p"),
+		goqu.On(goqu.I("i.product_id").Eq(goqu.I("p.product_id"))),
+	).Order(querybuilder.I("i.quantity").Asc())
 
-	rows, err := r.db.QueryContext(ctx, query)
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	results := []map[string]interface{}{}
 	for rows.Next() {
@@ -81,17 +100,22 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 }
 
 func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]interface{}, error) {
-	query := `
-		SELECT customer_id, COUNT(order_id) as order_count, SUM(total_amount) as total_spent
-		FROM orders
-		GROUP BY customer_id
-		ORDER BY total_spent DESC`
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, query)
+	ds := querybuilder.From("orders").Select(
+		querybuilder.I("customer_id"),
+		goqu.COUNT("order_id").As("order_count"),
+		goqu.COALESCE(goqu.SUM("total_amount"), 0).As("total_spent"),
+	).GroupBy(querybuilder.I("customer_id")).Order(querybuilder.I("total_spent").Desc())
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	stats := []map[string]interface{}{}
 	for rows.Next() {
@@ -112,65 +136,61 @@ func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]
 }
 
 func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]map[string]interface{}, error) {
-	query := `
-	WITH RECURSIVE category_path AS (
-		SELECT category_id, name, parent_category_id, name AS path
-		FROM categories
-		WHERE parent_category_id IS NULL
+	ds := querybuilder.From("categories").Select(
+		querybuilder.I("category_id"),
+		querybuilder.I("name"),
+		querybuilder.I("parent_category_id"),
+	)
 
-		UNION ALL
+	sqlStr, args := querybuilder.ToSQL(ds)
 
-		SELECT c.category_id, c.name, c.parent_category_id,
-			   cp.path || ' > ' || c.name
-		FROM categories c
-		JOIN category_path cp
-			ON cp.category_id = c.parent_category_id
-			)
-			SELECT category_id, name, parent_category_id, path
-			FROM category_path
-			ORDER BY path;
-	`
-
-	rows, err := r.db.QueryContext(ctx, query)
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
-	tree := []map[string]interface{}{}
+	categories := []map[string]interface{}{}
 	for rows.Next() {
-		var id, name, path string
-		var parentID *string
-
-		if err := rows.Scan(&id, &name, &parentID, &path); err != nil {
+		var categoryID, name string
+		var parentCategoryID sql.NullString
+		if err := rows.Scan(&categoryID, &name, &parentCategoryID); err != nil {
 			return nil, err
 		}
-
-		tree = append(tree, map[string]interface{}{
-			"id":        id,
-			"name":      name,
-			"parent_id": parentID,
-			"full_path": path,
-		})
+		cat := map[string]interface{}{"category_id": categoryID, "name": name}
+		if parentCategoryID.Valid {
+			cat["parent_category_id"] = parentCategoryID.String
+		}
+		categories = append(categories, cat)
 	}
 
-	return tree, nil
+	return categories, nil
 }
 
 func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]map[string]interface{}, error) {
-	query := `
-		SELECT p.name, SUM(oi.quantity) as total_sold
-		FROM order_items oi
-		JOIN products p ON oi.product_id = p.product_id
-		GROUP BY p.product_id, p.name
-		ORDER BY total_sold DESC
-		LIMIT 10`
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, query)
+	ds := querybuilder.From("order_items").Select(
+		querybuilder.I("p.name"),
+		querybuilder.SUM("order_items.quantity").As("total_sold"),
+	).Join(
+		goqu.I("products").As("p"),
+		goqu.On(goqu.I("order_items.product_id").Eq(goqu.I("p.product_id"))),
+	).GroupBy(
+		querybuilder.I("p.product_id"),
+		querybuilder.I("p.name"),
+	).Order(
+		querybuilder.I("total_sold").Desc(),
+	).Limit(10)
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	topProducts := []map[string]interface{}{}
 	for rows.Next() {

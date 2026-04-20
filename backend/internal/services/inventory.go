@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 
-	"backend/models"
+	"backend/internal/models"
 )
 
 type InventoryService struct {

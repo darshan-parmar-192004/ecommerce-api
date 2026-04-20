@@ -23,8 +23,8 @@ WORKDIR /app
 RUN apk add --no-cache postgresql-client
 
 COPY --from=build /app/migrate .
-COPY --from=build /app/migrations ./migrations
-COPY --from=build /app/datasets ./datasets
+COPY --from=build /app/internal/migrations ./migrations
+COPY --from=build /app/internal/datasets ./internal/datasets
 
 CMD ["./migrate", "up"]
 
@@ -39,16 +39,13 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=build /app/main .
 COPY --from=build /app/migrate .
-COPY --from=build /app/migrations ./migrations
-COPY --from=build /app/datasets ./datasets
+COPY --from=build /app/internal/migrations ./internal/migrations
+COPY --from=build /app/internal/datasets ./internal/datasets
 
 RUN chown -R appuser:appgroup /app
 
 USER appuser
 
 EXPOSE 8080
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
 CMD ["./main"]

@@ -4,6 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"backend/internal/querybuilder"
+
+	"github.com/doug-martin/goqu"
 )
 
 type CustomerRepository struct {
@@ -18,16 +22,22 @@ func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID s
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT order_id, customer_id, order_date, status, total_amount, shipping_address
-		FROM orders
-		WHERE customer_id = $1
-		ORDER BY order_date DESC
-	`, customerID)
+	ds := querybuilder.From("orders").Select(
+		querybuilder.I("order_id"),
+		querybuilder.I("customer_id"),
+		querybuilder.I("order_date"),
+		querybuilder.I("status"),
+		querybuilder.I("total_amount"),
+		querybuilder.I("shipping_address"),
+	).Where(querybuilder.Ex(map[string]interface{}{"customer_id": customerID})).Order(querybuilder.I("order_date").Desc())
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	orders := []map[string]interface{}{}
 	for rows.Next() {
@@ -54,15 +64,17 @@ func (r *CustomerRepository) GetCustomerLifetimeValue(ctx context.Context, custo
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	ds := querybuilder.From("orders").Select(
+		goqu.COUNT("order_id"),
+		querybuilder.COALESCE(querybuilder.SUM("total_amount"), 0),
+	).Where(querybuilder.Ex(map[string]interface{}{"customer_id": customerID}))
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
 	var totalOrders int
 	var totalValue float64
 
-	err := r.db.QueryRowContext(ctx, `
-		SELECT COUNT(order_id), COALESCE(SUM(total_amount),0)
-		FROM orders
-		WHERE customer_id = $1
-	`, customerID).Scan(&totalOrders, &totalValue)
-
+	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&totalOrders, &totalValue)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -71,12 +83,22 @@ func (r *CustomerRepository) GetCustomerLifetimeValue(ctx context.Context, custo
 }
 
 func (r *CustomerRepository) GetByID(ctx context.Context, customerID string) (map[string]interface{}, error) {
-	query := "SELECT customer_id, email, name, country, phone, created_at, status FROM customers WHERE customer_id = $1"
+	ds := querybuilder.From("customers").Select(
+		querybuilder.I("customer_id"),
+		querybuilder.I("email"),
+		querybuilder.I("name"),
+		querybuilder.I("country"),
+		querybuilder.I("phone"),
+		querybuilder.I("created_at"),
+		querybuilder.I("status"),
+	).Where(querybuilder.Ex(map[string]interface{}{"customer_id": customerID}))
+
+	sqlStr, args := querybuilder.ToSQL(ds)
 
 	var custID, email, name, country, phone, status string
 	var createdAt time.Time
 
-	err := r.db.QueryRowContext(ctx, query, customerID).Scan(&custID, &email, &name, &country, &phone, &createdAt, &status)
+	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&custID, &email, &name, &country, &phone, &createdAt, &status)
 	if err != nil {
 		return nil, err
 	}

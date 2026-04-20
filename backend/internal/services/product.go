@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"time"
 
-	"backend/models"
+	"backend/internal/models"
 )
 
 var categoryPattern = regexp.MustCompile(`^CAT-[a-f0-9]{8}$`)

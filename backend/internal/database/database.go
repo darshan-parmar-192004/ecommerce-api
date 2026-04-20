@@ -3,11 +3,12 @@ package database
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"log"
-	"os"
 	"strconv"
 	"time"
+
+	"backend/internal/config"
+	"backend/internal/constants"
+	"backend/internal/logger"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
@@ -23,36 +24,38 @@ type service struct {
 	db *sql.DB
 }
 
-var (
-	database   = os.Getenv("BLUEPRINT_DB_DATABASE")
-	password   = os.Getenv("BLUEPRINT_DB_PASSWORD")
-	username   = os.Getenv("BLUEPRINT_DB_USERNAME")
-	port       = os.Getenv("BLUEPRINT_DB_PORT")
-	host       = os.Getenv("BLUEPRINT_DB_HOST")
-	schema     = os.Getenv("BLUEPRINT_DB_SCHEMA")
-	dbInstance *service
-)
-
-func (s *service) DB() *sql.DB {
-	return s.db
-}
+var dbInstance Service
 
 func New() Service {
 	if dbInstance != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
-	db, err := sql.Open("pgx", connStr)
+
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatalf("failed to load config: %v", err)
 	}
+
+	connStr := cfg.GetDSN()
+	db, err := sql.Open(cfg.DBDialect, connStr)
+	if err != nil {
+		logger.Log.Fatalf("failed to open database: %v", err)
+	}
+
+	db.SetMaxOpenConns(constants.DBMaxOpenConns)
+	db.SetMaxIdleConns(constants.DBMaxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(constants.DBConnMaxLifetime) * time.Minute)
+
 	dbInstance = &service{
 		db: db,
 	}
-	db.SetMaxOpenConns(20)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(30 * time.Minute)
+
+	logger.Log.Infof("Database connection established: %s/%s", cfg.DBHost, cfg.DBName)
 	return dbInstance
+}
+
+func (s *service) DB() *sql.DB {
+	return s.db
 }
 
 func (s *service) Health() map[string]string {
@@ -83,6 +86,6 @@ func (s *service) Health() map[string]string {
 }
 
 func (s *service) Close() error {
-	log.Printf("Disconnected from database: %s", database)
+	logger.Log.Info("Closing database connection")
 	return s.db.Close()
 }
