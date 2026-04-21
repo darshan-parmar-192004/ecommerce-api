@@ -8,7 +8,11 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"backend/internal/config"
+	"backend/internal/constants"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -106,17 +110,11 @@ func main() {
 }
 
 func buildDSN() string {
-	dsn := os.Getenv("BLUEPRINT_DB_DSN")
-	if dsn == "" {
-		dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-			os.Getenv("BLUEPRINT_DB_USERNAME"),
-			os.Getenv("BLUEPRINT_DB_PASSWORD"),
-			os.Getenv("BLUEPRINT_DB_HOST"),
-			os.Getenv("BLUEPRINT_DB_PORT"),
-			os.Getenv("BLUEPRINT_DB_DATABASE"),
-		)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
 	}
-	return dsn
+	return cfg.GetDSN()
 }
 
 func SeedDatabase(dsn string) error {
@@ -157,42 +155,41 @@ func SeedDatabase(dsn string) error {
 	dropAllConstraints(db)
 
 	seedFiles := []struct {
-			table   string
-			csvPath string
-			columns []string
-		}{
-			{
-				table:   "categories",
-				// FIXED: Added /internal/ to the path
-				csvPath: "/app/internal/datasets/ecommerce/categories.csv", 
-				columns: []string{"category_id", "name", "parent_category_id"},
-			},
-			{
-				table:   "customers",
-				csvPath: "/app/internal/datasets/ecommerce/customers.csv",
-				columns: []string{"customer_id", "email", "name", "country", "phone", "created_at", "status"},
-			},
-			{
-				table:   "products",
-				csvPath: "/app/internal/datasets/ecommerce/products.csv",
-				columns: []string{"product_id", "name", "category_id", "price", "description", "created_at"},
-			},
-			{
-				table:   "inventory",
-				csvPath: "/app/internal/datasets/ecommerce/inventory.csv",
-				columns: []string{"product_id", "warehouse_id", "quantity", "last_updated"},
-			},
-			{
-				table:   "orders",
-				csvPath: "/app/internal/datasets/ecommerce/orders.csv",
-				columns: []string{"order_id", "customer_id", "order_date", "status", "total_amount", "shipping_address"},
-			},
-			{
-				table:   "order_items",
-				csvPath: "/app/internal/datasets/ecommerce/order_items.csv",
-				columns: []string{"order_item_id", "order_id", "product_id", "quantity", "unit_price"},
-			},
-		}
+		table   string
+		csvPath string
+		columns []string
+	}{
+		{
+			table:   "categories",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVCategories),
+			columns: []string{"category_id", "name", "parent_category_id"},
+		},
+		{
+			table:   "customers",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVCustomers),
+			columns: []string{"customer_id", "email", "name", "country", "phone", "created_at", "status"},
+		},
+		{
+			table:   "products",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVProductsPath),
+			columns: []string{"product_id", "name", "category_id", "price", "description", "created_at"},
+		},
+		{
+			table:   "inventory",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVInventory),
+			columns: []string{"product_id", "warehouse_id", "quantity", "last_updated"},
+		},
+		{
+			table:   "orders",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVOrders),
+			columns: []string{"order_id", "customer_id", "order_date", "status", "total_amount", "shipping_address"},
+		},
+		{
+			table:   "order_items",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVOrderItems),
+			columns: []string{"order_item_id", "order_id", "product_id", "quantity", "unit_price"},
+		},
+	}
 
 	for _, sf := range seedFiles {
 		file, err := os.Open(sf.csvPath)

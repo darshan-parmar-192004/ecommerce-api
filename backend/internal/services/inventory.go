@@ -1,8 +1,9 @@
 package services
 
 import (
-	"backend/internal/models"
 	"context"
+
+	"backend/internal/models"
 )
 
 type InventoryService struct {
@@ -13,22 +14,22 @@ func NewInventoryService(repo *models.InventoryRepository) *InventoryService {
 	return &InventoryService{repo: repo}
 }
 
-func (s *InventoryService) GetAll(ctx context.Context) ([]models.Inventory, error) {
+func (s *InventoryService) GetAll(ctx context.Context) ([]map[string]interface{}, error) {
 	return s.repo.GetAll(ctx)
 }
 
-func (s *InventoryService) GetStockLevels(ctx context.Context) ([]models.StockInfo, error) {
+func (s *InventoryService) GetStockLevels(ctx context.Context) ([]map[string]interface{}, error) {
 	return s.repo.GetStockLevels(ctx)
 }
 
-func (s *InventoryService) GetCustomerCLV(ctx context.Context) ([]models.CustomerCLV, error) {
+func (s *InventoryService) GetCustomerCLV(ctx context.Context) ([]map[string]interface{}, error) {
 	return s.repo.GetCustomerCLV(ctx)
 }
 
-func (s *InventoryService) GetCategoryTree(ctx context.Context) ([]models.CategoryTreeNode, error) {
+func (s *InventoryService) GetCategoryTree(ctx context.Context) ([]map[string]interface{}, error) {
 	return s.repo.GetCategoryTree(ctx)
 }
 
-func (s *InventoryService) GetTopSellers(ctx context.Context) ([]models.TopSeller, error) {
+func (s *InventoryService) GetTopSellers(ctx context.Context) ([]map[string]interface{}, error) {
 	return s.repo.GetTopSellers(ctx)
 }

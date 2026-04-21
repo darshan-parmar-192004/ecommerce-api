@@ -4,6 +4,8 @@ import (
 	"log"
 	"runtime/debug"
 
+	"backend/internal/constants"
+
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -20,9 +22,9 @@ func Recovery() fiber.Handler {
 				)
 
 				response := map[string]interface{}{
-					"error":      "internal_server_error",
-					"message":    "Something went wrong",
-					"request_id": requestID,
+					constants.JSONFieldError:   constants.ErrInternalServer,
+					constants.JSONFieldMessage: constants.MsgSomethingWrong,
+					"request_id":               requestID,
 				}
 
 				c.Status(fiber.StatusInternalServerError)

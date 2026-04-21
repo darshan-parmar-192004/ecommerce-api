@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"time"
+
+	"backend/internal/config"
+	"backend/internal/constants"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
@@ -24,15 +26,7 @@ type service struct {
 	db *sql.DB
 }
 
-var (
-	database = os.Getenv("BLUEPRINT_DB_DATABASE")
-	password = os.Getenv("BLUEPRINT_DB_PASSWORD")
-	username = os.Getenv("BLUEPRINT_DB_USERNAME")
-	port     = os.Getenv("BLUEPRINT_DB_PORT")
-	host     = os.Getenv("BLUEPRINT_DB_HOST")
-	schema   = os.Getenv("BLUEPRINT_DB_SCHEMA")
-	dbInstance *service
-)
+var dbInstance *service
 
 func (s *service) DB() *sql.DB {
 	return s.db
@@ -42,7 +36,11 @@ func New() Service {
 	if dbInstance != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", cfg.DBUser, cfg.DBPass, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBSchema)
 	db, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)
@@ -50,9 +48,9 @@ func New() Service {
 	dbInstance = &service{
 		db: db,
 	}
-	db.SetMaxOpenConns(20)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(30 * time.Minute)
+	db.SetMaxOpenConns(constants.DBMaxOpenConns)
+	db.SetMaxIdleConns(constants.DBMaxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(constants.DBConnMaxLifetime) * time.Minute)
 	return dbInstance
 }
 
@@ -84,6 +82,7 @@ func (s *service) Health() map[string]string {
 }
 
 func (s *service) Close() error {
-	log.Printf("Disconnected from database: %s", database)
+	cfg, _ := config.Load()
+	log.Printf("Disconnected from database: %s", cfg.DBName)
 	return s.db.Close()
 }

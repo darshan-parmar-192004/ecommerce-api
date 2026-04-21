@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"backend/internal/errors"
+	"backend/internal/utils"
 	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"
@@ -18,7 +18,7 @@ func NewCategoryController(service *services.CategoryService) *CategoryControlle
 func (h *CategoryController) GetAll(c fiber.Ctx) error {
 	categories, err := h.Service.GetAll(c.Context())
 	if err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
 			"DATABASE_ERROR",
@@ -37,7 +37,7 @@ func (h *CategoryController) GetCategoryProducts(c fiber.Ctx) error {
 
 	products, err := h.Service.GetCategoryProducts(c.Context(), categoryID)
 	if err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
 			"DATABASE_ERROR",
@@ -54,7 +54,7 @@ func (h *CategoryController) GetCategoryProducts(c fiber.Ctx) error {
 func (h *CategoryController) GetHierarchy(c fiber.Ctx) error {
 	categories, err := h.Service.GetHierarchy(c.Context())
 	if err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
 			"DATABASE_ERROR",

@@ -1,7 +1,5 @@
 package models
 
-import "log"
-
 import (
 	"context"
 	"database/sql"
@@ -9,16 +7,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"backend/internal/querybuilder"
+
+	"gopkg.in/doug-martin/goqu.v5"
 )
 
-type Product struct {
-	ProductID   string    `json:"product_id"`
-	Name        string    `json:"name"`
-	CategoryID  string    `json:"category_id"`
-	Price       float64   `json:"price"`
-	Description *string   `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-}
+var ErrNoRows = fmt.Errorf("no rows")
 
 type ProductRepository struct {
 	db *sql.DB
@@ -28,151 +23,196 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 	return &ProductRepository{db: db}
 }
 
-func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]Product, int, error) {
-	var filters []string
-	var args []interface{}
-	argIndex := 1
+func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]map[string]interface{}, map[string]interface{}, error) {
+	ds := querybuilder.From("products")
+
+	expressions := []goqu.Expression{}
 
 	if category != "" {
-		filters = append(filters, fmt.Sprintf("category_id = $%d", argIndex))
-		args = append(args, category)
-		argIndex++
+		expressions = append(expressions, querybuilder.Ex(map[string]interface{}{"category_id": category}))
 	}
-
 	if minPriceStr != "" {
-		minPrice, err := strconv.ParseFloat(minPriceStr, 64)
-		if err == nil {
-			filters = append(filters, fmt.Sprintf("price >= $%d", argIndex))
-			args = append(args, minPrice)
-			argIndex++
+		if minPrice, err := strconv.ParseFloat(minPriceStr, 64); err == nil {
+			expressions = append(expressions, querybuilder.Ex(map[string]interface{}{"price >=": minPrice}))
 		}
 	}
-
 	if maxPriceStr != "" {
-		maxPrice, err := strconv.ParseFloat(maxPriceStr, 64)
-		if err == nil {
-			filters = append(filters, fmt.Sprintf("price <= $%d", argIndex))
-			args = append(args, maxPrice)
-			argIndex++
+		if maxPrice, err := strconv.ParseFloat(maxPriceStr, 64); err == nil {
+			expressions = append(expressions, querybuilder.Ex(map[string]interface{}{"price <=": maxPrice}))
 		}
 	}
-
 	if search != "" {
-		filters = append(filters, fmt.Sprintf("(LOWER(name) LIKE $%d OR LOWER(description) LIKE $%d)", argIndex, argIndex+1))
-		searchPattern := "%" + strings.ToLower(search) + "%"
-		args = append(args, searchPattern, searchPattern)
-		argIndex += 2
+		expressions = append(expressions, querybuilder.Ex(map[string]interface{}{"name ILIKE": "%" + search + "%"}))
 	}
 
-	whereClause := ""
-	if len(filters) > 0 {
-		whereClause = "WHERE " + strings.Join(filters, " AND ")
+	if len(expressions) > 0 {
+		ds = ds.Where(expressions...)
 	}
 
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM products %s", whereClause)
 	var totalItems int
-	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalItems); err != nil {
-		return nil, 0, err
+	countSQL, countArgs := querybuilder.ToSQL(ds.Select(goqu.COUNT(goqu.I("*"))))
+	if err := r.db.QueryRowContext(ctx, countSQL, countArgs...).Scan(&totalItems); err != nil {
+		return nil, nil, err
 	}
 
+	totalPages := (totalItems + limit - 1) / limit
 	offset := (page - 1) * limit
 
-	query := fmt.Sprintf(`
-		SELECT product_id, name, category_id, price, description, created_at
-		FROM products
-		%s
-		ORDER BY created_at DESC
-		LIMIT $%d OFFSET $%d
-	`, whereClause, argIndex, argIndex+1)
-	args = append(args, limit, offset)
+	sqlStr, args := querybuilder.ToSQL(ds.Select(
+		querybuilder.I("product_id"),
+		querybuilder.I("name"),
+		querybuilder.I("category_id"),
+		querybuilder.I("price"),
+		querybuilder.I("description"),
+		querybuilder.I("created_at"),
+	).Order(querybuilder.I("created_at").Desc()).Limit(uint(limit)).Offset(uint(offset)))
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, err
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("Warning: failed to close rows: %v", err)
-		}
-	}()
+	defer func() { _ = rows.Close() }()
 
-	var products []Product
-	var description sql.NullString
+	products := []map[string]interface{}{}
 	for rows.Next() {
-		var p Product
-		if err := rows.Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &description, &p.CreatedAt); err != nil {
-			return nil, 0, err
+		var productID, name, categoryID, description sql.NullString
+		var price float64
+		var createdAt time.Time
+		if err := rows.Scan(&productID, &name, &categoryID, &price, &description, &createdAt); err != nil {
+			return nil, nil, err
+		}
+		product := map[string]interface{}{
+			"product_id":  productID.String,
+			"name":        name.String,
+			"category_id": categoryID.String,
+			"price":       price,
+			"created_at":  createdAt,
 		}
 		if description.Valid {
-			p.Description = &description.String
+			product["description"] = description.String
 		}
-		products = append(products, p)
+		products = append(products, product)
 	}
 
-	return products, totalItems, nil
+	pagination := map[string]interface{}{
+		"page":        page,
+		"limit":       limit,
+		"total_items": totalItems,
+		"total_pages": totalPages,
+	}
+
+	return products, pagination, nil
 }
 
-func (r *ProductRepository) GetByID(ctx context.Context, id string) (*Product, error) {
-	query := `
-		SELECT product_id, name, category_id, price, description, created_at
-		FROM products
-		WHERE product_id = $1
-	`
+func (r *ProductRepository) GetByID(ctx context.Context, id string) (map[string]interface{}, error) {
+	ds := querybuilder.From("products").Where(querybuilder.Ex(map[string]interface{}{"product_id": id}))
 
-	var p Product
-	var description sql.NullString
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &description, &p.CreatedAt)
+	sqlStr, args := querybuilder.ToSQL(ds.Select(
+		"product_id", "name", "category_id", "price", "description", "created_at",
+	))
+
+	var productID, name, categoryID, description string
+	var price float64
+	var createdAt time.Time
+
+	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&productID, &name, &categoryID, &price, &description, &createdAt)
 	if err != nil {
 		return nil, err
 	}
 
-	if description.Valid {
-		p.Description = &description.String
+	return map[string]interface{}{
+		"product_id":  productID,
+		"name":        name,
+		"category_id": categoryID,
+		"price":       price,
+		"description": description,
+		"created_at":  createdAt,
+	}, nil
+}
+
+func (r *ProductRepository) Create(ctx context.Context, productID, name, categoryID string, price float64, description string, createdAt time.Time) (map[string]interface{}, error) {
+	ds := querybuilder.From("products")
+
+	rec := goqu.Record{
+		"product_id":  productID,
+		"name":        name,
+		"category_id": categoryID,
+		"price":       price,
+		"description": description,
+		"created_at":  createdAt,
 	}
 
-	return &p, nil
-}
-
-func (r *ProductRepository) Create(ctx context.Context, product *Product) error {
-	query := `
-		INSERT INTO products (product_id, name, category_id, price, description, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`
-
-	_, err := r.db.ExecContext(ctx, query, product.ProductID, product.Name, product.CategoryID, product.Price, product.Description, product.CreatedAt)
-	return err
-}
-
-func (r *ProductRepository) Update(ctx context.Context, id string, name, categoryID string, price float64, description *string) error {
-	query := `
-		UPDATE products
-		SET name = $1,
-		    category_id = $2,
-		    price = $3,
-		    description = $4
-		WHERE product_id = $5
-	`
-
-	_, err := r.db.ExecContext(ctx, query, name, categoryID, price, description, id)
-	return err
-}
-
-func (r *ProductRepository) Delete(ctx context.Context, id string) (int64, error) {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM products WHERE product_id = $1`, id)
+	result, err := ds.Insert(rec).Exec()
 	if err != nil {
-		return 0, err
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "23505") {
+			return nil, fmt.Errorf("duplicate key")
+		}
+		return nil, err
 	}
-	return result.RowsAffected()
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return nil, fmt.Errorf("no rows inserted")
+	}
+
+	return map[string]interface{}{
+		"product_id":  productID,
+		"name":        name,
+		"category_id": categoryID,
+		"price":       price,
+		"description": description,
+		"created_at":  createdAt,
+	}, nil
+}
+
+func (r *ProductRepository) Update(ctx context.Context, id, name, categoryID string, price float64, description string) (map[string]interface{}, error) {
+	ds := querybuilder.From("products").Where(querybuilder.Ex(map[string]interface{}{"product_id": id}))
+
+	rec := goqu.Record{
+		"name":        name,
+		"category_id": categoryID,
+		"price":       price,
+		"description": description,
+	}
+
+	result, err := ds.Update(rec).Exec()
+	if err != nil {
+		return nil, err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return nil, ErrNoRows
+	}
+
+	return map[string]interface{}{
+		"product_id":  id,
+		"name":        name,
+		"category_id": categoryID,
+		"price":       price,
+		"description": description,
+	}, nil
+}
+
+func (r *ProductRepository) Delete(ctx context.Context, id string) error {
+	ds := querybuilder.From("products").Where(querybuilder.Ex(map[string]interface{}{"product_id": id}))
+
+	_, err := ds.Delete().Exec()
+	return err
 }
 
 func (r *ProductRepository) Exists(ctx context.Context, id string) (bool, error) {
-	var exists bool
-	err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM products WHERE product_id = $1)`, id).Scan(&exists)
-	return exists, err
-}
+	ds := querybuilder.From("products").Where(querybuilder.Ex(map[string]interface{}{"product_id": id}))
 
-func (r *ProductRepository) GetCreatedAt(ctx context.Context, id string) (time.Time, error) {
-	var createdAt time.Time
-	err := r.db.QueryRowContext(ctx, `SELECT created_at FROM products WHERE product_id = $1`, id).Scan(&createdAt)
-	return createdAt, err
+	sqlStr, args := querybuilder.ToSQL(ds.Select(querybuilder.L("1")).Limit(1))
+
+	var exists bool
+	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&exists)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }

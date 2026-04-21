@@ -1,21 +1,14 @@
 package models
 
-import "log"
-
 import (
 	"context"
 	"database/sql"
 	"time"
-)
 
-type Order struct {
-	OrderID         string    `json:"order_id"`
-	CustomerID      string    `json:"customer_id"`
-	OrderDate       time.Time `json:"order_date"`
-	Status          string    `json:"status"`
-	TotalAmount     float64   `json:"total_amount"`
-	ShippingAddress string    `json:"shipping_address"`
-}
+	"backend/internal/querybuilder"
+
+	"github.com/doug-martin/goqu"
+)
 
 type OrderRepository struct {
 	db *sql.DB
@@ -25,7 +18,10 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 	return &OrderRepository{db: db}
 }
 
-func (r *OrderRepository) CreateOrder(ctx context.Context, order Order, items []OrderItem) error {
+func (r *OrderRepository) CreateOrder(ctx context.Context, orderID, customerID string, totalAmount float64, status string, items []map[string]interface{}) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -35,17 +31,30 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order Order, items []
 		_ = tx.Rollback()
 	}()
 
-	orderQuery := `INSERT INTO orders (order_id, customer_id, total_amount, status, order_date)
-	               VALUES ($1, $2, $3, $4, $5)`
-	_, err = tx.ExecContext(ctx, orderQuery, order.OrderID, order.CustomerID, order.TotalAmount, order.Status, time.Now())
+	orderRec := goqu.Record{
+		"order_id":     orderID,
+		"customer_id":  customerID,
+		"total_amount": totalAmount,
+		"status":       status,
+		"order_date":   time.Now(),
+	}
+
+	orderDS := querybuilder.From("orders").Insert(orderRec)
+	_, err = orderDS.ExecContext(ctx)
 	if err != nil {
 		return err
 	}
 
-	itemQuery := `INSERT INTO order_items (order_id, product_id, quantity, unit_price)
-	              VALUES ($1, $2, $3, $4)`
 	for _, item := range items {
-		_, err = tx.ExecContext(ctx, itemQuery, order.OrderID, item.ProductID, item.Quantity, item.UnitPrice)
+		itemRec := goqu.Record{
+			"order_id":   orderID,
+			"product_id": item["product_id"],
+			"quantity":   item["quantity"],
+			"unit_price": item["unit_price"],
+		}
+
+		itemDS := querybuilder.From("order_items").Insert(itemRec)
+		_, err = itemDS.ExecContext(ctx)
 		if err != nil {
 			return err
 		}
@@ -54,31 +63,71 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order Order, items []
 	return tx.Commit()
 }
 
-func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]OrderItem, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT order_item_id, product_id, quantity, unit_price
-		 FROM order_items
-		 WHERE order_id = $1`,
-		orderID,
-	)
+func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ds := querybuilder.From("order_items").Select(
+		querybuilder.I("order_item_id"),
+		querybuilder.I("product_id"),
+		querybuilder.I("quantity"),
+		querybuilder.I("unit_price"),
+	).Where(querybuilder.Ex(map[string]interface{}{"order_id": orderID}))
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("Warning: failed to close rows: %v", err)
-		}
-	}()
+	defer func() { _ = rows.Close() }()
 
-	var items []OrderItem
+	items := []map[string]interface{}{}
 	for rows.Next() {
-		var item OrderItem
-		err := rows.Scan(&item.OrderItemID, &item.ProductID, &item.Quantity, &item.UnitPrice)
-		if err != nil {
+		var orderItemID, productID string
+		var quantity int
+		var unitPrice float64
+		if err := rows.Scan(&orderItemID, &productID, &quantity, &unitPrice); err != nil {
 			return nil, err
 		}
-		items = append(items, item)
+		items = append(items, map[string]interface{}{
+			"order_item_id": orderItemID,
+			"product_id":    productID,
+			"quantity":      quantity,
+			"unit_price":    unitPrice,
+		})
 	}
 
 	return items, nil
+}
+
+func (r *OrderRepository) GetByID(ctx context.Context, orderID string) (map[string]interface{}, error) {
+	ds := querybuilder.From("orders").Select(
+		querybuilder.I("order_id"),
+		querybuilder.I("customer_id"),
+		querybuilder.I("order_date"),
+		querybuilder.I("status"),
+		querybuilder.I("total_amount"),
+		querybuilder.I("shipping_address"),
+	).Where(querybuilder.Ex(map[string]interface{}{"order_id": orderID}))
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	var orderIDStr, customerID, status, shippingAddress string
+	var orderDate time.Time
+	var totalAmount float64
+
+	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&orderIDStr, &customerID, &orderDate, &status, &totalAmount, &shippingAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"order_id":         orderIDStr,
+		"customer_id":      customerID,
+		"order_date":       orderDate,
+		"status":           status,
+		"total_amount":     totalAmount,
+		"shipping_address": shippingAddress,
+	}, nil
 }

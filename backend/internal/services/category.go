@@ -1,14 +1,12 @@
 package services
 
 import (
-	"backend/internal/cache"
-	"backend/internal/models"
 	"context"
 	"encoding/json"
-	"fmt"
-	"time"
 
-	"github.com/redis/go-redis/v9"
+	"backend/internal/cache"
+	"backend/internal/constants"
+	"backend/internal/models"
 )
 
 type CategoryService struct {
@@ -20,36 +18,40 @@ func NewCategoryService(repo *models.CategoryRepository, cache *cache.RedisServi
 	return &CategoryService{repo: repo, cache: cache}
 }
 
-func (s *CategoryService) GetAll(ctx context.Context) ([]models.Category, error) {
-	key := "categories:all"
-
-	cached, err := s.cache.Client.Get(cache.Ctx, key).Result()
-	if err == nil {
-		cache.RecordHit()
-		var categories []models.Category
-		if json.Unmarshal([]byte(cached), &categories) == nil {
-			return categories, nil
+func (s *CategoryService) GetAll(ctx context.Context) ([]map[string]interface{}, error) {
+	if s.cache != nil {
+		cached, err := s.cache.Get(constants.CacheKeyCategoriesAll)
+		if err == nil {
+			cache.RecordHit()
+			var categories []map[string]interface{}
+			if json.Unmarshal([]byte(cached), &categories) == nil {
+				return categories, nil
+			}
 		}
-	} else if err != redis.Nil {
-		fmt.Println("Redis error:", err)
+		cache.RecordMiss()
 	}
-	cache.RecordMiss()
 
 	categories, err := s.repo.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	data, _ := json.Marshal(categories)
-	s.cache.Client.Set(cache.Ctx, key, data, 30*time.Minute)
+	if s.cache != nil && categories != nil {
+		data, _ := json.Marshal(categories)
+		s.cache.Set(constants.CacheKeyCategoriesAll, data, constants.CacheCategoriesTTL)
+	}
 
 	return categories, nil
 }
 
-func (s *CategoryService) GetCategoryProducts(ctx context.Context, categoryID string) ([]models.Product, error) {
+func (s *CategoryService) GetByID(ctx context.Context, categoryID string) (map[string]interface{}, error) {
+	return s.repo.GetByID(ctx, categoryID)
+}
+
+func (s *CategoryService) GetCategoryProducts(ctx context.Context, categoryID string) ([]map[string]interface{}, error) {
 	return s.repo.GetCategoryProducts(ctx, categoryID)
 }
 
-func (s *CategoryService) GetHierarchy(ctx context.Context) ([]models.Category, error) {
+func (s *CategoryService) GetHierarchy(ctx context.Context) ([]map[string]interface{}, error) {
 	return s.repo.GetHierarchy(ctx)
 }

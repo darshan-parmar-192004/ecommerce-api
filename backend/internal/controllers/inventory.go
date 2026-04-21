@@ -1,8 +1,9 @@
 package controllers
 
 import (
-	"backend/internal/errors"
+	"backend/internal/constants"
 	"backend/internal/services"
+	"backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -18,7 +19,7 @@ func NewInventoryController(service *services.InventoryService) *InventoryContro
 func (h *InventoryController) GetAll(c fiber.Ctx) error {
 	inventory, err := h.Service.GetAll(c.Context())
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, errors.ErrDatabase, "Failed to retrieve inventory list", nil)
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, "Failed to retrieve inventory list", nil)
 	}
 
 	return c.JSON(inventory)
@@ -27,7 +28,7 @@ func (h *InventoryController) GetAll(c fiber.Ctx) error {
 func (h *InventoryController) GetStockLevels(c fiber.Ctx) error {
 	stock, err := h.Service.GetStockLevels(c.Context())
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, errors.ErrDatabase, "Failed to fetch stock", nil)
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, "Failed to fetch stock", nil)
 	}
 	return c.JSON(stock)
 }
@@ -35,7 +36,7 @@ func (h *InventoryController) GetStockLevels(c fiber.Ctx) error {
 func (h *InventoryController) GetCustomerCLV(c fiber.Ctx) error {
 	clv, err := h.Service.GetCustomerCLV(c.Context())
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, errors.ErrDatabase, "Failed to calculate CLV", nil)
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, "Failed to calculate CLV", nil)
 	}
 	return c.JSON(clv)
 }
@@ -43,10 +44,10 @@ func (h *InventoryController) GetCustomerCLV(c fiber.Ctx) error {
 func (h *InventoryController) GetCategoryTree(c fiber.Ctx) error {
 	tree, err := h.Service.GetCategoryTree(c.Context())
 	if err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			errors.ErrDatabase,
+			constants.ErrDatabase,
 			"Failed to build category tree",
 			fiber.Map{
 				"error": err.Error(),
@@ -62,7 +63,7 @@ func (h *InventoryController) GetCategoryTree(c fiber.Ctx) error {
 func (h *InventoryController) GetTopSellers(c fiber.Ctx) error {
 	topProducts, err := h.Service.GetTopSellers(c.Context())
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, errors.ErrDatabase, "Failed to fetch top sellers", nil)
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, "Failed to fetch top sellers", nil)
 	}
 	return c.JSON(topProducts)
 }

@@ -1,57 +1,59 @@
 package main
 
 import (
-	"backend/internal/views"
+	"backend/internal/config"
+	"backend/internal/logger"
+	"backend/internal/server"
 	"context"
 	"fmt"
-	"log"
-	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
 	_ "github.com/joho/godotenv/autoload"
 )
 
-func gracefulShutdown(app *fiber.App, done chan bool) {
+func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	<-ctx.Done()
 
-	log.Println("shutting down gracefully, press Ctrl+C again to force")
+	logger.Log.Info("shutting down gracefully, press Ctrl+C again to force")
 	stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := app.ShutdownWithContext(ctx); err != nil {
-		log.Printf("Server forced to shutdown with error: %v", err)
+	if err := fiberServer.ShutdownWithContext(ctx); err != nil {
+		logger.Log.Errorf("Server forced to shutdown with error: %v", err)
 	}
 
-	log.Println("Server exiting")
+	logger.Log.Info("Server exiting")
+
 	done <- true
 }
 
 func main() {
-	app := views.New()
+	if err := logger.Init(); err != nil {
+		logger.Log.Errorf("failed to initialize logger: %v", err)
+		return
+	}
+	defer logger.Sync()
+
+	server := server.New()
 
 	done := make(chan bool, 1)
 
 	go func() {
-		port, _ := strconv.Atoi(os.Getenv("PORT"))
-		if port == 0 {
-			port = 8080
-		}
-		err := app.Listen(fmt.Sprintf(":%d", port))
+		port := config.GetPort()
+		err := server.Listen(fmt.Sprintf(":%d", port))
 		if err != nil {
-			panic(fmt.Sprintf("http server error: %s", err))
+			logger.Log.Fatalf("http server error: %s", err)
 		}
 	}()
 
-	go gracefulShutdown(app, done)
+	go gracefulShutdown(server, done)
 
 	<-done
-	log.Println("Graceful shutdown complete.")
+	logger.Log.Info("Graceful shutdown complete.")
 }

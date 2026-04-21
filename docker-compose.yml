@@ -1,12 +1,43 @@
 version: "3.9"
 
 services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    environment:
+      BLUEPRINT_ENV: ${BLUEPRINT_ENV}
+      BLUEPRINT_PORT: ${BLUEPRINT_PORT}
+      BLUEPRINT_DB_HOST: psql_bp
+      BLUEPRINT_DB_PORT: 5432
+      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
+      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
+      BLUEPRINT_DB_DIALECT: pgx
+      REDIS_HOST: redis_bp
+      REDIS_PORT: 6379
+    volumes:
+      - ./backend/internal/datasets:/app/datasets
+    networks:
+      - blueprint
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      psql_bp:
+        condition: service_healthy
+
   migrate:
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: migrate
-    container_name: blueprint_migrate
     env_file:
       - .env
     environment:
@@ -15,81 +46,53 @@ services:
       BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
       BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
       BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
-    networks:
-      - blueprint
-    depends_on:
-      psql_bp:
-        condition: service_healthy
-
-  app:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: prod
-    container_name: backend
-    restart: unless-stopped
-
-    env_file:
-      - .env
-
-    ports:
-      - "8080:8080"
-
-    environment:
-      APP_ENV: ${APP_ENV}
-      PORT: ${PORT}
-      BLUEPRINT_DB_HOST: psql_bp
-      BLUEPRINT_DB_PORT: 5432
-      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
-      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
-      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
       BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
-
+      BLUEPRINT_DB_DIALECT: pgx
     volumes:
-      - ./backend/internal/datasets:/app/internal/datasets
-
+      - ./backend/internal/datasets:/app/datasets
     networks:
       - blueprint
-
     depends_on:
-      migrate:
-        condition: service_completed_successfully
       psql_bp:
         condition: service_healthy
+
+  redis_bp:
+    image: docker.io/library/redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - blueprint
 
   psql_bp:
-    image: postgres:16-alpine
-    container_name: blueprint_postgres
+    image: docker.io/library/postgres:16-alpine
     restart: unless-stopped
-
     environment:
       POSTGRES_DB: ${BLUEPRINT_DB_DATABASE}
       POSTGRES_USER: ${BLUEPRINT_DB_USERNAME}
       POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
-
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "${BLUEPRINT_DB_PORT:-5432}:5432"
-
     volumes:
       - psql_volume_bp:/var/lib/postgresql/data
-
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
       start_period: 10s
-
     networks:
       - blueprint
-
-volumes:
-  psql_volume_bp:
 
 networks:
   blueprint:
     driver: bridge
+
+volumes:
+  psql_volume_bp:

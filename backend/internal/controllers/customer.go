@@ -1,8 +1,9 @@
 package controllers
 
 import (
-	"backend/internal/errors"
+	"backend/internal/constants"
 	"backend/internal/services"
+	"backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -20,10 +21,10 @@ func (h *CustomerController) GetCustomerOrders(c fiber.Ctx) error {
 
 	orders, err := h.Service.GetCustomerOrders(c.Context(), customerID)
 	if err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			"DATABASE_ERROR",
+			constants.ErrDatabase,
 			"Failed to fetch customer orders",
 			nil,
 		)
@@ -39,19 +40,10 @@ func (h *CustomerController) GetCustomerLifetimeValue(c fiber.Ctx) error {
 
 	totalOrders, totalValue, err := h.Service.GetCustomerLifetimeValue(c.Context(), customerID)
 	if err != nil {
-		if err == services.ErrNotFound {
-			return errors.SendError(
-				c,
-				fiber.StatusNotFound,
-				"CUSTOMER_NOT_FOUND",
-				"Customer not found",
-				nil,
-			)
-		}
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			"DATABASE_ERROR",
+			constants.ErrDatabase,
 			"Failed to calculate lifetime value",
 			nil,
 		)

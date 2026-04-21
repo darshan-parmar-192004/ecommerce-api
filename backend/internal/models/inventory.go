@@ -1,27 +1,14 @@
 package models
 
-import "log"
-
 import (
 	"context"
 	"database/sql"
 	"time"
+
+	"backend/internal/querybuilder"
+
+	"gopkg.in/doug-martin/goqu.v5"
 )
-
-type StockInfo struct {
-	ProductName string    `json:"product_name"`
-	ProductID   string    `json:"product_id"`
-	WarehouseID string    `json:"warehouse_id"`
-	Quantity    int       `json:"quantity"`
-	LastUpdated time.Time `json:"last_updated"`
-}
-
-type Inventory struct {
-	ProductID   string    `json:"product_id"`
-	WarehouseID string    `json:"warehouse_id"`
-	Quantity    int       `json:"quantity"`
-	LastUpdated time.Time `json:"last_updated"`
-}
 
 type InventoryRepository struct {
 	db *sql.DB
@@ -31,175 +18,192 @@ func NewInventoryRepository(db *sql.DB) *InventoryRepository {
 	return &InventoryRepository{db: db}
 }
 
-func (r *InventoryRepository) GetAll(ctx context.Context) ([]Inventory, error) {
-	query := `SELECT product_id, warehouse_id, quantity, last_updated FROM inventory`
+func (r *InventoryRepository) GetAll(ctx context.Context) ([]map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, query)
+	ds := querybuilder.From("inventory").Select(
+		querybuilder.I("product_id"),
+		querybuilder.I("warehouse_id"),
+		querybuilder.I("quantity"),
+		querybuilder.I("last_updated"),
+	)
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("Warning: failed to close rows: %v", err)
-		}
-	}()
+	defer func() { _ = rows.Close() }()
 
-	var inventoryList []Inventory
+	inventory := []map[string]interface{}{}
 	for rows.Next() {
-		var i Inventory
-		if err := rows.Scan(&i.ProductID, &i.WarehouseID, &i.Quantity, &i.LastUpdated); err != nil {
+		var productID, warehouseID string
+		var quantity int
+		var lastUpdated time.Time
+		if err := rows.Scan(&productID, &warehouseID, &quantity, &lastUpdated); err != nil {
 			return nil, err
 		}
-		inventoryList = append(inventoryList, i)
+		inventory = append(inventory, map[string]interface{}{
+			"product_id":   productID,
+			"warehouse_id": warehouseID,
+			"quantity":     quantity,
+			"last_updated": lastUpdated,
+		})
 	}
-	return inventoryList, nil
+
+	return inventory, nil
 }
 
-func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]StockInfo, error) {
-	query := `
-		SELECT p.name, i.product_id, i.warehouse_id, i.quantity, i.last_updated
-		FROM inventory i
-		JOIN products p ON i.product_id = p.product_id
-		ORDER BY i.quantity ASC`
+func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-	rows, err := r.db.QueryContext(ctx, query)
+	ds := querybuilder.From("inventory").Select(
+		querybuilder.I("p.name"),
+		querybuilder.I("i.product_id"),
+		querybuilder.I("i.warehouse_id"),
+		querybuilder.I("i.quantity"),
+		querybuilder.I("i.last_updated"),
+	).Join(
+		goqu.I("products").As("p"),
+		goqu.On(goqu.I("i.product_id").Eq(goqu.I("p.product_id"))),
+	).Order(querybuilder.I("i.quantity").Asc())
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("Warning: failed to close rows: %v", err)
-		}
-	}()
+	defer func() { _ = rows.Close() }()
 
-	var stockLevels []StockInfo
+	results := []map[string]interface{}{}
 	for rows.Next() {
-		var stock StockInfo
-		if err := rows.Scan(&stock.ProductName, &stock.ProductID, &stock.WarehouseID, &stock.Quantity, &stock.LastUpdated); err != nil {
+		var productName, productID, warehouseID string
+		var quantity int
+		var lastUpdated time.Time
+		if err := rows.Scan(&productName, &productID, &warehouseID, &quantity, &lastUpdated); err != nil {
 			return nil, err
 		}
-		stockLevels = append(stockLevels, stock)
+		results = append(results, map[string]interface{}{
+			"product_name": productName,
+			"product_id":   productID,
+			"warehouse_id": warehouseID,
+			"quantity":     quantity,
+			"last_updated": lastUpdated,
+		})
 	}
-	return stockLevels, nil
+
+	return results, nil
 }
 
-type CustomerCLV struct {
-	CustomerID    string  `json:"customer_id"`
-	OrderCount    int     `json:"order_count"`
-	LifetimeValue float64 `json:"lifetime_value"`
-}
+func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]CustomerCLV, error) {
-	query := `
-		SELECT customer_id, COUNT(order_id), SUM(total_amount)
-		FROM orders
-		GROUP BY customer_id
-		ORDER BY total_spent DESC`
+	ds := querybuilder.From("orders").Select(
+		querybuilder.I("customer_id"),
+		goqu.COUNT("order_id").As("order_count"),
+		goqu.COALESCE(goqu.SUM("total_amount"), 0).As("total_spent"),
+	).GroupBy(querybuilder.I("customer_id")).Order(querybuilder.I("total_spent").Desc())
 
-	rows, err := r.db.QueryContext(ctx, query)
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("Warning: failed to close rows: %v", err)
-		}
-	}()
+	defer func() { _ = rows.Close() }()
 
-	var stats []CustomerCLV
+	stats := []map[string]interface{}{}
 	for rows.Next() {
-		var clv CustomerCLV
-		err := rows.Scan(&clv.CustomerID, &clv.OrderCount, &clv.LifetimeValue)
-		if err != nil {
+		var id string
+		var count int
+		var total float64
+		if err := rows.Scan(&id, &count, &total); err != nil {
 			return nil, err
 		}
-		stats = append(stats, clv)
+		stats = append(stats, map[string]interface{}{
+			"customer_id":    id,
+			"order_count":    count,
+			"lifetime_value": total,
+		})
 	}
+
 	return stats, nil
 }
 
-type CategoryTreeNode struct {
-	ID       string  `json:"id"`
-	Name     string  `json:"name"`
-	ParentID *string `json:"parent_id"`
-	FullPath string  `json:"full_path"`
-}
-
-func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]CategoryTreeNode, error) {
-	query := `
-	WITH RECURSIVE category_path AS (
-		SELECT category_id, name, parent_category_id, name AS path
-		FROM categories
-		WHERE parent_category_id IS NULL
-
-		UNION ALL
-
-		SELECT c.category_id, c.name, c.parent_category_id,
-		       cp.path || ' > ' || c.name
-		FROM categories c
-		JOIN category_path cp
-		    ON cp.category_id = c.parent_category_id
+func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]map[string]interface{}, error) {
+	ds := querybuilder.From("categories").Select(
+		querybuilder.I("category_id"),
+		querybuilder.I("name"),
+		querybuilder.I("parent_category_id"),
 	)
-	SELECT category_id, name, parent_category_id, path
-	FROM category_path
-	ORDER BY path;
-	`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("Warning: failed to close rows: %v", err)
-		}
-	}()
+	defer func() { _ = rows.Close() }()
 
-	var tree []CategoryTreeNode
+	categories := []map[string]interface{}{}
 	for rows.Next() {
-		var node CategoryTreeNode
-		err := rows.Scan(&node.ID, &node.Name, &node.ParentID, &node.FullPath)
-		if err != nil {
+		var categoryID, name string
+		var parentCategoryID sql.NullString
+		if err := rows.Scan(&categoryID, &name, &parentCategoryID); err != nil {
 			return nil, err
 		}
-		tree = append(tree, node)
+		cat := map[string]interface{}{"category_id": categoryID, "name": name}
+		if parentCategoryID.Valid {
+			cat["parent_category_id"] = parentCategoryID.String
+		}
+		categories = append(categories, cat)
 	}
 
-	return tree, nil
+	return categories, nil
 }
 
-type TopSeller struct {
-	ProductName string `json:"product_name"`
-	UnitsSold   int    `json:"units_sold"`
-}
+func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]TopSeller, error) {
-	query := `
-		SELECT p.name, SUM(oi.quantity)
-		FROM order_items oi
-		JOIN products p ON oi.product_id = p.product_id
-		GROUP BY p.product_id, p.name
-		ORDER BY total_sold DESC
-		LIMIT 10`
+	ds := querybuilder.From("order_items").Select(
+		querybuilder.I("p.name"),
+		querybuilder.SUM("order_items.quantity").As("total_sold"),
+	).Join(
+		goqu.I("products").As("p"),
+		goqu.On(goqu.I("order_items.product_id").Eq(goqu.I("p.product_id"))),
+	).GroupBy(
+		querybuilder.I("p.product_id"),
+		querybuilder.I("p.name"),
+	).Order(
+		querybuilder.I("total_sold").Desc(),
+	).Limit(10)
 
-	rows, err := r.db.QueryContext(ctx, query)
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("Warning: failed to close rows: %v", err)
-		}
-	}()
+	defer func() { _ = rows.Close() }()
 
-	var topProducts []TopSeller
+	topProducts := []map[string]interface{}{}
 	for rows.Next() {
-		var product TopSeller
-		err := rows.Scan(&product.ProductName, &product.UnitsSold)
-		if err != nil {
+		var name string
+		var total int
+		if err := rows.Scan(&name, &total); err != nil {
 			return nil, err
 		}
-		topProducts = append(topProducts, product)
+		topProducts = append(topProducts, map[string]interface{}{
+			"product":    name,
+			"units_sold": total,
+		})
 	}
+
 	return topProducts, nil
 }

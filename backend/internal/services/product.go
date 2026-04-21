@@ -1,17 +1,15 @@
 package services
 
 import (
-	"backend/internal/cache"
-	"backend/internal/models"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	"backend/internal/cache"
+	"backend/internal/constants"
+	"backend/internal/models"
 )
 
 var categoryPattern = regexp.MustCompile(`^CAT-[a-f0-9]{8}$`)
@@ -23,6 +21,19 @@ type ProductService struct {
 
 func NewProductService(repo *models.ProductRepository, cache *cache.RedisService) *ProductService {
 	return &ProductService{repo: repo, cache: cache}
+}
+
+type ProductInput struct {
+	Name        string  `json:"name"`
+	CategoryID  string  `json:"category_id"`
+	Price       float64 `json:"price"`
+	Description string  `json:"description"`
+}
+
+type ValidationResult struct {
+	Errors map[string]interface{}
+	Status int
+	Code   string
 }
 
 func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResult {
@@ -46,7 +57,7 @@ func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResu
 		errors["category_id"] = "Category id must match CAT-xxxxxxxx format"
 	}
 
-	if input.Description != nil && len(*input.Description) > 500 {
+	if len(input.Description) > 500 {
 		errors["description"] = "Description must not exceed 500 characters"
 	}
 
@@ -61,148 +72,117 @@ func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResu
 	return ValidationResult{Errors: nil}
 }
 
-func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]models.Product, *Pagination, error) {
-	key := "products:all"
+func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]map[string]interface{}, map[string]interface{}, error) {
+	cacheKey := fmt.Sprintf("%s:%s:%s:%s:%d:%d", constants.CacheKeyProductsAll, category, minPriceStr, maxPriceStr, page, limit)
 
-	if s.cache.Client != nil {
-		cached, err := s.cache.Client.Get(cache.Ctx, key).Result()
-
-		if err == redis.Nil {
-			cache.RecordMiss()
-		} else if err != nil {
-			fmt.Println("Redis error:", err)
-			cache.RecordMiss()
-		} else {
+	if s.cache != nil {
+		cached, err := s.cache.Get(cacheKey)
+		if err == nil {
 			cache.RecordHit()
-			var cachedResponse CachedProductsResponse
-			if json.Unmarshal([]byte(cached), &cachedResponse) == nil {
-				return cachedResponse.Data, cachedResponse.Pagination, nil
+			var result struct {
+				Data       []map[string]interface{} `json:"data"`
+				Pagination map[string]interface{}   `json:"pagination"`
+			}
+			if json.Unmarshal([]byte(cached), &result) == nil {
+				return result.Data, result.Pagination, nil
 			}
 		}
-	} else {
 		cache.RecordMiss()
 	}
 
-	products, totalItems, err := s.repo.GetAll(ctx, category, minPriceStr, maxPriceStr, search, page, limit)
+	products, pagination, err := s.repo.GetAll(ctx, category, minPriceStr, maxPriceStr, search, page, limit)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	totalPages := (totalItems + limit - 1) / limit
-
-	pagination := &Pagination{
-		Page:       page,
-		Limit:      limit,
-		TotalItems: totalItems,
-		TotalPages: totalPages,
-	}
-
-	if s.cache.Client != nil {
-		response := CachedProductsResponse{
+	if s.cache != nil {
+		result := struct {
+			Data       []map[string]interface{} `json:"data"`
+			Pagination map[string]interface{}   `json:"pagination"`
+		}{
 			Data:       products,
 			Pagination: pagination,
 		}
-		data, _ := json.Marshal(response)
-		s.cache.Client.Set(cache.Ctx, key, data, 5*time.Minute)
+		data, _ := json.Marshal(result)
+		s.cache.Set(cacheKey, data, constants.CacheProductsAllTTL)
 	}
 
 	return products, pagination, nil
 }
 
-func (s *ProductService) GetByID(ctx context.Context, id string) (*models.Product, error) {
-	key := "product:" + id
+func (s *ProductService) GetByID(ctx context.Context, id string) (map[string]interface{}, error) {
+	cacheKey := constants.CacheKeyProductPrefix + id
 
-	cached, err := s.cache.Client.Get(cache.Ctx, key).Result()
-	if err == nil {
-		cache.RecordHit()
-		var product models.Product
-		if json.Unmarshal([]byte(cached), &product) == nil {
-			return &product, nil
+	if s.cache != nil {
+		cached, err := s.cache.Get(cacheKey)
+		if err == nil {
+			cache.RecordHit()
+			var product map[string]interface{}
+			if json.Unmarshal([]byte(cached), &product) == nil {
+				return product, nil
+			}
 		}
-	} else if err != redis.Nil {
-		fmt.Println("Redis error:", err)
+		cache.RecordMiss()
 	}
-	cache.RecordMiss()
 
 	product, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		return nil, ErrNotFound
+		return nil, err
 	}
 
-	data, _ := json.Marshal(product)
-	s.cache.Client.Set(cache.Ctx, key, data, 10*time.Minute)
+	if s.cache != nil && product != nil {
+		data, _ := json.Marshal(product)
+		s.cache.Set(cacheKey, data, constants.CacheProductByIDTTL)
+	}
 
 	return product, nil
 }
 
-func (s *ProductService) GenerateProductID() string {
-	bytes := make([]byte, 4)
-	if _, err := rand.Read(bytes); err != nil {
-		panic("crypto/rand failed: " + err.Error())
-	}
-	return fmt.Sprintf("PROD-%s", hex.EncodeToString(bytes))
-}
-
-func (s *ProductService) Create(ctx context.Context, productID string, input ProductInput) (*models.Product, error) {
-	product := &models.Product{
-		ProductID:   productID,
-		Name:        input.Name,
-		CategoryID:  input.CategoryID,
-		Price:       input.Price,
-		Description: input.Description,
-		CreatedAt:   time.Now(),
-	}
-
-	err := s.repo.Create(ctx, product)
+func (s *ProductService) Create(ctx context.Context, productID string, input ProductInput) (map[string]interface{}, error) {
+	result, err := s.repo.Create(ctx, productID, input.Name, input.CategoryID, input.Price, input.Description, time.Now())
 	if err != nil {
 		return nil, err
 	}
 
-	s.cache.Client.Del(cache.Ctx, "products:all")
-
-	return product, nil
-}
-
-func (s *ProductService) Update(ctx context.Context, id string, input ProductInput) (*models.Product, error) {
-	createdAt, err := s.repo.GetCreatedAt(ctx, id)
-	if err != nil {
-		return nil, ErrNotFound
+	if s.cache != nil {
+		s.cache.Delete(constants.CacheKeyProductsAll)
 	}
 
-	err = s.repo.Update(ctx, id, input.Name, input.CategoryID, input.Price, input.Description)
+	return result, nil
+}
+
+func (s *ProductService) Update(ctx context.Context, id string, input ProductInput) (map[string]interface{}, error) {
+	result, err := s.repo.Update(ctx, id, input.Name, input.CategoryID, input.Price, input.Description)
 	if err != nil {
 		return nil, err
 	}
 
-	s.cache.Client.Del(cache.Ctx, "products:all")
-	s.cache.Client.Del(cache.Ctx, "products:"+id)
+	if s.cache != nil {
+		s.cache.Delete(constants.CacheKeyProductsAll)
+		s.cache.Delete(constants.CacheKeyProductPrefix + id)
+	}
 
-	return &models.Product{
-		ProductID:   id,
-		Name:        input.Name,
-		CategoryID:  input.CategoryID,
-		Price:       input.Price,
-		Description: input.Description,
-		CreatedAt:   createdAt,
-	}, nil
+	return result, nil
 }
 
 func (s *ProductService) Delete(ctx context.Context, id string) error {
-	rowsAffected, err := s.repo.Delete(ctx, id)
+	err := s.repo.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	if rowsAffected == 0 {
-		return ErrNotFound
+	if s.cache != nil {
+		s.cache.Delete(constants.CacheKeyProductsAll)
+		s.cache.Delete(constants.CacheKeyProductPrefix + id)
 	}
-
-	s.cache.Client.Del(cache.Ctx, "products:all")
-	s.cache.Client.Del(cache.Ctx, "products:"+id)
 
 	return nil
 }
 
 func (s *ProductService) Exists(ctx context.Context, id string) (bool, error) {
 	return s.repo.Exists(ctx, id)
+}
+
+func (s *ProductService) GenerateProductID() string {
+	return fmt.Sprintf("PROD-%x", time.Now().UnixNano())[:16]
 }

@@ -1,22 +1,14 @@
 package models
 
-import "log"
-
 import (
 	"context"
 	"database/sql"
 	"time"
-)
 
-type Customer struct {
-	CustomerID string    `json:"customer_id"`
-	Email      string    `json:"email"`
-	Name       string    `json:"name"`
-	Country    string    `json:"country"`
-	Phone      string    `json:"phone"`
-	CreatedAt  time.Time `json:"created_at"`
-	Status     string    `json:"status"`
-}
+	"backend/internal/querybuilder"
+
+	"github.com/doug-martin/goqu"
+)
 
 type CustomerRepository struct {
 	db *sql.DB
@@ -26,48 +18,98 @@ func NewCustomerRepository(db *sql.DB) *CustomerRepository {
 	return &CustomerRepository{db: db}
 }
 
-func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID string) ([]Order, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT order_id, customer_id, order_date, status, total_amount, shipping_address
-		FROM orders
-		WHERE customer_id = $1
-		ORDER BY order_date DESC
-	`, customerID)
+func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID string) ([]map[string]interface{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ds := querybuilder.From("orders").Select(
+		querybuilder.I("order_id"),
+		querybuilder.I("customer_id"),
+		querybuilder.I("order_date"),
+		querybuilder.I("status"),
+		querybuilder.I("total_amount"),
+		querybuilder.I("shipping_address"),
+	).Where(querybuilder.Ex(map[string]interface{}{"customer_id": customerID})).Order(querybuilder.I("order_date").Desc())
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := rows.Close(); err != nil {
-			log.Printf("Warning: failed to close rows: %v", err)
-		}
-	}()
+	defer func() { _ = rows.Close() }()
 
-	var orders []Order
+	orders := []map[string]interface{}{}
 	for rows.Next() {
-		var o Order
-		err := rows.Scan(&o.OrderID, &o.CustomerID, &o.OrderDate, &o.Status, &o.TotalAmount, &o.ShippingAddress)
-		if err != nil {
+		var orderID, custID, status, shippingAddress string
+		var orderDate time.Time
+		var totalAmount float64
+		if err := rows.Scan(&orderID, &custID, &orderDate, &status, &totalAmount, &shippingAddress); err != nil {
 			return nil, err
 		}
-		orders = append(orders, o)
+		orders = append(orders, map[string]interface{}{
+			"order_id":         orderID,
+			"customer_id":      custID,
+			"order_date":       orderDate,
+			"status":           status,
+			"total_amount":     totalAmount,
+			"shipping_address": shippingAddress,
+		})
 	}
 
 	return orders, nil
 }
 
 func (r *CustomerRepository) GetCustomerLifetimeValue(ctx context.Context, customerID string) (int, float64, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ds := querybuilder.From("orders").Select(
+		goqu.COUNT("order_id"),
+		querybuilder.COALESCE(querybuilder.SUM("total_amount"), 0),
+	).Where(querybuilder.Ex(map[string]interface{}{"customer_id": customerID}))
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
 	var totalOrders int
 	var totalValue float64
 
-	err := r.db.QueryRowContext(ctx, `
-		SELECT COUNT(order_id), COALESCE(SUM(total_amount), 0)
-		FROM orders
-		WHERE customer_id = $1
-	`, customerID).Scan(&totalOrders, &totalValue)
-
+	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&totalOrders, &totalValue)
 	if err != nil {
 		return 0, 0, err
 	}
 
 	return totalOrders, totalValue, nil
+}
+
+func (r *CustomerRepository) GetByID(ctx context.Context, customerID string) (map[string]interface{}, error) {
+	ds := querybuilder.From("customers").Select(
+		querybuilder.I("customer_id"),
+		querybuilder.I("email"),
+		querybuilder.I("name"),
+		querybuilder.I("country"),
+		querybuilder.I("phone"),
+		querybuilder.I("created_at"),
+		querybuilder.I("status"),
+	).Where(querybuilder.Ex(map[string]interface{}{"customer_id": customerID}))
+
+	sqlStr, args := querybuilder.ToSQL(ds)
+
+	var custID, email, name, country, phone, status string
+	var createdAt time.Time
+
+	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&custID, &email, &name, &country, &phone, &createdAt, &status)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"customer_id": custID,
+		"email":       email,
+		"name":        name,
+		"country":     country,
+		"phone":       phone,
+		"created_at":  createdAt,
+		"status":      status,
+	}, nil
 }
