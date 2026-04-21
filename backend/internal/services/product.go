@@ -104,7 +104,7 @@ func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxP
 			Pagination: pagination,
 		}
 		data, _ := json.Marshal(result)
-		s.cache.Set(cacheKey, data, constants.CacheProductsAllTTL)
+		_ = s.cache.Set(cacheKey, data, constants.CacheProductsAllTTL)
 	}
 
 	return products, pagination, nil
@@ -132,7 +132,7 @@ func (s *ProductService) GetByID(ctx context.Context, id string) (map[string]int
 
 	if s.cache != nil && product != nil {
 		data, _ := json.Marshal(product)
-		s.cache.Set(cacheKey, data, constants.CacheProductByIDTTL)
+		_ = s.cache.Set(cacheKey, data, constants.CacheProductByIDTTL)
 	}
 
 	return product, nil
@@ -145,7 +145,7 @@ func (s *ProductService) Create(ctx context.Context, productID string, input Pro
 	}
 
 	if s.cache != nil {
-		s.cache.Delete(constants.CacheKeyProductsAll)
+		_ = s.cache.Delete(constants.CacheKeyProductsAll)
 	}
 
 	return result, nil
@@ -158,8 +158,8 @@ func (s *ProductService) Update(ctx context.Context, id string, input ProductInp
 	}
 
 	if s.cache != nil {
-		s.cache.Delete(constants.CacheKeyProductsAll)
-		s.cache.Delete(constants.CacheKeyProductPrefix + id)
+		_ = s.cache.Delete(constants.CacheKeyProductsAll)
+		_ = s.cache.Delete(constants.CacheKeyProductPrefix + id)
 	}
 
 	return result, nil
@@ -172,8 +172,8 @@ func (s *ProductService) Delete(ctx context.Context, id string) error {
 	}
 
 	if s.cache != nil {
-		s.cache.Delete(constants.CacheKeyProductsAll)
-		s.cache.Delete(constants.CacheKeyProductPrefix + id)
+		_ = s.cache.Delete(constants.CacheKeyProductsAll)
+		_ = s.cache.Delete(constants.CacheKeyProductPrefix + id)
 	}
 
 	return nil

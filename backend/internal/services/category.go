@@ -38,7 +38,7 @@ func (s *CategoryService) GetAll(ctx context.Context) ([]map[string]interface{},
 
 	if s.cache != nil && categories != nil {
 		data, _ := json.Marshal(categories)
-		s.cache.Set(constants.CacheKeyCategoriesAll, data, constants.CacheCategoriesTTL)
+		_ = s.cache.Set(constants.CacheKeyCategoriesAll, data, constants.CacheCategoriesTTL)
 	}
 
 	return categories, nil
