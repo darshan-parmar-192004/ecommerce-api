@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	apperrors "backend/internal/errors"
+	apperrors "backend/internal/utils"
 	"backend/internal/services"
 
 	"github.com/gofiber/fiber/v3"

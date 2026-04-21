@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"backend/internal/constants"
-	apperrors "backend/internal/errors"
+	apperrors "backend/internal/utils"
 	"backend/internal/models"
 	"backend/internal/services"
 
