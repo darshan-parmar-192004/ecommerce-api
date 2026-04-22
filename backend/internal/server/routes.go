@@ -1,6 +1,7 @@
 package server
 
 import (
+	"backend/internal/cache"
 	"backend/internal/constants"
 	"backend/internal/controllers"
 	"backend/internal/database"
@@ -28,7 +29,8 @@ func RegisterRoutes(app *fiber.App) {
 	db := database.New().DB()
 
 	productRepo := models.NewProductRepository(db)
-	productService := services.NewProductService(productRepo)
+	redisCache := cache.NewRedis()
+	productService := services.NewProductService(productRepo, redisCache)
 	productController := controllers.NewProductController(productService)
 
 	app.Get(constants.RouteProducts, productController.GetAll)
@@ -38,7 +40,7 @@ func RegisterRoutes(app *fiber.App) {
 	app.Delete(constants.RouteProductsID, productController.Delete)
 
 	categoryRepo := models.NewCategoryRepository(db)
-	categoryService := services.NewCategoryService(categoryRepo)
+	categoryService := services.NewCategoryService(categoryRepo, redisCache)
 	categoryController := controllers.NewCategoryController(categoryService)
 
 	app.Get(constants.RouteCategories, categoryController.GetAll)
@@ -75,6 +77,21 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get(constants.RouteHealth, func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			constants.JSONFieldStatus: constants.ResponseStatusOK,
+		})
+	})
+
+	app.Get(constants.RouteStatsCache, func(c fiber.Ctx) error {
+		hits, misses, _ := cache.GetStats()
+		total := hits + misses
+		var hitRate float64
+		if total > 0 {
+			hitRate = float64(hits) / float64(total)
+		}
+		return c.JSON(fiber.Map{
+			"hits":     hits,
+			"misses":   misses,
+			"hit_rate": hitRate,
+			"total":    total,
 		})
 	})
 

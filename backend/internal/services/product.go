@@ -2,21 +2,25 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"time"
 
+	"backend/internal/cache"
+	"backend/internal/constants"
 	"backend/internal/models"
 )
 
 var categoryPattern = regexp.MustCompile(`^CAT-[a-f0-9]{8}$`)
 
 type ProductService struct {
-	repo *models.ProductRepository
+	repo  *models.ProductRepository
+	cache *cache.RedisService
 }
 
-func NewProductService(repo *models.ProductRepository) *ProductService {
-	return &ProductService{repo: repo}
+func NewProductService(repo *models.ProductRepository, cache *cache.RedisService) *ProductService {
+	return &ProductService{repo: repo, cache: cache}
 }
 
 type ProductInput struct {
@@ -69,23 +73,110 @@ func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResu
 }
 
 func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]map[string]interface{}, map[string]interface{}, error) {
-	return s.repo.GetAll(ctx, category, minPriceStr, maxPriceStr, search, page, limit)
+	cacheKey := fmt.Sprintf("%s:%s:%s:%s:%d:%d", constants.CacheKeyProductsAll, category, minPriceStr, maxPriceStr, page, limit)
+
+	if s.cache != nil {
+		cached, err := s.cache.Get(cacheKey)
+		if err == nil {
+			cache.RecordHit()
+			var result struct {
+				Data       []map[string]interface{} `json:"data"`
+				Pagination map[string]interface{}   `json:"pagination"`
+			}
+			if json.Unmarshal([]byte(cached), &result) == nil {
+				return result.Data, result.Pagination, nil
+			}
+		}
+		cache.RecordMiss()
+	}
+
+	products, pagination, err := s.repo.GetAll(ctx, category, minPriceStr, maxPriceStr, search, page, limit)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if s.cache != nil {
+		result := struct {
+			Data       []map[string]interface{} `json:"data"`
+			Pagination map[string]interface{}   `json:"pagination"`
+		}{
+			Data:       products,
+			Pagination: pagination,
+		}
+		data, _ := json.Marshal(result)
+		_ = s.cache.Set(cacheKey, data, constants.CacheProductsAllTTL)
+	}
+
+	return products, pagination, nil
 }
 
 func (s *ProductService) GetByID(ctx context.Context, id string) (map[string]interface{}, error) {
-	return s.repo.GetByID(ctx, id)
+	cacheKey := constants.CacheKeyProductPrefix + id
+
+	if s.cache != nil {
+		cached, err := s.cache.Get(cacheKey)
+		if err == nil {
+			cache.RecordHit()
+			var product map[string]interface{}
+			if json.Unmarshal([]byte(cached), &product) == nil {
+				return product, nil
+			}
+		}
+		cache.RecordMiss()
+	}
+
+	product, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil && product != nil {
+		data, _ := json.Marshal(product)
+		_ = s.cache.Set(cacheKey, data, constants.CacheProductByIDTTL)
+	}
+
+	return product, nil
 }
 
 func (s *ProductService) Create(ctx context.Context, productID string, input ProductInput) (map[string]interface{}, error) {
-	return s.repo.Create(ctx, productID, input.Name, input.CategoryID, input.Price, input.Description, time.Now())
+	result, err := s.repo.Create(ctx, productID, input.Name, input.CategoryID, input.Price, input.Description, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		_ = s.cache.Delete(constants.CacheKeyProductsAll)
+	}
+
+	return result, nil
 }
 
 func (s *ProductService) Update(ctx context.Context, id string, input ProductInput) (map[string]interface{}, error) {
-	return s.repo.Update(ctx, id, input.Name, input.CategoryID, input.Price, input.Description)
+	result, err := s.repo.Update(ctx, id, input.Name, input.CategoryID, input.Price, input.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		_ = s.cache.Delete(constants.CacheKeyProductsAll)
+		_ = s.cache.Delete(constants.CacheKeyProductPrefix + id)
+	}
+
+	return result, nil
 }
 
 func (s *ProductService) Delete(ctx context.Context, id string) error {
-	return s.repo.Delete(ctx, id)
+	err := s.repo.Delete(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if s.cache != nil {
+		_ = s.cache.Delete(constants.CacheKeyProductsAll)
+		_ = s.cache.Delete(constants.CacheKeyProductPrefix + id)
+	}
+
+	return nil
 }
 
 func (s *ProductService) Exists(ctx context.Context, id string) (bool, error) {
