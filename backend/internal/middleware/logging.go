@@ -10,7 +10,6 @@ import (
 
 func Logging() fiber.Handler {
 	return func(c fiber.Ctx) error {
-
 		start := time.Now()
 
 		err := c.Next()
