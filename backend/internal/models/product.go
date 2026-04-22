@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"backend/internal/querybuilder"
-
 	"gopkg.in/doug-martin/goqu.v5"
 )
 
@@ -24,25 +22,25 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 }
 
 func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]map[string]interface{}, map[string]interface{}, error) {
-	ds := querybuilder.From("products")
+	ds := goqu.From("products")
 
 	expressions := []goqu.Expression{}
 
 	if category != "" {
-		expressions = append(expressions, querybuilder.Ex(map[string]interface{}{"category_id": category}))
+		expressions = append(expressions, goqu.Ex(map[string]interface{}{"category_id": category}))
 	}
 	if minPriceStr != "" {
 		if minPrice, err := strconv.ParseFloat(minPriceStr, 64); err == nil {
-			expressions = append(expressions, querybuilder.Ex(map[string]interface{}{"price >=": minPrice}))
+			expressions = append(expressions, goqu.Ex(map[string]interface{}{"price >=": minPrice}))
 		}
 	}
 	if maxPriceStr != "" {
 		if maxPrice, err := strconv.ParseFloat(maxPriceStr, 64); err == nil {
-			expressions = append(expressions, querybuilder.Ex(map[string]interface{}{"price <=": maxPrice}))
+			expressions = append(expressions, goqu.Ex(map[string]interface{}{"price <=": maxPrice}))
 		}
 	}
 	if search != "" {
-		expressions = append(expressions, querybuilder.Ex(map[string]interface{}{"name ILIKE": "%" + search + "%"}))
+		expressions = append(expressions, goqu.Ex(map[string]interface{}{"name ILIKE": "%" + search + "%"}))
 	}
 
 	if len(expressions) > 0 {
@@ -50,7 +48,7 @@ func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, m
 	}
 
 	var totalItems int
-	countSQL, countArgs := querybuilder.ToSQL(ds.Select(goqu.COUNT(goqu.I("*"))))
+	countSQL, countArgs, _ := ds.Select(goqu.COUNT(goqu.I("*"))).ToSql()
 	if err := r.db.QueryRowContext(ctx, countSQL, countArgs...).Scan(&totalItems); err != nil {
 		return nil, nil, err
 	}
@@ -58,14 +56,14 @@ func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, m
 	totalPages := (totalItems + limit - 1) / limit
 	offset := (page - 1) * limit
 
-	sqlStr, args := querybuilder.ToSQL(ds.Select(
-		querybuilder.I("product_id"),
-		querybuilder.I("name"),
-		querybuilder.I("category_id"),
-		querybuilder.I("price"),
-		querybuilder.I("description"),
-		querybuilder.I("created_at"),
-	).Order(querybuilder.I("created_at").Desc()).Limit(uint(limit)).Offset(uint(offset)))
+	sqlStr, args, _ := ds.Select(
+		goqu.I("product_id"),
+		goqu.I("name"),
+		goqu.I("category_id"),
+		goqu.I("price"),
+		goqu.I("description"),
+		goqu.I("created_at"),
+	).Order(goqu.I("created_at").Desc()).Limit(uint(limit)).Offset(uint(offset)).ToSql()
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
@@ -105,11 +103,11 @@ func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, m
 }
 
 func (r *ProductRepository) GetByID(ctx context.Context, id string) (map[string]interface{}, error) {
-	ds := querybuilder.From("products").Where(querybuilder.Ex(map[string]interface{}{"product_id": id}))
+	ds := goqu.From("products").Where(goqu.Ex(map[string]interface{}{"product_id": id}))
 
-	sqlStr, args := querybuilder.ToSQL(ds.Select(
+	sqlStr, args, _ := ds.Select(
 		"product_id", "name", "category_id", "price", "description", "created_at",
-	))
+	).ToSql()
 
 	var productID, name, categoryID, description string
 	var price float64
@@ -131,8 +129,6 @@ func (r *ProductRepository) GetByID(ctx context.Context, id string) (map[string]
 }
 
 func (r *ProductRepository) Create(ctx context.Context, productID, name, categoryID string, price float64, description string, createdAt time.Time) (map[string]interface{}, error) {
-	ds := querybuilder.From("products")
-
 	rec := goqu.Record{
 		"product_id":  productID,
 		"name":        name,
@@ -142,7 +138,7 @@ func (r *ProductRepository) Create(ctx context.Context, productID, name, categor
 		"created_at":  createdAt,
 	}
 
-	result, err := ds.Insert(rec).Exec()
+	result, err := goqu.From("products").Insert(rec).Exec()
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "23505") {
 			return nil, fmt.Errorf("duplicate key")
@@ -166,8 +162,6 @@ func (r *ProductRepository) Create(ctx context.Context, productID, name, categor
 }
 
 func (r *ProductRepository) Update(ctx context.Context, id, name, categoryID string, price float64, description string) (map[string]interface{}, error) {
-	ds := querybuilder.From("products").Where(querybuilder.Ex(map[string]interface{}{"product_id": id}))
-
 	rec := goqu.Record{
 		"name":        name,
 		"category_id": categoryID,
@@ -175,7 +169,7 @@ func (r *ProductRepository) Update(ctx context.Context, id, name, categoryID str
 		"description": description,
 	}
 
-	result, err := ds.Update(rec).Exec()
+	result, err := goqu.From("products").Where(goqu.Ex(map[string]interface{}{"product_id": id})).Update(rec).Exec()
 	if err != nil {
 		return nil, err
 	}
@@ -195,16 +189,12 @@ func (r *ProductRepository) Update(ctx context.Context, id, name, categoryID str
 }
 
 func (r *ProductRepository) Delete(ctx context.Context, id string) error {
-	ds := querybuilder.From("products").Where(querybuilder.Ex(map[string]interface{}{"product_id": id}))
-
-	_, err := ds.Delete().Exec()
+	_, err := goqu.From("products").Where(goqu.Ex(map[string]interface{}{"product_id": id})).Delete().Exec()
 	return err
 }
 
 func (r *ProductRepository) Exists(ctx context.Context, id string) (bool, error) {
-	ds := querybuilder.From("products").Where(querybuilder.Ex(map[string]interface{}{"product_id": id}))
-
-	sqlStr, args := querybuilder.ToSQL(ds.Select(querybuilder.L("1")).Limit(1))
+	sqlStr, args, _ := goqu.From("products").Where(goqu.Ex(map[string]interface{}{"product_id": id})).Select(goqu.L("1")).Limit(1).ToSql()
 
 	var exists bool
 	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&exists)

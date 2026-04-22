@@ -3,7 +3,6 @@ module backend
 go 1.25.6
 
 require (
-	github.com/doug-martin/goqu v5.0.0+incompatible
 	github.com/gofiber/fiber/v3 v3.0.0
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0

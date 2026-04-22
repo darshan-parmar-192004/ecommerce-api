@@ -5,9 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"backend/internal/querybuilder"
-
-	"github.com/doug-martin/goqu"
+	"gopkg.in/doug-martin/goqu.v5"
 )
 
 type OrderRepository struct {
@@ -39,7 +37,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, orderID, customerID s
 		"order_date":   time.Now(),
 	}
 
-	orderDS := querybuilder.From("orders").Insert(orderRec)
+	orderDS := goqu.From("orders").Insert(orderRec)
 	_, err = orderDS.ExecContext(ctx)
 	if err != nil {
 		return err
@@ -53,7 +51,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, orderID, customerID s
 			"unit_price": item["unit_price"],
 		}
 
-		itemDS := querybuilder.From("order_items").Insert(itemRec)
+		itemDS := goqu.From("order_items").Insert(itemRec)
 		_, err = itemDS.ExecContext(ctx)
 		if err != nil {
 			return err
@@ -67,14 +65,14 @@ func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := querybuilder.From("order_items").Select(
-		querybuilder.I("order_item_id"),
-		querybuilder.I("product_id"),
-		querybuilder.I("quantity"),
-		querybuilder.I("unit_price"),
-	).Where(querybuilder.Ex(map[string]interface{}{"order_id": orderID}))
+	ds := goqu.From("order_items").Select(
+		goqu.I("order_item_id"),
+		goqu.I("product_id"),
+		goqu.I("quantity"),
+		goqu.I("unit_price"),
+	).Where(goqu.Ex(map[string]interface{}{"order_id": orderID}))
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, _ := ds.ToSql()
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
@@ -102,16 +100,16 @@ func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]
 }
 
 func (r *OrderRepository) GetByID(ctx context.Context, orderID string) (map[string]interface{}, error) {
-	ds := querybuilder.From("orders").Select(
-		querybuilder.I("order_id"),
-		querybuilder.I("customer_id"),
-		querybuilder.I("order_date"),
-		querybuilder.I("status"),
-		querybuilder.I("total_amount"),
-		querybuilder.I("shipping_address"),
-	).Where(querybuilder.Ex(map[string]interface{}{"order_id": orderID}))
+	ds := goqu.From("orders").Select(
+		goqu.I("order_id"),
+		goqu.I("customer_id"),
+		goqu.I("order_date"),
+		goqu.I("status"),
+		goqu.I("total_amount"),
+		goqu.I("shipping_address"),
+	).Where(goqu.Ex(map[string]interface{}{"order_id": orderID}))
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, _ := ds.ToSql()
 
 	var orderIDStr, customerID, status, shippingAddress string
 	var orderDate time.Time
