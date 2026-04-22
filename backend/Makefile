@@ -5,13 +5,12 @@ all: build test
 
 build:
 	@echo "Building..."
-	
-	
-	@go build -o main cmd/api/main.go
+	@go build -o main ./cmd/api
 
 # Run the application
 run:
-	@go run cmd/api/main.go
+	@go run ./cmd/api
+
 # Create DB container
 docker-run:
 	@if docker compose up --build 2>/dev/null; then \
@@ -34,15 +33,16 @@ docker-down:
 test:
 	@echo "Testing..."
 	@go test ./... -v
+
 # Integrations Tests for the application
 itest:
 	@echo "Running integration tests..."
-	@go test ./internal/database -v
+	@go test ./database -v
 
 # Clean the binary
 clean:
 	@echo "Cleaning..."
-	@rm -f main
+	@rm -f main migrate
 
 # Live Reload
 watch:
