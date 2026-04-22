@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"backend/internal/querybuilder"
+	"github.com/doug-martin/goqu"
 )
 
 type CategoryRepository struct {
@@ -20,13 +20,16 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]map[string]interface
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := querybuilder.From("categories").Select(
-		querybuilder.I("category_id"),
-		querybuilder.I("name"),
-		querybuilder.I("parent_category_id"),
-	).Order(querybuilder.I("name").Asc())
+	ds := goqu.From("categories").Select(
+		goqu.I("category_id"),
+		goqu.I("name"),
+		goqu.I("parent_category_id"),
+	).Order(goqu.I("name").Asc())
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, err := ds.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
@@ -51,19 +54,21 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]map[string]interface
 }
 
 func (r *CategoryRepository) GetByID(ctx context.Context, categoryID string) (map[string]interface{}, error) {
-	ds := querybuilder.From("categories").Select(
-		querybuilder.I("category_id"),
-		querybuilder.I("name"),
-		querybuilder.I("parent_category_id"),
-	).Where(querybuilder.Ex(map[string]interface{}{"category_id": categoryID}))
+	ds := goqu.From("categories").Select(
+		goqu.I("category_id"),
+		goqu.I("name"),
+		goqu.I("parent_category_id"),
+	).Where(goqu.Ex(map[string]interface{}{"category_id": categoryID}))
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, err := ds.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	var id, name sql.NullString
 	var parentID sql.NullString
 
-	err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&id, &name, &parentID)
-	if err != nil {
+	if err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&id, &name, &parentID); err != nil {
 		return nil, err
 	}
 
@@ -78,16 +83,19 @@ func (r *CategoryRepository) GetCategoryProducts(ctx context.Context, categoryID
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := querybuilder.From("products").Select(
-		querybuilder.I("product_id"),
-		querybuilder.I("name"),
-		querybuilder.I("category_id"),
-		querybuilder.I("price"),
-		querybuilder.I("description"),
-		querybuilder.I("created_at"),
-	).Where(querybuilder.Ex(map[string]interface{}{"category_id": categoryID})).Order(querybuilder.I("created_at").Desc())
+	ds := goqu.From("products").Select(
+		goqu.I("product_id"),
+		goqu.I("name"),
+		goqu.I("category_id"),
+		goqu.I("price"),
+		goqu.I("description"),
+		goqu.I("created_at"),
+	).Where(goqu.Ex(map[string]interface{}{"category_id": categoryID})).Order(goqu.I("created_at").Desc())
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, err := ds.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
@@ -120,13 +128,16 @@ func (r *CategoryRepository) GetHierarchy(ctx context.Context) ([]map[string]int
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := querybuilder.From("categories").Select(
-		querybuilder.I("category_id"),
-		querybuilder.I("name"),
-		querybuilder.I("parent_category_id"),
-	).Order(querybuilder.I("category_id").Asc())
+	ds := goqu.From("categories").Select(
+		goqu.I("category_id"),
+		goqu.I("name"),
+		goqu.I("parent_category_id"),
+	).Order(goqu.I("category_id").Asc())
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, err := ds.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {

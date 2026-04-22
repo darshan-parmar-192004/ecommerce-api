@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"time"
 
-	"backend/internal/querybuilder"
-
 	"github.com/doug-martin/goqu"
 )
 
@@ -22,14 +20,17 @@ func (r *InventoryRepository) GetAll(ctx context.Context) ([]map[string]interfac
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := querybuilder.From("inventory").Select(
-		querybuilder.I("product_id"),
-		querybuilder.I("warehouse_id"),
-		querybuilder.I("quantity"),
-		querybuilder.I("last_updated"),
+	ds := goqu.From("inventory").Select(
+		goqu.I("product_id"),
+		goqu.I("warehouse_id"),
+		goqu.I("quantity"),
+		goqu.I("last_updated"),
 	)
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, err := ds.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
@@ -60,18 +61,21 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := querybuilder.From("inventory").Select(
-		querybuilder.I("p.name"),
-		querybuilder.I("i.product_id"),
-		querybuilder.I("i.warehouse_id"),
-		querybuilder.I("i.quantity"),
-		querybuilder.I("i.last_updated"),
+	ds := goqu.From("inventory").Select(
+		goqu.I("p.name"),
+		goqu.I("i.product_id"),
+		goqu.I("i.warehouse_id"),
+		goqu.I("i.quantity"),
+		goqu.I("i.last_updated"),
 	).Join(
 		goqu.I("products").As("p"),
 		goqu.On(goqu.I("i.product_id").Eq(goqu.I("p.product_id"))),
-	).Order(querybuilder.I("i.quantity").Asc())
+	).Order(goqu.I("i.quantity").Asc())
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, err := ds.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
@@ -103,13 +107,16 @@ func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := querybuilder.From("orders").Select(
-		querybuilder.I("customer_id"),
+	ds := goqu.From("orders").Select(
+		goqu.I("customer_id"),
 		goqu.COUNT("order_id").As("order_count"),
 		goqu.COALESCE(goqu.SUM("total_amount"), 0).As("total_spent"),
-	).GroupBy(querybuilder.I("customer_id")).Order(querybuilder.I("total_spent").Desc())
+	).GroupBy(goqu.I("customer_id")).Order(goqu.I("total_spent").Desc())
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, err := ds.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
@@ -136,13 +143,16 @@ func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]
 }
 
 func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]map[string]interface{}, error) {
-	ds := querybuilder.From("categories").Select(
-		querybuilder.I("category_id"),
-		querybuilder.I("name"),
-		querybuilder.I("parent_category_id"),
+	ds := goqu.From("categories").Select(
+		goqu.I("category_id"),
+		goqu.I("name"),
+		goqu.I("parent_category_id"),
 	)
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, err := ds.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
@@ -171,20 +181,23 @@ func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]map[string]i
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := querybuilder.From("order_items").Select(
-		querybuilder.I("p.name"),
-		querybuilder.SUM("order_items.quantity").As("total_sold"),
+	ds := goqu.From("order_items").Select(
+		goqu.I("p.name"),
+		goqu.SUM("order_items.quantity").As("total_sold"),
 	).Join(
 		goqu.I("products").As("p"),
 		goqu.On(goqu.I("order_items.product_id").Eq(goqu.I("p.product_id"))),
 	).GroupBy(
-		querybuilder.I("p.product_id"),
-		querybuilder.I("p.name"),
+		goqu.I("p.product_id"),
+		goqu.I("p.name"),
 	).Order(
-		querybuilder.I("total_sold").Desc(),
+		goqu.I("total_sold").Desc(),
 	).Limit(10)
 
-	sqlStr, args := querybuilder.ToSQL(ds)
+	sqlStr, args, err := ds.ToSql()
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
