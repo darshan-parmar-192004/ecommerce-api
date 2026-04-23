@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"backend/internal/errors"
+	"backend/internal/constants"
 	"backend/internal/models"
 	"backend/internal/services"
+	"backend/internal/utils"
 	"strconv"
 
 	"github.com/gofiber/fiber/v3"
@@ -40,13 +41,14 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 
 	products, pagination, err := h.Service.GetAll(c.Context(), category, minPriceStr, maxPriceStr, search, page, limit)
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch products", fiber.Map{"debug": err.Error()})
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, "Failed to fetch products", fiber.Map{"debug": err.Error()})
 	}
 
-	return c.JSON(fiber.Map{
-		"data":       products,
+	data := fiber.Map{
+		"products":   products,
 		"pagination": pagination,
-	})
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, data)
 }
 
 func (h *ProductController) GetById(c fiber.Ctx) error {
@@ -54,29 +56,29 @@ func (h *ProductController) GetById(c fiber.Ctx) error {
 
 	product, err := h.Service.GetById(c.Context(), id)
 	if err != nil {
-		return errors.SendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
+		return utils.SendError(c, fiber.StatusNotFound, constants.ErrProductNotFound, "Product not found", nil)
 	}
 
-	return c.JSON(product)
+	return utils.SendSuccess(c, fiber.StatusOK, product)
 }
 
 func (h *ProductController) Create(c fiber.Ctx) error {
 	var p models.Product
 
 	if err := c.Bind().Body(&p); err != nil {
-		return errors.SendError(c, fiber.StatusBadRequest, "INVALID_INPUT", "Malformed JSON", fiber.Map{"details": err.Error()})
+		return utils.SendError(c, fiber.StatusBadRequest, constants.ErrInvalidInput, "Malformed JSON", fiber.Map{"details": err.Error()})
 	}
 
 	if validationErrors, status, code := validateProductInput(p); validationErrors != nil {
-		return errors.SendError(c, status, code, "Validation failed", validationErrors)
+		return utils.SendError(c, status, code, "Validation failed", validationErrors)
 	}
 
 	err := h.Service.Create(c.Context(), &p)
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to create product", fiber.Map{"error": err.Error()})
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, "Failed to create product", fiber.Map{"error": err.Error()})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(p)
+	return utils.SendSuccess(c, fiber.StatusCreated, p)
 }
 
 func (h *ProductController) Update(c fiber.Ctx) error {
@@ -84,23 +86,23 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 
 	var p models.Product
 	if err := c.Bind().Body(&p); err != nil {
-		return errors.SendError(c, fiber.StatusBadRequest, "INVALID_INPUT", "Malformed JSON", fiber.Map{"details": err.Error()})
+		return utils.SendError(c, fiber.StatusBadRequest, constants.ErrInvalidInput, "Malformed JSON", fiber.Map{"details": err.Error()})
 	}
 
 	if validationErrors, status, code := validateProductInput(p); validationErrors != nil {
-		return errors.SendError(c, status, code, "Validation failed", validationErrors)
+		return utils.SendError(c, status, code, "Validation failed", validationErrors)
 	}
 
 	updated, err := h.Service.Update(c.Context(), id, p.Name, p.CategoryID, p.Price, p.Description)
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to update product", fiber.Map{"error": err.Error()})
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, "Failed to update product", fiber.Map{"error": err.Error()})
 	}
 
 	if updated == nil {
-		return errors.SendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
+		return utils.SendError(c, fiber.StatusNotFound, constants.ErrProductNotFound, "Product not found", nil)
 	}
 
-	return c.JSON(updated)
+	return utils.SendSuccess(c, fiber.StatusOK, updated)
 }
 
 func (h *ProductController) Delete(c fiber.Ctx) error {
@@ -108,10 +110,10 @@ func (h *ProductController) Delete(c fiber.Ctx) error {
 
 	err := h.Service.Delete(c.Context(), id)
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to delete product", fiber.Map{"error": err.Error()})
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, "Failed to delete product", fiber.Map{"error": err.Error()})
 	}
 
-	return c.JSON(fiber.Map{
+	return utils.SendSuccess(c, fiber.StatusOK, fiber.Map{
 		"message": "Deleted successfully",
 	})
 }
@@ -142,7 +144,7 @@ func validateProductInput(p models.Product) (map[string]interface{}, int, string
 	}
 
 	if len(errs) > 0 {
-		return errs, fiber.StatusUnprocessableEntity, "VALIDATION_FAILED"
+		return errs, fiber.StatusUnprocessableEntity, constants.ErrValidationFailed
 	}
 
 	return nil, 0, ""

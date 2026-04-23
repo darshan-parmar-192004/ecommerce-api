@@ -2,11 +2,11 @@ package services
 
 import (
 	"backend/internal/cache"
+	"backend/internal/constants"
+	"backend/internal/logger"
 	"backend/internal/models"
 	"context"
 	"encoding/json"
-	"fmt"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -21,7 +21,7 @@ func NewCategoryService(repo *models.CategoryRepository, cache *cache.RedisServi
 }
 
 func (s *CategoryService) GetAll(ctx context.Context) ([]models.Category, error) {
-	key := "categories:all"
+	key := constants.CacheKeyCategoriesAll
 
 	if s.cache.Client != nil {
 		cached, err := s.cache.Client.Get(cache.Ctx, key).Result()
@@ -29,7 +29,7 @@ func (s *CategoryService) GetAll(ctx context.Context) ([]models.Category, error)
 		if err == redis.Nil {
 			cache.RecordMiss()
 		} else if err != nil {
-			fmt.Println("Redis error:", err)
+			logger.Log.Warnw("Redis error fetching categories:all", "error", err)
 			cache.RecordMiss()
 		} else {
 			cache.RecordHit()
@@ -47,7 +47,7 @@ func (s *CategoryService) GetAll(ctx context.Context) ([]models.Category, error)
 
 	if s.cache.Client != nil {
 		data, _ := json.Marshal(categories)
-		s.cache.Client.Set(cache.Ctx, key, data, 30*time.Minute)
+		s.cache.Client.Set(cache.Ctx, key, data, constants.CacheCategoriesTTL)
 	}
 
 	return categories, nil
@@ -59,4 +59,8 @@ func (s *CategoryService) GetCategoryProducts(ctx context.Context, categoryID st
 
 func (s *CategoryService) GetHierarchy(ctx context.Context) ([]models.Category, error) {
 	return s.repo.GetHierarchy(ctx)
+}
+
+func (s *CategoryService) GetByID(ctx context.Context, id string) (*models.Category, error) {
+	return s.repo.GetByID(ctx, id)
 }

@@ -2,13 +2,15 @@ package auth
 
 import (
 	"backend/internal/cache"
+	"backend/internal/constants"
 	"backend/internal/database"
-	"backend/internal/errors"
 	"backend/internal/models"
+	"backend/internal/utils"
 	"context"
 	"database/sql"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -51,30 +53,30 @@ func NewHandler(db database.Service, cache cache.RedisService, jwtSecret string)
 func (h *Handler) Register(c fiber.Ctx) error {
 	var req RegisterRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
-			errors.ErrValidation,
+			constants.ErrValidationFailed,
 			"Invalid request body",
 			fiber.Map{"details": err.Error()},
 		)
 	}
 
 	if req.Email == "" || req.Password == "" || req.Name == "" {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
-			errors.ErrValidation,
+			constants.ErrValidationFailed,
 			"Email, password, and name are required",
 			nil,
 		)
 	}
 
 	if len(req.Password) < 8 {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
-			errors.ErrValidation,
+			constants.ErrValidationFailed,
 			"Password must be at least 8 characters",
 			nil,
 		)
@@ -82,10 +84,10 @@ func (h *Handler) Register(c fiber.Ctx) error {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), 10)
 	if err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			errors.ErrDatabase,
+			constants.ErrDatabase,
 			"Failed to hash password",
 			fiber.Map{"details": err.Error()},
 		)
@@ -94,20 +96,29 @@ func (h *Handler) Register(c fiber.Ctx) error {
 	customerID := "CUST-" + uuid.New().String()[:8]
 	createdAt := time.Now()
 
-	db := h.db.DB()
+	dbConn := h.db.DB()
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	_, err = db.ExecContext(ctx, `
-		INSERT INTO customers (customer_id, email, name, country, phone, created_at, status, password_hash)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword))
+	goquDB := goqu.New("postgres", dbConn)
 
+	query := goquDB.Insert("customers").Rows(goqu.Record{
+		"customer_id":   customerID,
+		"email":         req.Email,
+		"name":          req.Name,
+		"country":       req.Country,
+		"phone":         req.Phone,
+		"created_at":    createdAt,
+		"status":        "active",
+		"password_hash": string(hashedPassword),
+	})
+
+	_, err = query.Executor().ExecContext(ctx)
 	if err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			errors.ErrDatabase,
+			constants.ErrDatabase,
 			"Failed to register customer",
 			fiber.Map{"details": err.Error()},
 		)
@@ -123,43 +134,54 @@ func (h *Handler) Register(c fiber.Ctx) error {
 		Status:     "active",
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"data": customer,
-	})
+	return utils.SendSuccess(c, fiber.StatusCreated, customer)
 }
 
 func (h *Handler) Login(c fiber.Ctx) error {
 	var req LoginRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
-			errors.ErrValidation,
+			constants.ErrValidationFailed,
 			"Invalid request body",
 			fiber.Map{"details": err.Error()},
 		)
 	}
 
 	if req.Email == "" || req.Password == "" {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
-			errors.ErrValidation,
+			constants.ErrValidationFailed,
 			"Email and password are required",
 			nil,
 		)
 	}
 
-	db := h.db.DB()
+	dbConn := h.db.DB()
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
+	goquDB := goqu.New("postgres", dbConn)
+
+	query := goquDB.From("customers").
+		Select("customer_id", "email", "name", "country", "phone", "created_at", "status", "password_hash").
+		Where(goqu.C("email").Eq(req.Email))
+
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return utils.SendError(
+			c,
+			fiber.StatusInternalServerError,
+			constants.ErrDatabase,
+			"Failed to build query",
+			fiber.Map{"details": err.Error()},
+		)
+	}
+
 	var customer models.Customer
-	err := db.QueryRowContext(ctx, `
-		SELECT customer_id, email, name, country, phone, created_at, status, password_hash
-		FROM customers
-		WHERE email = $1
-	`, req.Email).Scan(
+	err = dbConn.QueryRowContext(ctx, sqlQuery).Scan(
 		&customer.CustomerID,
 		&customer.Email,
 		&customer.Name,
@@ -171,40 +193,40 @@ func (h *Handler) Login(c fiber.Ctx) error {
 	)
 
 	if err == sql.ErrNoRows {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusUnauthorized,
-			errors.ErrUnauthorized,
+			constants.ErrUnauthorized,
 			"Invalid email or password",
 			nil,
 		)
 	}
 
 	if err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			errors.ErrDatabase,
+			constants.ErrDatabase,
 			"Failed to fetch customer",
 			fiber.Map{"details": err.Error()},
 		)
 	}
 
 	if customer.PasswordHash == "" {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusUnauthorized,
-			errors.ErrUnauthorized,
+			constants.ErrUnauthorized,
 			"Account has no password set. Please contact support.",
 			nil,
 		)
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(customer.PasswordHash), []byte(req.Password)); err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusUnauthorized,
-			errors.ErrUnauthorized,
+			constants.ErrUnauthorized,
 			"Invalid email or password",
 			nil,
 		)
@@ -214,17 +236,17 @@ func (h *Handler) Login(c fiber.Ctx) error {
 		CustomerID: customer.CustomerID,
 		Email:      customer.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(constants.JWTExpiration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	})
 
 	tokenString, err := token.SignedString(h.jwtSecret)
 	if err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			errors.ErrDatabase,
+			constants.ErrDatabase,
 			"Failed to generate token",
 			fiber.Map{"details": err.Error()},
 		)
@@ -235,32 +257,33 @@ func (h *Handler) Login(c fiber.Ctx) error {
 		"email":       customer.Email,
 	}
 	if err := StoreSession(&h.cache, tokenString, sessionData); err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			errors.ErrDatabase,
+			constants.ErrDatabase,
 			"Failed to store session",
 			fiber.Map{"details": err.Error()},
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	loginResponse := fiber.Map{
 		"token": tokenString,
 		"customer": fiber.Map{
 			"customer_id": customer.CustomerID,
 			"email":       customer.Email,
 			"name":        customer.Name,
 		},
-	})
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, loginResponse)
 }
 
 func (h *Handler) Logout(c fiber.Ctx) error {
 	token := c.Get("Authorization")
 	if token == "" {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
-			errors.ErrValidation,
+			constants.ErrValidationFailed,
 			"Authorization token required",
 			nil,
 		)
@@ -269,16 +292,16 @@ func (h *Handler) Logout(c fiber.Ctx) error {
 	token = token[len("Bearer "):]
 
 	if err := DeleteSession(&h.cache, token); err != nil {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			errors.ErrDatabase,
+			constants.ErrDatabase,
 			"Failed to logout",
 			fiber.Map{"details": err.Error()},
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return utils.SendSuccess(c, fiber.StatusOK, fiber.Map{
 		"message": "Logged out successfully",
 	})
 }
@@ -286,10 +309,10 @@ func (h *Handler) Logout(c fiber.Ctx) error {
 func (h *Handler) ValidateToken(c fiber.Ctx) error {
 	token := c.Get("Authorization")
 	if token == "" {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
-			errors.ErrValidation,
+			constants.ErrValidationFailed,
 			"Authorization token required",
 			nil,
 		)
@@ -303,17 +326,18 @@ func (h *Handler) ValidateToken(c fiber.Ctx) error {
 	})
 
 	if err != nil || !t.Valid {
-		return errors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusUnauthorized,
-			errors.ErrUnauthorized,
+			constants.ErrUnauthorized,
 			"Invalid token",
 			fiber.Map{"details": err.Error()},
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	tokenData := fiber.Map{
 		"customer_id": claims.CustomerID,
 		"email":       claims.Email,
-	})
+	}
+	return utils.SendSuccess(c, fiber.StatusOK, tokenData)
 }

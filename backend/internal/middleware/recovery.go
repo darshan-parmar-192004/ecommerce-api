@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"log"
 	"runtime/debug"
+
+	"backend/internal/logger"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -15,10 +16,10 @@ func Recovery() fiber.Handler {
 
 				requestID := c.Locals("request_id")
 
-				log.Printf("PANIC: %v\nSTACK TRACE:\n%s\nREQUEST_ID: %v",
-					err,
-					string(debug.Stack()),
-					requestID,
+				logger.Log.Errorw("Panic recovered",
+					"error", err,
+					"stack_trace", string(debug.Stack()),
+					"request_id", requestID,
 				)
 
 				response := map[string]interface{}{

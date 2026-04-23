@@ -2,8 +2,9 @@ package cache
 
 import (
 	"context"
-	"fmt"
-	"os"
+
+	"backend/internal/config"
+	"backend/internal/logger"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -15,32 +16,27 @@ type RedisService struct {
 }
 
 func NewRedis() *RedisService {
-
-	host := os.Getenv("REDIS_HOST")
-	if host == "" {
-		host = "localhost"
-	}
-
-	port := os.Getenv("REDIS_PORT")
-	if port == "" {
-		port = "6379"
-	}
-	
-	if os.Getenv("APP_ENV") == "test" {
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Log.Warnw("Failed to load config for Redis", "error", err)
 		return &RedisService{}
 	}
 
-	addr := host + ":" + port
+	if cfg.AppEnv == "test" {
+		return &RedisService{}
+	}
+
+	addr := cfg.RedisHost + ":" + cfg.RedisPort
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr: addr,
 	})
 
 	if err := rdb.Ping(Ctx).Err(); err != nil {
-		fmt.Printf("Redis connection failed: %v", err)
+		logger.Log.Warnw("Redis connection failed", "error", err)
 	}
 
-	fmt.Println("Connected to Redis:", addr)
+	logger.Log.Info("Connected to Redis", "address", addr)
 
 	return &RedisService{
 		Client: rdb,

@@ -1,9 +1,9 @@
 package middleware
 
 import (
-	"encoding/json"
-	"log"
 	"time"
+
+	"backend/internal/logger"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -26,8 +26,14 @@ func Logging() fiber.Handler {
 			"request_id":  c.Locals("request_id"),
 		}
 
-		jsonLog, _ := json.Marshal(logData)
-		log.Println(string(jsonLog))
+		logger.Log.Infow("Request completed",
+			"timestamp", logData["timestamp"],
+			"method", logData["method"],
+			"path", logData["path"],
+			"status", logData["status"],
+			"duration_ms", logData["duration_ms"],
+			"request_id", logData["request_id"],
+		)
 
 		return err
 	}

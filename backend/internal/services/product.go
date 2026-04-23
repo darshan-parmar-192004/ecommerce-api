@@ -2,6 +2,8 @@ package services
 
 import (
 	"backend/internal/cache"
+	"backend/internal/constants"
+	"backend/internal/logger"
 	"backend/internal/models"
 	"context"
 	"crypto/rand"
@@ -23,7 +25,7 @@ func NewProductService(repo *models.ProductRepository, cache *cache.RedisService
 }
 
 func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]models.Product, map[string]interface{}, error) {
-	key := "products:all"
+	key := constants.CacheKeyProductsAll
 
 	if s.cache.Client != nil {
 		cached, err := s.cache.Client.Get(cache.Ctx, key).Result()
@@ -31,14 +33,21 @@ func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxP
 		if err == redis.Nil {
 			cache.RecordMiss()
 		} else if err != nil {
-			fmt.Println("Redis error:", err)
+			logger.Log.Warnw("Redis error fetching products:all", "error", err)
 			cache.RecordMiss()
 		} else {
 			cache.RecordHit()
-			var response map[string]interface{}
-			if json.Unmarshal([]byte(cached), &response) == nil {
-				return response["data"].([]models.Product), response["pagination"].(map[string]interface{}), nil
+			var cachedResponse struct {
+				Data       []models.Product       `json:"data"`
+				Pagination map[string]interface{} `json:"pagination"`
 			}
+			if err := json.Unmarshal([]byte(cached), &cachedResponse); err != nil {
+				logger.Log.Warnw("Failed to unmarshal cached products, falling back to database", "error", err)
+				cache.RecordMiss()
+			} else if cachedResponse.Data != nil {
+				return cachedResponse.Data, cachedResponse.Pagination, nil
+			}
+			// If Data is nil, fall through to database query
 		}
 	}
 
@@ -57,18 +66,26 @@ func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxP
 	}
 
 	if s.cache.Client != nil {
-		data, _ := json.Marshal(map[string]interface{}{
-			"data":       products,
-			"pagination": pagination,
-		})
-		s.cache.Client.Set(cache.Ctx, key, data, 5*time.Minute)
+		cacheData := struct {
+			Data       []models.Product       `json:"data"`
+			Pagination map[string]interface{} `json:"pagination"`
+		}{
+			Data:       products,
+			Pagination: pagination,
+		}
+		data, err := json.Marshal(cacheData)
+		if err != nil {
+			logger.Log.Warnw("Failed to marshal products for caching", "error", err)
+		} else {
+			s.cache.Client.Set(cache.Ctx, key, data, constants.CacheProductsAllTTL)
+		}
 	}
 
 	return products, pagination, nil
 }
 
 func (s *ProductService) GetById(ctx context.Context, id string) (*models.Product, error) {
-	key := "products:" + id
+	key := constants.CacheKeyProductPrefix + id
 
 	if s.cache.Client != nil {
 		cached, err := s.cache.Client.Get(cache.Ctx, key).Result()
@@ -76,7 +93,7 @@ func (s *ProductService) GetById(ctx context.Context, id string) (*models.Produc
 		if err == redis.Nil {
 			cache.RecordMiss()
 		} else if err != nil {
-			fmt.Println("Redis error:", err)
+			logger.Log.Warnw("Redis error fetching product by id", "error", err)
 			cache.RecordMiss()
 		} else {
 			cache.RecordHit()
@@ -94,7 +111,7 @@ func (s *ProductService) GetById(ctx context.Context, id string) (*models.Produc
 
 	if s.cache.Client != nil {
 		data, _ := json.Marshal(product)
-		s.cache.Client.Set(cache.Ctx, key, data, 10*time.Minute)
+		s.cache.Client.Set(cache.Ctx, key, data, constants.CacheProductByIDTTL)
 	}
 
 	return product, nil
@@ -118,7 +135,7 @@ func (s *ProductService) Create(ctx context.Context, product *models.Product) er
 	*product = p
 
 	if s.cache.Client != nil {
-		s.cache.Client.Del(cache.Ctx, "products:all")
+		s.cache.Client.Del(cache.Ctx, constants.CacheKeyProductsAll)
 	}
 
 	return nil
@@ -144,8 +161,8 @@ func (s *ProductService) Update(ctx context.Context, id string, name, categoryID
 	}
 
 	if s.cache.Client != nil {
-		s.cache.Client.Del(cache.Ctx, "products:all")
-		s.cache.Client.Del(cache.Ctx, "products:"+id)
+		s.cache.Client.Del(cache.Ctx, constants.CacheKeyProductsAll)
+		s.cache.Client.Del(cache.Ctx, constants.CacheKeyProductPrefix+id)
 	}
 
 	return &models.Product{
@@ -169,8 +186,8 @@ func (s *ProductService) Delete(ctx context.Context, id string) error {
 	}
 
 	if s.cache.Client != nil {
-		s.cache.Client.Del(cache.Ctx, "products:all")
-		s.cache.Client.Del(cache.Ctx, "products:"+id)
+		s.cache.Client.Del(cache.Ctx, constants.CacheKeyProductsAll)
+		s.cache.Client.Del(cache.Ctx, constants.CacheKeyProductPrefix+id)
 	}
 
 	return nil

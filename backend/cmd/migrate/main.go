@@ -167,11 +167,11 @@ func SeedDatabase(dsn string) error {
 		{
 			table:   "customers",
 			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVCustomers),
-			columns: []string{"customer_id", "email", "name", "country", "phone", "created_at", "status"},
+			columns: []string{"customer_id", "email", "name", "country", "phone", "created_at", "status", "password_hash"},
 		},
 		{
 			table:   "products",
-			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVProductsPath),
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVProducts),
 			columns: []string{"product_id", "name", "category_id", "price", "description", "created_at"},
 		},
 		{
@@ -218,15 +218,17 @@ func SeedDatabase(dsn string) error {
 
 func dropAllConstraints(db *sql.DB) {
 	constraints := []string{
-		"ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_customer_id_fkey",
 		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_order_id_fkey",
 		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_product_id_fkey",
-		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_pkey",
+		"ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_customer_id_fkey",
 		"ALTER TABLE products DROP CONSTRAINT IF EXISTS products_category_id_fkey",
 		"ALTER TABLE inventory DROP CONSTRAINT IF EXISTS inventory_product_id_fkey",
-		"ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_pkey",
-		"ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_email_key",
-		"ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_pkey",
+		"ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_parent_category_id_fkey",
+		"ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_pkey CASCADE",
+		"ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_pkey CASCADE",
+		"ALTER TABLE categories DROP CONSTRAINT IF EXISTS categories_pkey CASCADE",
+		"ALTER TABLE products DROP CONSTRAINT IF EXISTS products_pkey CASCADE",
+		"ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_pkey CASCADE",
 	}
 	for _, c := range constraints {
 		if _, err := db.Exec(c); err != nil {

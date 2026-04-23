@@ -52,7 +52,6 @@ func RegisterRoutes(app *fiber.App) {
 	customerService := services.NewCustomerService(customerRepo)
 	customerController := controllers.NewCustomerController(customerService)
 
-	app.Get(constants.RouteCustomersID, customerController.GetByID)
 	app.Get(constants.RouteCustomersOrd, customerController.GetCustomerOrders)
 	app.Get(constants.RouteCustomersLTV, customerController.GetCustomerLifetimeValue)
 
@@ -62,7 +61,7 @@ func RegisterRoutes(app *fiber.App) {
 
 	app.Post(constants.RouteOrders, orderController.CreateOrder)
 	app.Get(constants.RouteOrdersID, orderController.GetByID)
-	app.Get(constants.RouteOrdersID+"/items", orderController.GetOrderItems)
+	app.Get(constants.RouteOrdersItems, orderController.GetOrderItems)
 
 	inventoryRepo := models.NewInventoryRepository(db)
 	inventoryService := services.NewInventoryService(inventoryRepo)

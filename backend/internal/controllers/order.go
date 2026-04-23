@@ -1,9 +1,10 @@
 package controllers
 
 import (
-	"backend/internal/errors"
+	"backend/internal/constants"
 	"backend/internal/models"
 	"backend/internal/services"
+	"backend/internal/utils"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -36,17 +37,17 @@ func (h *OrderController) CreateOrder(c fiber.Ctx) error {
 	var req CreateOrderRequest
 
 	if err := c.Bind().Body(&req); err != nil {
-		return errors.SendError(c, fiber.StatusBadRequest, errors.ErrInvalidInput, "Invalid request body", nil)
+		return utils.SendError(c, fiber.StatusBadRequest, constants.ErrInvalidInput, "Invalid request body", nil)
 	}
 
 	req.Order.OrderID = generateOrderID()
 
 	err := h.Service.CreateOrder(c.Context(), req.Order, req.Items)
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, errors.ErrDatabase, err.Error(), nil)
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, err.Error(), nil)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(req.Order)
+	return utils.SendSuccess(c, fiber.StatusCreated, req.Order)
 }
 
 func (h *OrderController) GetOrder(c fiber.Ctx) error {
@@ -54,8 +55,16 @@ func (h *OrderController) GetOrder(c fiber.Ctx) error {
 
 	items, err := h.Service.GetOrderItems(c.Context(), id)
 	if err != nil {
-		return errors.SendError(c, fiber.StatusInternalServerError, errors.ErrDatabase, "Failed to fetch order items", nil)
+		return utils.SendError(c, fiber.StatusInternalServerError, constants.ErrDatabase, "Failed to fetch order items", nil)
 	}
 
-	return c.JSON(items)
+	return utils.SendSuccess(c, fiber.StatusOK, items)
+}
+
+func (h *OrderController) GetByID(c fiber.Ctx) error {
+	return h.GetOrder(c)
+}
+
+func (h *OrderController) GetOrderItems(c fiber.Ctx) error {
+	return h.GetOrder(c)
 }

@@ -1,19 +1,17 @@
 package database
 
 import (
+	"backend/internal/config"
+	"backend/internal/constants"
+	"backend/internal/logger"
 	"context"
 	"database/sql"
-	"fmt"
-	"log"
-	"os"
 	"strconv"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	_ "github.com/joho/godotenv/autoload"
 )
 
-// Service represents a service that interacts with a database.
 type Service interface {
 	Health() map[string]string
 	Close() error
@@ -24,15 +22,7 @@ type service struct {
 	db *sql.DB
 }
 
-var (
-	database   = os.Getenv("BLUEPRINT_DB_DATABASE")
-	password   = os.Getenv("BLUEPRINT_DB_PASSWORD")
-	username   = os.Getenv("BLUEPRINT_DB_USERNAME")
-	port       = os.Getenv("BLUEPRINT_DB_PORT")
-	host       = os.Getenv("BLUEPRINT_DB_HOST")
-	schema     = os.Getenv("BLUEPRINT_DB_SCHEMA")
-	dbInstance *service
-)
+var dbInstance *service
 
 func (s *service) DB() *sql.DB {
 	return s.db
@@ -42,17 +32,26 @@ func New() Service {
 	if dbInstance != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
-	db, err := sql.Open("pgx", connStr)
+
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatalw("Failed to load config", "error", err)
 	}
+
+	db, err := sql.Open(cfg.DBDialect, cfg.GetDSN())
+	if err != nil {
+		logger.Log.Fatalw("Failed to open database", "error", err)
+	}
+
+	db.SetMaxOpenConns(constants.DBMaxOpenConns)
+	db.SetMaxIdleConns(constants.DBMaxIdleConns)
+	db.SetConnMaxLifetime(constants.DBConnMaxLifetime * time.Minute)
+
 	dbInstance = &service{
 		db: db,
 	}
-	db.SetMaxOpenConns(20)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(30 * time.Minute)
+
+	logger.Log.Info("Connected to database", "database", cfg.DBName)
 	return dbInstance
 }
 
@@ -84,6 +83,10 @@ func (s *service) Health() map[string]string {
 }
 
 func (s *service) Close() error {
-	log.Printf("Disconnected from database: %s", database)
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Log.Warnw("Failed to load config for close message", "error", err)
+	}
+	logger.Log.Info("Disconnected from database", "database", cfg.DBName)
 	return s.db.Close()
 }

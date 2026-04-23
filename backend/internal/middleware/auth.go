@@ -3,7 +3,8 @@ package middleware
 import (
 	"backend/internal/auth"
 	"backend/internal/cache"
-	apperrors "backend/internal/errors"
+	"backend/internal/constants"
+	"backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
@@ -30,20 +31,20 @@ func NewAuthMiddleware(secret string, cache *cache.RedisService) *AuthMiddleware
 func (m *AuthMiddleware) Authenticate(c fiber.Ctx) error {
 	token := c.Get("Authorization")
 	if token == "" {
-		return apperrors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusUnauthorized,
-			apperrors.ErrUnauthorized,
+			constants.ErrUnauthorized,
 			"Authorization token required",
 			nil,
 		)
 	}
 
 	if len(token) < 8 || token[:7] != "Bearer " {
-		return apperrors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusUnauthorized,
-			apperrors.ErrUnauthorized,
+			constants.ErrUnauthorized,
 			"Invalid authorization header format",
 			nil,
 		)
@@ -57,10 +58,10 @@ func (m *AuthMiddleware) Authenticate(c fiber.Ctx) error {
 	})
 
 	if err != nil || !t.Valid {
-		return apperrors.SendError(
+		return utils.SendError(
 			c,
 			fiber.StatusUnauthorized,
-			apperrors.ErrUnauthorized,
+			constants.ErrUnauthorized,
 			"Invalid or expired token",
 			fiber.Map{"details": err.Error()},
 		)
@@ -69,10 +70,10 @@ func (m *AuthMiddleware) Authenticate(c fiber.Ctx) error {
 	if m.cache != nil && m.cache.Client != nil {
 		_, err := auth.GetSession(m.cache, token)
 		if err != nil {
-			return apperrors.SendError(
+			return utils.SendError(
 				c,
 				fiber.StatusUnauthorized,
-				apperrors.ErrUnauthorized,
+				constants.ErrUnauthorized,
 				"Session expired or invalid",
 				nil,
 			)
