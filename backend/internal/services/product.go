@@ -1,150 +1,188 @@
 package services
 
 import (
-	"backend/internal/models"
-	"encoding/csv"
-	"os"
+	"context"
+	"encoding/json"
+	"fmt"
+	"regexp"
 	"time"
 
-	"github.com/jszwec/csvutil"
+	"backend/internal/cache"
+	"backend/internal/constants"
+	"backend/internal/models"
 )
 
+var categoryPattern = regexp.MustCompile(`^CAT-[a-f0-9]{8}$`)
+
 type ProductService struct {
-	Products           map[string]models.Product
-	DisablePersistance bool
+	repo  *models.ProductRepository
+	cache *cache.RedisService
 }
 
-func NewProductService() *ProductService {
-	return &ProductService{
-		Products: make(map[string]models.Product),
+func NewProductService(repo *models.ProductRepository, cache *cache.RedisService) *ProductService {
+	return &ProductService{repo: repo, cache: cache}
+}
+
+type ProductInput struct {
+	Name        string  `json:"name"`
+	CategoryID  string  `json:"category_id"`
+	Price       float64 `json:"price"`
+	Description string  `json:"description"`
+}
+
+type ValidationResult struct {
+	Errors map[string]interface{}
+	Status int
+	Code   string
+}
+
+func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResult {
+	errors := make(map[string]interface{})
+
+	if input.Name == "" {
+		errors["name"] = "Name is required cannot be empty"
+	} else if len(input.Name) > 200 {
+		errors["name"] = "Name must not exceed 200 characters"
 	}
+
+	if input.Price == 0 {
+		errors["price"] = "Price is required"
+	} else if input.Price <= 0 {
+		errors["price"] = "Price must not be negative or greater than 0"
+	}
+
+	if input.CategoryID == "" {
+		errors["category_id"] = "Category id is required"
+	} else if !categoryPattern.MatchString(input.CategoryID) {
+		errors["category_id"] = "Category id must match CAT-xxxxxxxx format"
+	}
+
+	if len(input.Description) > 500 {
+		errors["description"] = "Description must not exceed 500 characters"
+	}
+
+	if len(errors) > 0 {
+		return ValidationResult{
+			Errors: errors,
+			Status: 422,
+			Code:   "VALIDATION_FAILED",
+		}
+	}
+
+	return ValidationResult{Errors: nil}
 }
 
-func (s *ProductService) LoadCSV(path string) error {
-	file, err := os.Open(path)
+func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]map[string]interface{}, map[string]interface{}, error) {
+	cacheKey := fmt.Sprintf("%s:%s:%s:%s:%d:%d", constants.CacheKeyProductsAll, category, minPriceStr, maxPriceStr, page, limit)
+
+	if s.cache != nil {
+		cached, err := s.cache.Get(cacheKey)
+		if err == nil {
+			cache.RecordHit()
+			var result struct {
+				Data       []map[string]interface{} `json:"data"`
+				Pagination map[string]interface{}   `json:"pagination"`
+			}
+			if json.Unmarshal([]byte(cached), &result) == nil {
+				return result.Data, result.Pagination, nil
+			}
+		}
+		cache.RecordMiss()
+	}
+
+	products, pagination, err := s.repo.GetAll(ctx, category, minPriceStr, maxPriceStr, search, page, limit)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if s.cache != nil {
+		result := struct {
+			Data       []map[string]interface{} `json:"data"`
+			Pagination map[string]interface{}   `json:"pagination"`
+		}{
+			Data:       products,
+			Pagination: pagination,
+		}
+		data, _ := json.Marshal(result)
+		_ = s.cache.Set(cacheKey, data, constants.CacheProductsAllTTL)
+	}
+
+	return products, pagination, nil
+}
+
+func (s *ProductService) GetByID(ctx context.Context, id string) (map[string]interface{}, error) {
+	cacheKey := constants.CacheKeyProductPrefix + id
+
+	if s.cache != nil {
+		cached, err := s.cache.Get(cacheKey)
+		if err == nil {
+			cache.RecordHit()
+			var product map[string]interface{}
+			if json.Unmarshal([]byte(cached), &product) == nil {
+				return product, nil
+			}
+		}
+		cache.RecordMiss()
+	}
+
+	product, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil && product != nil {
+		data, _ := json.Marshal(product)
+		_ = s.cache.Set(cacheKey, data, constants.CacheProductByIDTTL)
+	}
+
+	return product, nil
+}
+
+func (s *ProductService) Create(ctx context.Context, productID string, input ProductInput) (map[string]interface{}, error) {
+	result, err := s.repo.Create(ctx, productID, input.Name, input.CategoryID, input.Price, input.Description, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		_ = s.cache.Delete(constants.CacheKeyProductsAll)
+	}
+
+	return result, nil
+}
+
+func (s *ProductService) Update(ctx context.Context, id string, input ProductInput) (map[string]interface{}, error) {
+	result, err := s.repo.Update(ctx, id, input.Name, input.CategoryID, input.Price, input.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.cache != nil {
+		_ = s.cache.Delete(constants.CacheKeyProductsAll)
+		_ = s.cache.Delete(constants.CacheKeyProductPrefix + id)
+	}
+
+	return result, nil
+}
+
+func (s *ProductService) Delete(ctx context.Context, id string) error {
+	err := s.repo.Delete(ctx, id)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = file.Close() }()
 
-	dec, err := csvutil.NewDecoder(csv.NewReader(file))
-	if err != nil {
-		return err
+	if s.cache != nil {
+		_ = s.cache.Delete(constants.CacheKeyProductsAll)
+		_ = s.cache.Delete(constants.CacheKeyProductPrefix + id)
 	}
 
-	for {
-		var p ProductRow
-		if err := dec.Decode(&p); err != nil {
-			break
-		}
-		product := models.Product{
-			ProductID:   p.ProductID,
-			Name:        p.Name,
-			CategoryID:  p.CategoryID,
-			Price:       p.Price,
-			Description: p.Description,
-			CreatedAt:   time.Now(),
-		}
-		s.Products[product.ProductID] = product
-	}
 	return nil
 }
 
-type ProductRow struct {
-	ProductID   string  `csv:"product_id"`
-	Name        string  `csv:"name"`
-	CategoryID  string  `csv:"category_id"`
-	Price       float64 `csv:"price"`
-	Description string  `csv:"description"`
-	CreatedAt   string  `csv:"created_at"`
+func (s *ProductService) Exists(ctx context.Context, id string) (bool, error) {
+	return s.repo.Exists(ctx, id)
 }
 
-type ProductCSVRow struct {
-	ProductID   string  `csv:"product_id"`
-	Name        string  `csv:"name"`
-	CategoryID  string  `csv:"category_id"`
-	Price       float64 `csv:"price"`
-	Description string  `csv:"description"`
-	CreatedAt   string  `csv:"created_at"`
-}
-
-func (s *ProductService) AppendToCSV(path string, product models.Product) error {
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = file.Close() }()
-
-	enc := csvutil.NewEncoder(csv.NewWriter(file))
-	csvRow := ProductCSVRow{
-		ProductID:   product.ProductID,
-		Name:        product.Name,
-		CategoryID:  product.CategoryID,
-		Price:       product.Price,
-		Description: product.Description,
-		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
-	}
-
-	if err := enc.Encode(csvRow); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *ProductService) RewriteCSV(path string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = file.Close() }()
-
-	enc := csvutil.NewEncoder(csv.NewWriter(file))
-
-	header := []string{"product_id", "name", "category_id", "price", "description", "created_at"}
-	if err := enc.Encode(header); err != nil {
-		return err
-	}
-
-	for _, p := range s.Products {
-		csvRow := ProductCSVRow{
-			ProductID:   p.ProductID,
-			Name:        p.Name,
-			CategoryID:  p.CategoryID,
-			Price:       p.Price,
-			Description: p.Description,
-			CreatedAt:   p.CreatedAt.Format(time.RFC3339),
-		}
-
-		if err := enc.Encode(csvRow); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *ProductService) GetAll() []models.Product {
-	list := []models.Product{}
-	for _, p := range s.Products {
-		list = append(list, p)
-	}
-	return list
-}
-
-func (s *ProductService) GetByID(id string) (models.Product, bool) {
-	product, exists := s.Products[id]
-	return product, exists
-}
-
-func (s *ProductService) Create(product models.Product) {
-	s.Products[product.ProductID] = product
-}
-
-func (s *ProductService) Update(id string, product models.Product) {
-	s.Products[id] = product
-}
-
-func (s *ProductService) Delete(id string) {
-	delete(s.Products, id)
+func (s *ProductService) GenerateProductID() string {
+	return fmt.Sprintf("PROD-%x", time.Now().UnixNano())[:16]
 }
