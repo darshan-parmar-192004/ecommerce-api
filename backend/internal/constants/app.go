@@ -73,6 +73,7 @@ const (
 	DBConnMaxLifetime = 30
 
 	JWTExpiration = 24 * time.Hour
+	JWTSecret     = "your-secret-key"
 
 	ContextTimeoutShort  = 1 * time.Second
 	ContextTimeoutMedium = 5 * time.Second
@@ -92,6 +93,10 @@ const (
 
 	RouteProducts       = "/products"
 	RouteProductsID     = "/products/:id"
+	RouteAuthRegister   = "/auth/register"
+	RouteAuthLogin      = "/auth/login"
+	RouteAuthLogout     = "/auth/logout"
+	RouteCustomersMe    = "/customers/me"
 	RouteHealth         = "/health"
 	RouteCategories     = "/categories"
 	RouteCategoriesID   = "/categories/:id"

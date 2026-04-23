@@ -1,6 +1,7 @@
 package server
 
 import (
+	"backend/internal/auth"
 	"backend/internal/cache"
 	"backend/internal/constants"
 	"backend/internal/controllers"
@@ -26,18 +27,36 @@ func RegisterRoutes(app *fiber.App) {
 		MaxAge:           constants.CORSMaxAge,
 	}))
 
-	db := database.New().DB()
+	dbService := database.New()
+	db := dbService.DB()
+
+	redisCache := cache.NewRedis()
+
+	authHandler := auth.NewHandler(dbService, *redisCache, constants.JWTSecret)
+	authMiddleware := middleware.NewAuthMiddleware(constants.JWTSecret, redisCache)
+
+	customerRepo := models.NewCustomerRepository(db)
+	customerService := services.NewCustomerService(customerRepo)
+	customerController := controllers.NewCustomerController(customerService)
 
 	productRepo := models.NewProductRepository(db)
-	redisCache := cache.NewRedis()
 	productService := services.NewProductService(productRepo, redisCache)
 	productController := controllers.NewProductController(productService)
 
+	app.Post(constants.RouteAuthRegister, authHandler.Register)
+	app.Post(constants.RouteAuthLogin, authHandler.Login)
+	app.Post(constants.RouteAuthLogout, authHandler.Logout)
+
+	protected := app.Group("")
+	protected.Use(authMiddleware.Authenticate)
+	protected.Get(constants.RouteCustomersMe, customerController.GetMe)
+	protected.Put(constants.RouteCustomersMe, customerController.UpdateMe)
+
 	app.Get(constants.RouteProducts, productController.GetAll)
 	app.Get(constants.RouteProductsID, productController.GetById)
-	app.Post(constants.RouteProducts, productController.Create)
-	app.Put(constants.RouteProductsID, productController.Update)
-	app.Delete(constants.RouteProductsID, productController.Delete)
+	protected.Post(constants.RouteProducts, productController.Create)
+	protected.Put(constants.RouteProductsID, productController.Update)
+	protected.Delete(constants.RouteProductsID, productController.Delete)
 
 	categoryRepo := models.NewCategoryRepository(db)
 	categoryService := services.NewCategoryService(categoryRepo, redisCache)
@@ -47,10 +66,6 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get(constants.RouteCategoriesID, categoryController.GetByID)
 	app.Get(constants.RouteCategoriesProd, categoryController.GetCategoryProducts)
 	app.Get(constants.RouteCategoriesHier, categoryController.GetHierarchy)
-
-	customerRepo := models.NewCustomerRepository(db)
-	customerService := services.NewCustomerService(customerRepo)
-	customerController := controllers.NewCustomerController(customerService)
 
 	app.Get(constants.RouteCustomersOrd, customerController.GetCustomerOrders)
 	app.Get(constants.RouteCustomersLTV, customerController.GetCustomerLifetimeValue)
