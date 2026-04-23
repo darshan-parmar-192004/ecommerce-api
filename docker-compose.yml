@@ -62,8 +62,6 @@ services:
     depends_on:
       psql_bp:
         condition: service_healthy
-    entrypoint: >
-      sh -c "until nc -z psql_bp 5432; do echo 'Waiting for postgres...'; sleep 1; done; ./migrate up"
 
   redis:
     image: docker.io/library/redis:7-alpine

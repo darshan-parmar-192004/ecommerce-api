@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/doug-martin/goqu/v9"
 )
 
 type Inventory struct {
@@ -22,10 +24,17 @@ func NewInventoryRepository(db *sql.DB) *InventoryRepository {
 }
 
 func (r *InventoryRepository) GetAll(ctx context.Context) ([]Inventory, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT product_id, warehouse_id, quantity, last_updated 
-		FROM inventory
-	`)
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("inventory").
+		Select("product_id", "warehouse_id", "quantity", "last_updated")
+
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -49,12 +58,19 @@ type StockInfo struct {
 }
 
 func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]StockInfo, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT p.name, i.product_id, i.warehouse_id, i.quantity, i.last_updated
-		FROM inventory i
-		JOIN products p ON i.product_id = p.product_id
-		ORDER BY i.quantity ASC
-	`)
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("inventory").As("i").
+		Join(goqu.T("products").As("p"), goqu.On(goqu.Ex{"p.product_id": goqu.C("i.product_id")})).
+		Select("p.name", "i.product_id", "i.warehouse_id", "i.quantity", "i.last_updated").
+		Order(goqu.C("i.quantity").Asc())
+
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +95,23 @@ type CustomerCLV struct {
 }
 
 func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]CustomerCLV, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT customer_id, COUNT(order_id) as order_count, SUM(total_amount) as total_spent
-		FROM orders
-		GROUP BY customer_id
-		ORDER BY total_spent DESC
-	`)
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("orders").
+		Select(
+			"customer_id",
+			goqu.COUNT("order_id").As("order_count"),
+			goqu.SUM("total_amount").As("total_spent"),
+		).
+		GroupBy("customer_id").
+		Order(goqu.C("total_spent").Desc())
+
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -110,24 +137,32 @@ type CategoryTreeNode struct {
 }
 
 func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]CategoryTreeNode, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		WITH RECURSIVE category_path AS (
-			SELECT category_id, name, parent_category_id, name AS path
-			FROM categories
-			WHERE parent_category_id IS NULL
+	db := goqu.New("postgres", r.db)
 
-			UNION ALL
+	cteQuery := `WITH RECURSIVE category_path AS (
+		SELECT category_id, name, parent_category_id, name AS path
+		FROM categories
+		WHERE parent_category_id IS NULL
 
-			SELECT c.category_id, c.name, c.parent_category_id,
-			       cp.path || ' > ' || c.name
-			FROM categories c
-			JOIN category_path cp
-			    ON cp.category_id = c.parent_category_id
-		)
-		SELECT category_id, name, parent_category_id, path
-		FROM category_path
-		ORDER BY path
-	`)
+		UNION ALL
+
+		SELECT c.category_id, c.name, c.parent_category_id,
+		       cp.path || ' > ' || c.name
+		FROM categories c
+		JOIN category_path cp
+		    ON cp.category_id = c.parent_category_id
+	)
+	SELECT category_id, name, parent_category_id, path
+	FROM category_path
+	ORDER BY path`
+
+	subquery := db.From(goqu.L("(" + cteQuery + ")"))
+	sqlQuery, _, err := subquery.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -151,14 +186,21 @@ type TopSeller struct {
 }
 
 func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]TopSeller, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT p.name, SUM(oi.quantity) as total_sold
-		FROM order_items oi
-		JOIN products p ON oi.product_id = p.product_id
-		GROUP BY p.product_id, p.name
-		ORDER BY total_sold DESC
-		LIMIT 10
-	`)
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("order_items").As("oi").
+		Join(goqu.T("products").As("p"), goqu.On(goqu.Ex{"p.product_id": goqu.C("oi.product_id")})).
+		Select("p.name", goqu.SUM("oi.quantity").As("total_sold")).
+		GroupBy("p.product_id", "p.name").
+		Order(goqu.C("total_sold").Desc()).
+		Limit(10)
+
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}

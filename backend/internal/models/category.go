@@ -3,6 +3,8 @@ package models
 import (
 	"context"
 	"database/sql"
+
+	"github.com/doug-martin/goqu/v9"
 )
 
 type Category struct {
@@ -20,11 +22,18 @@ func NewCategoryRepository(db *sql.DB) *CategoryRepository {
 }
 
 func (r *CategoryRepository) GetAll(ctx context.Context) ([]Category, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT category_id, name, parent_category_id
-		FROM categories
-		ORDER BY name
-	`)
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("categories").
+		Select("category_id", "name", "parent_category_id").
+		Order(goqu.C("name").Asc())
+
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -43,12 +52,26 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]Category, error) {
 }
 
 func (r *CategoryRepository) GetCategoryProducts(ctx context.Context, categoryID string) ([]Product, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT product_id, name, category_id, price::float8, description, created_at
-		FROM products
-		WHERE category_id = $1
-		ORDER BY created_at DESC
-	`, categoryID)
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("products").
+		Select(
+			"product_id",
+			"name",
+			"category_id",
+			goqu.L("price::float8").As("price"),
+			"description",
+			"created_at",
+		).
+		Where(goqu.C("category_id").Eq(categoryID)).
+		Order(goqu.C("created_at").Desc())
+
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -71,21 +94,29 @@ func (r *CategoryRepository) GetCategoryProducts(ctx context.Context, categoryID
 }
 
 func (r *CategoryRepository) GetHierarchy(ctx context.Context) ([]Category, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		WITH RECURSIVE category_tree AS (
-			SELECT category_id, name, parent_category_id
-			FROM categories
-			WHERE parent_category_id IS NULL
+	db := goqu.New("postgres", r.db)
 
-			UNION ALL
+	cteQuery := `WITH RECURSIVE category_tree AS (
+		SELECT category_id, name, parent_category_id
+		FROM categories
+		WHERE parent_category_id IS NULL
 
-			SELECT c.category_id, c.name, c.parent_category_id
-			FROM categories c
-			INNER JOIN category_tree ct
-			ON ct.category_id = c.parent_category_id
-		)
-		SELECT * FROM category_tree
-	`)
+		UNION ALL
+
+		SELECT c.category_id, c.name, c.parent_category_id
+		FROM categories c
+		INNER JOIN category_tree ct
+		ON ct.category_id = c.parent_category_id
+	)
+	SELECT * FROM category_tree`
+
+	subquery := db.From(goqu.L("(" + cteQuery + ")"))
+	sqlQuery, _, err := subquery.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -101,4 +132,25 @@ func (r *CategoryRepository) GetHierarchy(ctx context.Context) ([]Category, erro
 	}
 
 	return categories, nil
+}
+
+func (r *CategoryRepository) GetByID(ctx context.Context, id string) (*Category, error) {
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("categories").
+		Select("category_id", "name", "parent_category_id").
+		Where(goqu.C("category_id").Eq(id))
+
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	var category Category
+	err = r.db.QueryRowContext(ctx, sqlQuery).Scan(&category.CategoryID, &category.Name, &category.ParentCategoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &category, nil
 }

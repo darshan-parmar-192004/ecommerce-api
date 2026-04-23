@@ -3,10 +3,11 @@ package models
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/doug-martin/goqu/v9"
 )
 
 type Product struct {
@@ -27,73 +28,81 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 }
 
 func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]Product, int, error) {
-	var filters []string
-	var args []interface{}
-	argIndex := 1
+	db := goqu.New("postgres", r.db)
+
+	filters := []goqu.Expression{}
+	args := []interface{}{}
 
 	if category != "" {
-		filters = append(filters, fmt.Sprintf("category_id = $%d", argIndex))
-		args = append(args, category)
-		argIndex++
+		filters = append(filters, goqu.C("category_id").Eq(category))
 	}
 
 	if minPriceStr != "" {
 		minPrice, err := strconv.ParseFloat(minPriceStr, 64)
 		if err == nil {
-			filters = append(filters, fmt.Sprintf("price >= $%d", argIndex))
-			args = append(args, minPrice)
-			argIndex++
+			filters = append(filters, goqu.C("price").Gte(minPrice))
 		}
 	}
 
 	if maxPriceStr != "" {
 		maxPrice, err := strconv.ParseFloat(maxPriceStr, 64)
 		if err == nil {
-			filters = append(filters, fmt.Sprintf("price <= $%d", argIndex))
-			args = append(args, maxPrice)
-			argIndex++
+			filters = append(filters, goqu.C("price").Lte(maxPrice))
 		}
 	}
 
 	if search != "" {
-		filters = append(filters, fmt.Sprintf("(LOWER(name) LIKE $%d OR LOWER(description) LIKE $%d)", argIndex, argIndex+1))
 		searchPattern := "%" + strings.ToLower(search) + "%"
-		args = append(args, searchPattern, searchPattern)
-		argIndex += 2
+		filters = append(filters, goqu.Or(
+			goqu.C("name").ILike(searchPattern),
+			goqu.C("description").ILike(searchPattern),
+		))
 	}
 
-	whereClause := ""
+	countQuery := db.From("products")
 	if len(filters) > 0 {
-		whereClause = "WHERE " + strings.Join(filters, " AND ")
+		countQuery = countQuery.Where(filters...)
 	}
 
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM products %s", whereClause)
 	var totalItems int
-	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&totalItems); err != nil {
+	countSQL, _, err := countQuery.Select(goqu.COUNT("*").As("count")).ToSQL()
+	if err != nil {
+		return nil, 0, err
+	}
+	if err := r.db.QueryRowContext(ctx, countSQL, args...).Scan(&totalItems); err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * limit
 
-	query := fmt.Sprintf(`
-		SELECT product_id, name, category_id, price::float8, description, created_at
-		FROM products
-		%s
-		ORDER BY created_at DESC
-		LIMIT $%d OFFSET $%d
-	`, whereClause, argIndex, argIndex+1)
-	args = append(args, limit, offset)
+	productsQuery := db.From("products").
+		Select(
+			"product_id",
+			"name",
+			"category_id",
+			goqu.L("price::float8").As("price"),
+			"description",
+			"created_at",
+		).
+		Where(filters...).
+		Order(goqu.C("created_at").Desc()).
+		Limit(uint(limit)).
+		Offset(uint(offset))
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	sqlQuery, args, err := productsQuery.ToSQL()
+	if err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.db.QueryContext(ctx, sqlQuery, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer func() { _ = rows.Close() }()
 
 	var products []Product
-	var description sql.NullString
 	for rows.Next() {
 		var p Product
+		var description sql.NullString
 		if err := rows.Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &description, &p.CreatedAt); err != nil {
 			return nil, 0, err
 		}
@@ -107,15 +116,26 @@ func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, m
 }
 
 func (r *ProductRepository) GetByID(ctx context.Context, id string) (*Product, error) {
-	query := `
-		SELECT product_id, name, category_id, price::float8, description, created_at
-		FROM products
-		WHERE product_id = $1
-	`
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("products").
+		Select(
+			"product_id",
+			"name",
+			"category_id",
+			goqu.L("price::float8").As("price"),
+			"description",
+			"created_at",
+		).
+		Where(goqu.C("product_id").Eq(id))
 
 	var p Product
 	var description sql.NullString
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &description, &p.CreatedAt)
+	sqlQuery, args, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+	err = r.db.QueryRowContext(ctx, sqlQuery, args...).Scan(&p.ProductID, &p.Name, &p.CategoryID, &p.Price, &description, &p.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -128,31 +148,44 @@ func (r *ProductRepository) GetByID(ctx context.Context, id string) (*Product, e
 }
 
 func (r *ProductRepository) Create(ctx context.Context, product *Product) error {
-	query := `
-		INSERT INTO products (product_id, name, category_id, price, description, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`
+	db := goqu.New("postgres", r.db)
 
-	_, err := r.db.ExecContext(ctx, query, product.ProductID, product.Name, product.CategoryID, product.Price, product.Description, product.CreatedAt)
+	query := db.Insert("products").Rows(goqu.Record{
+		"product_id":  product.ProductID,
+		"name":        product.Name,
+		"category_id": product.CategoryID,
+		"price":       product.Price,
+		"description": product.Description,
+		"created_at":  product.CreatedAt,
+	})
+
+	_, err := query.Executor().ExecContext(ctx)
 	return err
 }
 
 func (r *ProductRepository) Update(ctx context.Context, id string, name, categoryID string, price float64, description *string) error {
-	query := `
-		UPDATE products
-		SET name = $1,
-		    category_id = $2,
-		    price = $3,
-		    description = $4
-		WHERE product_id = $5
-	`
+	db := goqu.New("postgres", r.db)
 
-	_, err := r.db.ExecContext(ctx, query, name, categoryID, price, description, id)
+	query := db.Update("products").
+		Set(goqu.Record{
+			"name":        name,
+			"category_id": categoryID,
+			"price":       price,
+			"description": description,
+		}).
+		Where(goqu.C("product_id").Eq(id))
+
+	_, err := query.Executor().ExecContext(ctx)
 	return err
 }
 
 func (r *ProductRepository) Delete(ctx context.Context, id string) (int64, error) {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM products WHERE product_id = $1`, id)
+	db := goqu.New("postgres", r.db)
+
+	query := db.Delete("products").
+		Where(goqu.C("product_id").Eq(id))
+
+	result, err := query.Executor().ExecContext(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -160,13 +193,33 @@ func (r *ProductRepository) Delete(ctx context.Context, id string) (int64, error
 }
 
 func (r *ProductRepository) Exists(ctx context.Context, id string) (bool, error) {
-	var exists bool
-	err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM products WHERE product_id = $1)`, id).Scan(&exists)
-	return exists, err
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("products").
+		Select(goqu.COUNT("*")).
+		Where(goqu.C("product_id").Eq(id))
+
+	var count int
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return false, err
+	}
+	err = r.db.QueryRowContext(ctx, sqlQuery).Scan(&count)
+	return count > 0, err
 }
 
 func (r *ProductRepository) GetCreatedAt(ctx context.Context, id string) (time.Time, error) {
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("products").
+		Select("created_at").
+		Where(goqu.C("product_id").Eq(id))
+
 	var createdAt time.Time
-	err := r.db.QueryRowContext(ctx, `SELECT created_at FROM products WHERE product_id = $1`, id).Scan(&createdAt)
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return createdAt, err
+	}
+	err = r.db.QueryRowContext(ctx, sqlQuery).Scan(&createdAt)
 	return createdAt, err
 }

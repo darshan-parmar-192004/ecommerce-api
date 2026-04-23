@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/doug-martin/goqu/v9"
 )
 
 type Customer struct {
@@ -26,12 +28,18 @@ func NewCustomerRepository(db *sql.DB) *CustomerRepository {
 }
 
 func (r *CustomerRepository) GetByID(ctx context.Context, customerID string) (*Customer, error) {
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("customers").
+		Select("customer_id", "email", "name", "country", "phone", "created_at", "status").
+		Where(goqu.C("customer_id").Eq(customerID))
+
 	var customer Customer
-	err := r.db.QueryRowContext(ctx, `
-		SELECT customer_id, email, name, country, phone, created_at, status
-		FROM customers
-		WHERE customer_id = $1
-	`, customerID).Scan(
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+	err = r.db.QueryRowContext(ctx, sqlQuery).Scan(
 		&customer.CustomerID,
 		&customer.Email,
 		&customer.Name,
@@ -44,12 +52,18 @@ func (r *CustomerRepository) GetByID(ctx context.Context, customerID string) (*C
 }
 
 func (r *CustomerRepository) GetByEmail(ctx context.Context, email string) (*Customer, error) {
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("customers").
+		Select("customer_id", "email", "name", "country", "phone", "created_at", "status", "password_hash").
+		Where(goqu.C("email").Eq(email))
+
 	var customer Customer
-	err := r.db.QueryRowContext(ctx, `
-		SELECT customer_id, email, name, country, phone, created_at, status, password_hash
-		FROM customers
-		WHERE email = $1
-	`, email).Scan(
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+	err = r.db.QueryRowContext(ctx, sqlQuery).Scan(
 		&customer.CustomerID,
 		&customer.Email,
 		&customer.Name,
@@ -63,31 +77,52 @@ func (r *CustomerRepository) GetByEmail(ctx context.Context, email string) (*Cus
 }
 
 func (r *CustomerRepository) Update(ctx context.Context, customerID, name, country, phone string) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE customers
-		SET name = COALESCE(NULLIF($1, ''), name),
-		    country = COALESCE(NULLIF($2, ''), country),
-		    phone = COALESCE(NULLIF($3, ''), phone)
-		WHERE customer_id = $4
-	`, name, country, phone, customerID)
+	db := goqu.New("postgres", r.db)
+
+	query := db.Update("customers").
+		Set(goqu.Record{
+			"name":    goqu.L("COALESCE(NULLIF(?, ''), name)", name),
+			"country": goqu.L("COALESCE(NULLIF(?, ''), country)", country),
+			"phone":   goqu.L("COALESCE(NULLIF(?, ''), phone)", phone),
+		}).
+		Where(goqu.C("customer_id").Eq(customerID))
+
+	_, err := query.Executor().ExecContext(ctx)
 	return err
 }
 
 func (r *CustomerRepository) Create(ctx context.Context, customerID, email, name, country, phone, passwordHash string, createdAt time.Time) error {
-	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO customers (customer_id, email, name, country, phone, created_at, status, password_hash)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`, customerID, email, name, country, phone, createdAt, "active", passwordHash)
+	db := goqu.New("postgres", r.db)
+
+	query := db.Insert("customers").Rows(goqu.Record{
+		"customer_id":   customerID,
+		"email":         email,
+		"name":          name,
+		"country":       country,
+		"phone":         phone,
+		"created_at":    createdAt,
+		"status":        "active",
+		"password_hash": passwordHash,
+	})
+
+	_, err := query.Executor().ExecContext(ctx)
 	return err
 }
 
 func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID string) ([]Order, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT order_id, customer_id, order_date, status, total_amount, shipping_address
-		FROM orders
-		WHERE customer_id = $1
-		ORDER BY order_date DESC
-	`, customerID)
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("orders").
+		Select("order_id", "customer_id", "order_date", "status", "total_amount", "shipping_address").
+		Where(goqu.C("customer_id").Eq(customerID)).
+		Order(goqu.C("order_date").Desc())
+
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, sqlQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -113,14 +148,21 @@ func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID s
 }
 
 func (r *CustomerRepository) GetCustomerLifetimeValue(ctx context.Context, customerID string) (int, float64, error) {
+	db := goqu.New("postgres", r.db)
+
+	query := db.From("orders").
+		Select(
+			goqu.COUNT("order_id"),
+			goqu.COALESCE(goqu.SUM("total_amount"), 0),
+		).
+		Where(goqu.C("customer_id").Eq(customerID))
+
 	var totalOrders int
 	var totalValue float64
-
-	err := r.db.QueryRowContext(ctx, `
-		SELECT COUNT(order_id), COALESCE(SUM(total_amount),0)
-		FROM orders
-		WHERE customer_id = $1
-	`, customerID).Scan(&totalOrders, &totalValue)
-
+	sqlQuery, _, err := query.ToSQL()
+	if err != nil {
+		return 0, 0, err
+	}
+	err = r.db.QueryRowContext(ctx, sqlQuery).Scan(&totalOrders, &totalValue)
 	return totalOrders, totalValue, err
 }
