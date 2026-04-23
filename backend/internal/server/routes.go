@@ -1,99 +1,99 @@
 package server
 
 import (
-	"backend/internal/auth"
+	"backend/internal/cache"
+	"backend/internal/constants"
 	"backend/internal/controllers"
+	"backend/internal/database"
+	"backend/internal/logger"
 	"backend/internal/middleware"
 	"backend/internal/models"
 	"backend/internal/services"
-	"backend/internal/stats"
 
 	"github.com/gofiber/fiber/v3"
-
 	"github.com/gofiber/fiber/v3/middleware/cors"
 )
 
-func (s *FiberServer) RegisterFiberRoutes() {
-
-	s.Use(middleware.RequestID())
-	s.Use(middleware.Logging())
-	s.Use(middleware.Recovery())
-	s.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowHeaders:     []string{"Accept", "Authorization", "Content-Type"},
-		AllowCredentials: false,
-		MaxAge:           300,
+func RegisterRoutes(app *fiber.App) {
+	app.Use(middleware.RequestID())
+	app.Use(middleware.Logging())
+	app.Use(middleware.Recovery())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     constants.CORSAllowOrigins,
+		AllowMethods:     constants.CORSAllowMethods,
+		AllowHeaders:     constants.CORSAllowHeaders,
+		AllowCredentials: constants.CORSAllowCredentials,
+		MaxAge:           constants.CORSMaxAge,
 	}))
 
-	// Create repositories
-	productRepo := models.NewProductRepository(s.db.DB())
-	categoryRepo := models.NewCategoryRepository(s.db.DB())
-	customerRepo := models.NewCustomerRepository(s.db.DB())
-	orderRepo := models.NewOrderRepository(s.db.DB())
-	inventoryRepo := models.NewInventoryRepository(s.db.DB())
+	db := database.New().DB()
 
-	// Create services
-	productService := services.NewProductService(productRepo, &s.cache)
-	categoryService := services.NewCategoryService(categoryRepo, &s.cache)
+	productRepo := models.NewProductRepository(db)
+	redisCache := cache.NewRedis()
+	productService := services.NewProductService(productRepo, redisCache)
+	productController := controllers.NewProductController(productService)
+
+	app.Get(constants.RouteProducts, productController.GetAll)
+	app.Get(constants.RouteProductsID, productController.GetById)
+	app.Post(constants.RouteProducts, productController.Create)
+	app.Put(constants.RouteProductsID, productController.Update)
+	app.Delete(constants.RouteProductsID, productController.Delete)
+
+	categoryRepo := models.NewCategoryRepository(db)
+	categoryService := services.NewCategoryService(categoryRepo, redisCache)
+	categoryController := controllers.NewCategoryController(categoryService)
+
+	app.Get(constants.RouteCategories, categoryController.GetAll)
+	app.Get(constants.RouteCategoriesID, categoryController.GetByID)
+	app.Get(constants.RouteCategoriesProd, categoryController.GetCategoryProducts)
+	app.Get(constants.RouteCategoriesHier, categoryController.GetHierarchy)
+
+	customerRepo := models.NewCustomerRepository(db)
 	customerService := services.NewCustomerService(customerRepo)
+	customerController := controllers.NewCustomerController(customerService)
+
+	app.Get(constants.RouteCustomersID, customerController.GetByID)
+	app.Get(constants.RouteCustomersOrd, customerController.GetCustomerOrders)
+	app.Get(constants.RouteCustomersLTV, customerController.GetCustomerLifetimeValue)
+
+	orderRepo := models.NewOrderRepository(db)
 	orderService := services.NewOrderService(orderRepo)
+	orderController := controllers.NewOrderController(orderService)
+
+	app.Post(constants.RouteOrders, orderController.CreateOrder)
+	app.Get(constants.RouteOrdersID, orderController.GetByID)
+	app.Get(constants.RouteOrdersID+"/items", orderController.GetOrderItems)
+
+	inventoryRepo := models.NewInventoryRepository(db)
 	inventoryService := services.NewInventoryService(inventoryRepo)
+	inventoryController := controllers.NewInventoryController(inventoryService)
 
-	// Create controllers
-	productCtrl := controllers.NewProductController(productService)
-	categoryCtrl := controllers.NewCategoryController(categoryService)
-	customerCtrl := controllers.NewCustomerController(customerService)
-	orderCtrl := controllers.NewOrderController(orderService)
-	inventoryCtrl := controllers.NewInventoryController(inventoryService)
-	statsHandler := stats.NewHandler()
+	app.Get(constants.RouteInventory, inventoryController.GetAll)
+	app.Get(constants.RouteInvStock, inventoryController.GetStockLevels)
+	app.Get(constants.RouteInvCLV, inventoryController.GetCustomerCLV)
+	app.Get(constants.RouteInvHier, inventoryController.GetCategoryTree)
+	app.Get(constants.RouteInvTopSell, inventoryController.GetTopSellers)
 
-	// Auth (preserved)
-	authHandler := auth.NewHandler(s.db, s.cache, s.jwtSecret)
-	authMiddleware := middleware.NewAuthMiddleware(s.jwtSecret, &s.cache)
-
-	// Product routes
-	s.Get("/products", productCtrl.GetAll)
-	s.Get("/products/:id", productCtrl.GetById)
-	s.Post("/products", authMiddleware.Authenticate, productCtrl.Create)
-	s.Put("/products/:id", authMiddleware.Authenticate, productCtrl.Update)
-	s.Delete("/products/:id", authMiddleware.Authenticate, productCtrl.Delete)
-
-	// Category routes
-	s.Get("/categories", categoryCtrl.GetAll)
-	s.Get("/categories/:id/products", categoryCtrl.GetCategoryProducts)
-	s.Get("/categories/hierarchy", categoryCtrl.GetHierarchy)
-
-	// Customer routes
-	s.Get("/customers/me", authMiddleware.Authenticate, customerCtrl.GetMe)
-	s.Put("/customers/me", authMiddleware.Authenticate, customerCtrl.UpdateMe)
-	s.Get("/customers/:id/orders", customerCtrl.GetCustomerOrders)
-	s.Get("/customers/:id/lifetime-value", customerCtrl.GetCustomerLifetimeValue)
-
-	// Order routes
-	s.Get("/orders/:id", orderCtrl.GetOrder)
-	s.Post("/orders", orderCtrl.CreateOrder)
-
-	// Inventory routes
-	s.Get("/inventory", inventoryCtrl.GetAll)
-	s.Get("/inventory/stock", inventoryCtrl.GetStockLevels)
-	s.Get("/inventory/customer-lifetime-value", inventoryCtrl.GetCustomerCLV)
-	s.Get("/inventory/hierarchy", inventoryCtrl.GetCategoryTree)
-	s.Get("/inventory/top-sellers", inventoryCtrl.GetTopSellers)
-
-	// Stats routes
-	s.Get("/stats/cache", statsHandler.CacheStats)
-
-	// Auth routes
-	s.Post("/auth/register", authHandler.Register)
-	s.Post("/auth/login", authHandler.Login)
-	s.Post("/auth/logout", authHandler.Logout)
-	s.Get("/auth/me", authMiddleware.Authenticate, authHandler.ValidateToken)
-
-	// Health check
-	s.Get("/health", func(c fiber.Ctx) error {
+	app.Get(constants.RouteHealth, func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"status": "ok",
+			constants.JSONFieldStatus: constants.ResponseStatusOK,
 		})
 	})
+
+	app.Get(constants.RouteStatsCache, func(c fiber.Ctx) error {
+		hits, misses, _ := cache.GetStats()
+		total := hits + misses
+		var hitRate float64
+		if total > 0 {
+			hitRate = float64(hits) / float64(total)
+		}
+		return c.JSON(fiber.Map{
+			"hits":     hits,
+			"misses":   misses,
+			"hit_rate": hitRate,
+			"total":    total,
+		})
+	})
+
+	logger.Log.Infof("Routes registered successfully")
 }

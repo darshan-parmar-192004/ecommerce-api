@@ -8,8 +8,11 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
-	"time"
+
+	"backend/internal/config"
+	"backend/internal/constants"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -28,29 +31,19 @@ func main() {
 
 	dsn := buildDSN()
 
-	var db *sql.DB
-	var err error
-
-	log.Println("Connecting to database...")
-	for i := 0; i < 10; i++ { // Try 10 times
-		db, err = sql.Open("pgx", dsn)
-		if err == nil {
-			err = db.Ping()
-		}
-
-		if err == nil {
-			log.Println("Database connection established!")
-			break
-		}
-
-		log.Printf("Database not ready (attempt %d/10): %v. Retrying in 2s...", i+1, err)
-		time.Sleep(2 * time.Second)
-	}
-
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		log.Fatalf("could not connect to database after retries: %v", err)
+		log.Fatalf("failed to open database: %v", err)
 	}
-	defer func() { _ = db.Close() }()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Warning: failed to close database: %v", err)
+		}
+	}()
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("failed to ping database: %v", err)
+	}
 
 	m, err := migrate.New(
 		"file://migrations",
@@ -103,7 +96,7 @@ func main() {
 		}
 		var version int
 		if _, err := fmt.Sscanf(args[1], "%d", &version); err != nil {
-			log.Fatalf("invalid version: %v", err)
+			log.Fatalf("failed to parse version: %v", err)
 		}
 		if err := m.Force(version); err != nil {
 			log.Fatalf("force failed: %v", err)
@@ -117,17 +110,11 @@ func main() {
 }
 
 func buildDSN() string {
-	dsn := os.Getenv("BLUEPRINT_DB_DSN")
-	if dsn == "" {
-		dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-			os.Getenv("BLUEPRINT_DB_USERNAME"),
-			os.Getenv("BLUEPRINT_DB_PASSWORD"),
-			os.Getenv("BLUEPRINT_DB_HOST"),
-			os.Getenv("BLUEPRINT_DB_PORT"),
-			os.Getenv("BLUEPRINT_DB_DATABASE"),
-		)
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
 	}
-	return dsn
+	return cfg.GetDSN()
 }
 
 func SeedDatabase(dsn string) error {
@@ -135,7 +122,11 @@ func SeedDatabase(dsn string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %v", err)
 	}
-	defer func() { _ = db.Close() }()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("Warning: failed to close database: %v", err)
+		}
+	}()
 
 	var count int
 	err = db.QueryRow("SELECT COUNT(*) FROM categories").Scan(&count)
@@ -154,7 +145,11 @@ func SeedDatabase(dsn string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect with pgx: %v", err)
 	}
-	defer func() { _ = conn.Close(context.Background()) }()
+	defer func() {
+		if err := conn.Close(context.Background()); err != nil {
+			log.Printf("Warning: failed to close connection: %v", err)
+		}
+	}()
 
 	log.Println("Dropping all constraints for seeding...")
 	dropAllConstraints(db)
@@ -166,32 +161,32 @@ func SeedDatabase(dsn string) error {
 	}{
 		{
 			table:   "categories",
-			csvPath: "/app/datasets/ecommerce/categories.csv",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVCategories),
 			columns: []string{"category_id", "name", "parent_category_id"},
 		},
 		{
 			table:   "customers",
-			csvPath: "/app/datasets/ecommerce/customers.csv",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVCustomers),
 			columns: []string{"customer_id", "email", "name", "country", "phone", "created_at", "status"},
 		},
 		{
 			table:   "products",
-			csvPath: "/app/datasets/ecommerce/products.csv",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVProductsPath),
 			columns: []string{"product_id", "name", "category_id", "price", "description", "created_at"},
 		},
 		{
 			table:   "inventory",
-			csvPath: "/app/datasets/ecommerce/inventory.csv",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVInventory),
 			columns: []string{"product_id", "warehouse_id", "quantity", "last_updated"},
 		},
 		{
 			table:   "orders",
-			csvPath: "/app/datasets/ecommerce/orders.csv",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVOrders),
 			columns: []string{"order_id", "customer_id", "order_date", "status", "total_amount", "shipping_address"},
 		},
 		{
 			table:   "order_items",
-			csvPath: "/app/datasets/ecommerce/order_items.csv",
+			csvPath: filepath.Join(constants.CSVDockerPath, constants.CSVOrderItems),
 			columns: []string{"order_item_id", "order_id", "product_id", "quantity", "unit_price"},
 		},
 	}
@@ -204,7 +199,9 @@ func SeedDatabase(dsn string) error {
 		}
 
 		count, err := copyFromCSVText(conn, sf.table, sf.columns, file)
-		_ = file.Close()
+		if err := file.Close(); err != nil {
+			log.Printf("Warning: failed to close file: %v", err)
+		}
 		if err != nil {
 			log.Printf("Warning: failed to seed %s: %v", sf.table, err)
 			continue
@@ -233,7 +230,7 @@ func dropAllConstraints(db *sql.DB) {
 	}
 	for _, c := range constraints {
 		if _, err := db.Exec(c); err != nil {
-			log.Printf("Warning: failed to drop constraint: %v", err)
+			log.Printf("Warning: failed to execute query: %v", err)
 		}
 	}
 }
