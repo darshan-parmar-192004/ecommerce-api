@@ -1,150 +1,97 @@
 package services
 
 import (
-	"backend/internal/models"
-	"encoding/csv"
-	"os"
+	"context"
+	"fmt"
+	"regexp"
 	"time"
 
-	"github.com/jszwec/csvutil"
+	"backend/internal/models"
 )
 
+var categoryPattern = regexp.MustCompile(`^CAT-[a-f0-9]{8}$`)
+
 type ProductService struct {
-	Products           map[string]models.Product
-	DisablePersistance bool
+	repo *models.ProductRepository
 }
 
-func NewProductService() *ProductService {
-	return &ProductService{
-		Products: make(map[string]models.Product),
-	}
+func NewProductService(repo *models.ProductRepository) *ProductService {
+	return &ProductService{repo: repo}
 }
 
-func (s *ProductService) LoadCSV(path string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = file.Close() }()
-
-	dec, err := csvutil.NewDecoder(csv.NewReader(file))
-	if err != nil {
-		return err
-	}
-
-	for {
-		var p ProductRow
-		if err := dec.Decode(&p); err != nil {
-			break
-		}
-		product := models.Product{
-			ProductID:   p.ProductID,
-			Name:        p.Name,
-			CategoryID:  p.CategoryID,
-			Price:       p.Price,
-			Description: p.Description,
-			CreatedAt:   time.Now(),
-		}
-		s.Products[product.ProductID] = product
-	}
-	return nil
+type ProductInput struct {
+	Name        string  `json:"name"`
+	CategoryID  string  `json:"category_id"`
+	Price       float64 `json:"price"`
+	Description string  `json:"description"`
 }
 
-type ProductRow struct {
-	ProductID   string  `csv:"product_id"`
-	Name        string  `csv:"name"`
-	CategoryID  string  `csv:"category_id"`
-	Price       float64 `csv:"price"`
-	Description string  `csv:"description"`
-	CreatedAt   string  `csv:"created_at"`
+type ValidationResult struct {
+	Errors map[string]interface{}
+	Status int
+	Code   string
 }
 
-type ProductCSVRow struct {
-	ProductID   string  `csv:"product_id"`
-	Name        string  `csv:"name"`
-	CategoryID  string  `csv:"category_id"`
-	Price       float64 `csv:"price"`
-	Description string  `csv:"description"`
-	CreatedAt   string  `csv:"created_at"`
-}
+func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResult {
+	errors := make(map[string]interface{})
 
-func (s *ProductService) AppendToCSV(path string, product models.Product) error {
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = file.Close() }()
-
-	enc := csvutil.NewEncoder(csv.NewWriter(file))
-	csvRow := ProductCSVRow{
-		ProductID:   product.ProductID,
-		Name:        product.Name,
-		CategoryID:  product.CategoryID,
-		Price:       product.Price,
-		Description: product.Description,
-		CreatedAt:   product.CreatedAt.Format(time.RFC3339),
+	if input.Name == "" {
+		errors["name"] = "Name is required cannot be empty"
+	} else if len(input.Name) > 200 {
+		errors["name"] = "Name must not exceed 200 characters"
 	}
 
-	if err := enc.Encode(csvRow); err != nil {
-		return err
+	if input.Price == 0 {
+		errors["price"] = "Price is required"
+	} else if input.Price <= 0 {
+		errors["price"] = "Price must not be negative or greater than 0"
 	}
 
-	return nil
-}
-
-func (s *ProductService) RewriteCSV(path string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = file.Close() }()
-
-	enc := csvutil.NewEncoder(csv.NewWriter(file))
-
-	header := []string{"product_id", "name", "category_id", "price", "description", "created_at"}
-	if err := enc.Encode(header); err != nil {
-		return err
+	if input.CategoryID == "" {
+		errors["category_id"] = "Category id is required"
+	} else if !categoryPattern.MatchString(input.CategoryID) {
+		errors["category_id"] = "Category id must match CAT-xxxxxxxx format"
 	}
 
-	for _, p := range s.Products {
-		csvRow := ProductCSVRow{
-			ProductID:   p.ProductID,
-			Name:        p.Name,
-			CategoryID:  p.CategoryID,
-			Price:       p.Price,
-			Description: p.Description,
-			CreatedAt:   p.CreatedAt.Format(time.RFC3339),
-		}
+	if len(input.Description) > 500 {
+		errors["description"] = "Description must not exceed 500 characters"
+	}
 
-		if err := enc.Encode(csvRow); err != nil {
-			return err
+	if len(errors) > 0 {
+		return ValidationResult{
+			Errors: errors,
+			Status: 422,
+			Code:   "VALIDATION_FAILED",
 		}
 	}
 
-	return nil
+	return ValidationResult{Errors: nil}
 }
 
-func (s *ProductService) GetAll() []models.Product {
-	list := []models.Product{}
-	for _, p := range s.Products {
-		list = append(list, p)
-	}
-	return list
+func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]map[string]interface{}, map[string]interface{}, error) {
+	return s.repo.GetAll(ctx, category, minPriceStr, maxPriceStr, search, page, limit)
 }
 
-func (s *ProductService) GetByID(id string) (models.Product, bool) {
-	product, exists := s.Products[id]
-	return product, exists
+func (s *ProductService) GetByID(ctx context.Context, id string) (map[string]interface{}, error) {
+	return s.repo.GetByID(ctx, id)
 }
 
-func (s *ProductService) Create(product models.Product) {
-	s.Products[product.ProductID] = product
+func (s *ProductService) Create(ctx context.Context, productID string, input ProductInput) (map[string]interface{}, error) {
+	return s.repo.Create(ctx, productID, input.Name, input.CategoryID, input.Price, input.Description, time.Now())
 }
 
-func (s *ProductService) Update(id string, product models.Product) {
-	s.Products[id] = product
+func (s *ProductService) Update(ctx context.Context, id string, input ProductInput) (map[string]interface{}, error) {
+	return s.repo.Update(ctx, id, input.Name, input.CategoryID, input.Price, input.Description)
 }
 
-func (s *ProductService) Delete(id string) {
-	delete(s.Products, id)
+func (s *ProductService) Delete(ctx context.Context, id string) error {
+	return s.repo.Delete(ctx, id)
+}
+
+func (s *ProductService) Exists(ctx context.Context, id string) (bool, error) {
+	return s.repo.Exists(ctx, id)
+}
+
+func (s *ProductService) GenerateProductID() string {
+	return fmt.Sprintf("PROD-%x", time.Now().UnixNano())[:16]
 }
