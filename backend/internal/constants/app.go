@@ -6,6 +6,13 @@ const (
 	DefaultLimit = 10
 	MaxLimit     = 100
 
+	// Database pool health thresholds
+	DBPoolMaxConnectionsThreshold = 40
+	DBPoolWaitCountThreshold      = 1000
+
+	// File permissions
+	FilePermissionReadWrite = 0644
+
 	ResponseStatusOK   = "ok"
 	ResponseStatusUp   = "up"
 	ResponseStatusDown = "down"
@@ -49,7 +56,12 @@ const (
 	ProductIDPrefix = "PROD-"
 	ProductIDFormat = "%08d"
 
-	CSVProductsPath = "./internal/datasets/ecommerce/products.csv"
+	CSVProductsPath   = "./datasets/ecommerce/products.csv"
+	CSVCategoriesPath = "./datasets/ecommerce/categories.csv"
+	CSVCustomersPath  = "./datasets/ecommerce/customers.csv"
+	CSVInventoryPath  = "./datasets/ecommerce/inventory.csv"
+	CSVOrdersPath     = "./datasets/ecommerce/orders.csv"
+	CSVOrderItemsPath = "./datasets/ecommerce/order_items.csv"
 
 	ErrInternalServer = "internal_server_error"
 	MsgSomethingWrong = "Something went wrong"
@@ -62,19 +74,21 @@ const (
 	DBMaxIdleConns    = 5
 	DBConnMaxLifetime = 30
 
+	RouteParamID = ":id"
+
 	RouteProducts       = "/products"
-	RouteProductsID     = "/products/:id"
+	RouteProductsID     = "/products/" + RouteParamID
 	RouteHealth         = "/health"
 	RouteCategories     = "/categories"
-	RouteCategoriesID   = "/categories/:id"
-	RouteCategoriesProd = "/categories/:id/products"
+	RouteCategoriesID   = "/categories/" + RouteParamID
+	RouteCategoriesProd = "/categories/" + RouteParamID + "/products"
 	RouteCategoriesHier = "/categories/hierarchy"
 	RouteCustomers      = "/customers"
-	RouteCustomersID    = "/customers/:id"
-	RouteCustomersOrd   = "/customers/:id/orders"
-	RouteCustomersLTV   = "/customers/:id/lifetime-value"
+	RouteCustomersID    = "/customers/" + RouteParamID
+	RouteCustomersOrd   = "/customers/" + RouteParamID + "/orders"
+	RouteCustomersLTV   = "/customers/" + RouteParamID + "/lifetime-value"
 	RouteOrders         = "/orders"
-	RouteOrdersID       = "/orders/:id"
+	RouteOrdersID       = "/orders/" + RouteParamID
 	RouteInventory      = "/inventory"
 	RouteInvStock       = "/inventory/stock"
 	RouteInvCLV         = "/inventory/customer-lifetime-value"

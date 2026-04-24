@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"time"
 
+	"backend/internal/config"
+	"backend/internal/constants"
+
+	"github.com/doug-martin/goqu/v9"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -25,31 +28,33 @@ type Service interface {
 }
 
 type service struct {
-	db *sql.DB
+	db     *sql.DB
+	gdb    *goqu.Database
+	dbName string
 }
 
 var (
-	database   = os.Getenv("BLUEPRINT_DB_DATABASE")
-	password   = os.Getenv("BLUEPRINT_DB_PASSWORD")
-	username   = os.Getenv("BLUEPRINT_DB_USERNAME")
-	port       = os.Getenv("BLUEPRINT_DB_PORT")
-	host       = os.Getenv("BLUEPRINT_DB_HOST")
-	schema     = os.Getenv("BLUEPRINT_DB_SCHEMA")
 	dbInstance *service
 )
 
-func New() Service {
+func New(cfg *config.AppConfig) Service {
 	// Reuse Connection
 	if dbInstance != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
-	db, err := sql.Open("pgx", connStr)
+
+	connStr := cfg.GetDSN()
+	sqlDB, err := sql.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Initialize goqu ORM with dialect from config (default "postgres")
+	gdb := goqu.New(cfg.DBDialect, sqlDB)
+
 	dbInstance = &service{
-		db: db,
+		db:     sqlDB,
+		gdb:    gdb,
+		dbName: cfg.DBName,
 	}
 	return dbInstance
 }
@@ -73,7 +78,7 @@ func (s *service) Health() map[string]string {
 
 	// Database is up, add more statistics
 	stats["status"] = "up"
-	stats["message"] = "It's healthy"
+	stats["message"] = constants.HealthDBUp
 
 	// Get database stats (like open connections, in use, idle, etc.)
 	dbStats := s.db.Stats()
@@ -86,20 +91,20 @@ func (s *service) Health() map[string]string {
 	stats["max_lifetime_closed"] = strconv.FormatInt(dbStats.MaxLifetimeClosed, 10)
 
 	// Evaluate stats to provide a health message
-	if dbStats.OpenConnections > 40 { // Assuming 50 is the max for this example
-		stats["message"] = "The database is experiencing heavy load."
+	if dbStats.OpenConnections > constants.DBPoolMaxConnectionsThreshold {
+		stats["message"] = constants.HealthDBHeavyLoad
 	}
 
-	if dbStats.WaitCount > 1000 {
-		stats["message"] = "The database has a high number of wait events, indicating potential bottlenecks."
+	if dbStats.WaitCount > constants.DBPoolWaitCountThreshold {
+		stats["message"] = constants.HealthDBHighWaits
 	}
 
 	if dbStats.MaxIdleClosed > int64(dbStats.OpenConnections)/2 {
-		stats["message"] = "Many idle connections are being closed, consider revising the connection pool settings."
+		stats["message"] = constants.HealthDBIdleClosing
 	}
 
 	if dbStats.MaxLifetimeClosed > int64(dbStats.OpenConnections)/2 {
-		stats["message"] = "Many connections are being closed due to max lifetime, consider increasing max lifetime or revising the connection usage pattern."
+		stats["message"] = constants.HealthDBLifetimeClose
 	}
 
 	return stats
@@ -110,6 +115,6 @@ func (s *service) Health() map[string]string {
 // If the connection is successfully closed, it returns nil.
 // If an error occurs while closing the connection, it returns the error.
 func (s *service) Close() error {
-	log.Printf("Disconnected from database: %s", database)
+	log.Printf("Disconnected from database: %s", s.dbName)
 	return s.db.Close()
 }

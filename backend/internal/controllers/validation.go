@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"backend/internal/constants"
 	"backend/internal/models"
 	"regexp"
 
@@ -36,7 +37,7 @@ func validateProductInput(p models.Product) (map[string]interface{}, int, string
 	}
 
 	if len(errors) > 0 {
-		return errors, fiber.StatusUnprocessableEntity, ErrValidationFailed
+		return errors, fiber.StatusUnprocessableEntity, constants.ErrValidationFailed
 	}
 
 	return nil, 0, ""

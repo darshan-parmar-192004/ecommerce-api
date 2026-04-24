@@ -1,8 +1,8 @@
 package server
 
 import (
+	"backend/internal/config"
 	"backend/internal/database"
-	"backend/internal/views"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -13,17 +13,17 @@ type FiberServer struct {
 	db database.Service
 }
 
-func New() *FiberServer {
+func New(cfg *config.AppConfig) *FiberServer {
 	server := &FiberServer{
 		App: fiber.New(fiber.Config{
 			ServerHeader: "backend",
 			AppName:      "backend",
 		}),
 
-		db: database.New(),
+		db: database.New(cfg),
 	}
 
-	views.RegisterRoutes(server.App)
+	RegisterRoutes(server.App)
 
 	return server
 }

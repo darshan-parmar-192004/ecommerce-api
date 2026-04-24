@@ -10,14 +10,15 @@ import (
 )
 
 type AppConfig struct {
-	Port      int    `envconfig:"BLUEPRINT_PORT" default:"8080"`
-	DBHost    string `envconfig:"BLUEPRINT_DB_HOST"`
-	DBPort    string `envconfig:"BLUEPRINT_DB_PORT" default:"5432"`
-	DBName    string `envconfig:"BLUEPRINT_DB_DATABASE"`
-	DBUser    string `envconfig:"BLUEPRINT_DB_USERNAME"`
-	DBPass    string `envconfig:"BLUEPRINT_DB_PASSWORD"`
-	DBSchema  string `envconfig:"BLUEPRINT_DB_SCHEMA" default:"public"`
-	DBDialect string `envconfig:"BLUEPRINT_DB_DIALECT" default:"pgx"`
+	Port         int    `envconfig:"BLUEPRINT_PORT" default:"8080"`
+	DBHost       string `envconfig:"BLUEPRINT_DB_HOST"`
+	DBPort       string `envconfig:"BLUEPRINT_DB_PORT" default:"5432"`
+	DBName       string `envconfig:"BLUEPRINT_DB_DATABASE"`
+	DBUser       string `envconfig:"BLUEPRINT_DB_USERNAME"`
+	DBPass       string `envconfig:"BLUEPRINT_DB_PASSWORD"`
+	DBSchema     string `envconfig:"BLUEPRINT_DB_SCHEMA" default:"public"`
+	DBDialect    string `envconfig:"BLUEPRINT_DB_DIALECT" default:"postgres"`
+	MigrationDir string `envconfig:"BLUEPRINT_MIGRATION_DIR" default:"migrations"`
 }
 
 var cfg *AppConfig
@@ -39,11 +40,8 @@ func Load() (*AppConfig, error) {
 	if cfg.Port == 0 {
 		cfg.Port = constants.DefaultPort
 	}
-	if cfg.DBSchema == "" {
-		cfg.DBSchema = "public"
-	}
-	if cfg.DBDialect == "" {
-		cfg.DBDialect = "pgx"
+	if cfg.MigrationDir == "" {
+		cfg.MigrationDir = "migrations"
 	}
 
 	return cfg, nil

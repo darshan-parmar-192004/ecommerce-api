@@ -1,13 +1,12 @@
 package main
 
 import (
+	"backend/internal/config"
 	"backend/internal/server"
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -41,16 +40,18 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 
 func main() {
 
-	server := server.New()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	server := server.New(cfg)
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)
 
 	go func() {
-		port, _ := strconv.Atoi(os.Getenv("PORT"))
-		if port == 0 {
-			port = 8080
-		}
+		port := cfg.Port
 		err := server.Listen(fmt.Sprintf(":%d", port))
 		if err != nil {
 			panic(fmt.Sprintf("http server error: %s", err))

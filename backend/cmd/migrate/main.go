@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"backend/internal/config"
+	"backend/internal/constants"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -27,20 +28,15 @@ func main() {
 		log.Fatal("usage: migrate <command>")
 	}
 
-	dsn := buildDSN()
-
-	db, err := sql.Open("pgx", dsn)
+	// Load config
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
+		log.Fatalf("failed to load config: %v", err)
 	}
-	defer func() { _ = db.Close() }()
-
-	if err := db.Ping(); err != nil {
-		log.Fatalf("failed to ping database: %v", err)
-	}
+	dsn := cfg.GetDSN()
 
 	m, err := migrate.New(
-		"file://migrations",
+		"file://"+cfg.MigrationDir,
 		dsn,
 	)
 	if err != nil {
@@ -103,14 +99,6 @@ func main() {
 	log.Printf("Command '%s' completed successfully", command)
 }
 
-func buildDSN() string {
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
-	}
-	return cfg.GetDSN()
-}
-
 func SeedDatabase(dsn string) error {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
@@ -147,32 +135,32 @@ func SeedDatabase(dsn string) error {
 	}{
 		{
 			table:   "categories",
-			csvPath: "/app/datasets/ecommerce/categories.csv",
+			csvPath: constants.CSVCategoriesPath,
 			columns: []string{"category_id", "name", "parent_category_id"},
 		},
 		{
 			table:   "customers",
-			csvPath: "/app/datasets/ecommerce/customers.csv",
+			csvPath: constants.CSVCustomersPath,
 			columns: []string{"customer_id", "email", "name", "country", "phone", "created_at", "status"},
 		},
 		{
 			table:   "products",
-			csvPath: "/app/datasets/ecommerce/products.csv",
+			csvPath: constants.CSVProductsPath,
 			columns: []string{"product_id", "name", "category_id", "price", "description", "created_at"},
 		},
 		{
 			table:   "inventory",
-			csvPath: "/app/datasets/ecommerce/inventory.csv",
+			csvPath: constants.CSVInventoryPath,
 			columns: []string{"product_id", "warehouse_id", "quantity", "last_updated"},
 		},
 		{
 			table:   "orders",
-			csvPath: "/app/datasets/ecommerce/orders.csv",
+			csvPath: constants.CSVOrdersPath,
 			columns: []string{"order_id", "customer_id", "order_date", "status", "total_amount", "shipping_address"},
 		},
 		{
 			table:   "order_items",
-			csvPath: "/app/datasets/ecommerce/order_items.csv",
+			csvPath: constants.CSVOrderItemsPath,
 			columns: []string{"order_item_id", "order_id", "product_id", "quantity", "unit_price"},
 		},
 	}

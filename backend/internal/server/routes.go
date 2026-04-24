@@ -1,6 +1,7 @@
-package views
+package server
 
 import (
+	"backend/internal/constants"
 	"backend/internal/controllers"
 	"backend/internal/middleware"
 	"backend/internal/services"
@@ -25,17 +26,17 @@ func RegisterRoutes(app *fiber.App) {
 	}))
 
 	productService := services.NewProductService()
-	err := productService.LoadCSV("./datasets/ecommerce/products.csv")
+	err := productService.LoadCSV(constants.CSVProductsPath)
 	if err != nil {
 		log.Fatalf("failed to load csv: %v", err)
 	}
 	productController := controllers.NewProductController(productService)
 
-	app.Get("/products", productController.GetAll)
-	app.Get("/products/:id", productController.GetById)
-	app.Post("/products", productController.Create)
-	app.Put("/products/:id", productController.Update)
-	app.Delete("/products/:id", productController.Delete)
+	app.Get(constants.RouteProducts, productController.GetAll)
+	app.Get(constants.RouteProductsID, productController.GetById)
+	app.Post(constants.RouteProducts, productController.Create)
+	app.Put(constants.RouteProductsID, productController.Update)
+	app.Delete(constants.RouteProductsID, productController.Delete)
 	app.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"status": "ok",

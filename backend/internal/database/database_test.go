@@ -6,10 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"backend/internal/config"
+	"backend/internal/constants"
+
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+var testCfg *config.AppConfig
 
 func mustStartPostgresContainer() (func(context.Context, ...testcontainers.TerminateOption) error, error) {
 	var (
@@ -25,16 +30,12 @@ func mustStartPostgresContainer() (func(context.Context, ...testcontainers.Termi
 		postgres.WithUsername(dbUser),
 		postgres.WithPassword(dbPwd),
 		testcontainers.WithWaitStrategy(
-    wait.ForListeningPort("5432/tcp").
-        WithStartupTimeout(10*time.Second)),
+			wait.ForListeningPort("5432/tcp").
+				WithStartupTimeout(10*time.Second)),
 	)
 	if err != nil {
 		return nil, err
 	}
-
-	database = dbName
-	password = dbPwd
-	username = dbUser
 
 	dbHost, err := dbContainer.Host(context.Background())
 	if err != nil {
@@ -46,8 +47,17 @@ func mustStartPostgresContainer() (func(context.Context, ...testcontainers.Termi
 		return dbContainer.Terminate, err
 	}
 
-	host = dbHost
-	port = dbPort.Port()
+	// Build test config
+	testCfg = &config.AppConfig{
+		Port:      8080,
+		DBHost:    dbHost,
+		DBPort:    dbPort.Port(),
+		DBName:    dbName,
+		DBUser:    dbUser,
+		DBPass:    dbPwd,
+		DBSchema:  "public",
+		DBDialect: "postgres",
+	}
 
 	return dbContainer.Terminate, err
 }
@@ -66,14 +76,14 @@ func TestMain(m *testing.M) {
 }
 
 func TestNew(t *testing.T) {
-	srv := New()
+	srv := New(testCfg)
 	if srv == nil {
 		t.Fatal("New() returned nil")
 	}
 }
 
 func TestHealth(t *testing.T) {
-	srv := New()
+	srv := New(testCfg)
 
 	stats := srv.Health()
 
@@ -85,13 +95,13 @@ func TestHealth(t *testing.T) {
 		t.Fatalf("expected error not to be present")
 	}
 
-	if stats["message"] != "It's healthy" {
-		t.Fatalf("expected message to be 'It's healthy', got %s", stats["message"])
+	if stats["message"] != constants.HealthDBUp {
+		t.Fatalf("expected message to be '%s', got %s", constants.HealthDBUp, stats["message"])
 	}
 }
 
 func TestClose(t *testing.T) {
-	srv := New()
+	srv := New(testCfg)
 
 	if srv.Close() != nil {
 		t.Fatalf("expected Close() to return nil")
