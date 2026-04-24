@@ -4,6 +4,7 @@ import (
 	"backend/internal/constants"
 	"backend/internal/models"
 	"backend/internal/services"
+	"backend/internal/utils"
 	"fmt"
 	"math/rand/v2"
 	"strconv"
@@ -41,7 +42,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 	if pageStr != "" {
 		page, err = strconv.Atoi(pageStr)
 		if err != nil || page < 1 {
-			return sendError(
+			return utils.SendError(
 				c,
 				fiber.StatusBadRequest,
 				constants.ErrInvalidInput,
@@ -56,7 +57,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 		limit, err = strconv.Atoi(limitStr)
 
 		if err != nil || limit < 1 {
-			return sendError(
+			return utils.SendError(
 				c,
 				fiber.StatusBadRequest,
 				constants.ErrInvalidInput,
@@ -75,7 +76,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 	if MinPriceStr != "" {
 		minPrice, err = strconv.ParseFloat(MinPriceStr, 64)
 		if err != nil {
-			return sendError(
+			return utils.SendError(
 				c,
 				fiber.StatusBadRequest,
 				constants.ErrInvalidInput,
@@ -88,7 +89,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 	if MaxPriceStr != "" {
 		maxPrice, err = strconv.ParseFloat(MaxPriceStr, 64)
 		if err != nil {
-			return sendError(
+			return utils.SendError(
 				c,
 				fiber.StatusBadRequest,
 				constants.ErrInvalidInput,
@@ -99,7 +100,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 	}
 
 	if MinPriceStr != "" && MaxPriceStr != "" && minPrice > maxPrice {
-		return sendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
 			constants.ErrInvalidInput,
@@ -141,7 +142,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 	totalPages := (totalItems + limit - 1) / limit
 
 	if page > totalPages && totalItems > 0 {
-		return sendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
 			constants.ErrInvalidInput,
@@ -179,7 +180,7 @@ func (h *ProductController) GetById(c fiber.Ctx) error {
 
 	product, exists := h.Service.GetByID(id)
 	if !exists {
-		return sendError(
+		return utils.SendError(
 			c,
 			fiber.StatusNotFound,
 			constants.ErrProductNotFound,
@@ -199,7 +200,7 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 	var product models.Product
 
 	if err := c.Bind().Body(&product); err != nil {
-		return sendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
 			constants.ErrInvalidInput,
@@ -212,7 +213,7 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 	product.CreatedAt = time.Now()
 
 	if validationErrors, status, code := validateProductInput(product); validationErrors != nil {
-		return sendError(
+		return utils.SendError(
 			c,
 			status,
 			code,
@@ -226,7 +227,7 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 	if !h.Service.Store.DisablePersistance {
 		err := h.Service.AppendToCSV(constants.CSVProductsPath, product)
 		if err != nil {
-			return sendError(
+			return utils.SendError(
 				c,
 				fiber.StatusInternalServerError,
 				constants.ErrInternal,
@@ -245,7 +246,7 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 	var input models.Product
 
 	if err := c.Bind().Body(&input); err != nil {
-		return sendError(
+		return utils.SendError(
 			c,
 			fiber.StatusBadRequest,
 			constants.ErrInvalidInput,
@@ -256,7 +257,7 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 
 	existing, exists := h.Service.GetByID(id)
 	if !exists {
-		return sendError(
+		return utils.SendError(
 			c,
 			fiber.StatusNotFound,
 			constants.ErrProductNotFound,
@@ -266,7 +267,7 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 	}
 
 	if validationErrors, status, code := validateProductInput(input); validationErrors != nil {
-		return sendError(
+		return utils.SendError(
 			c,
 			status,
 			code,
@@ -289,7 +290,7 @@ func (h *ProductController) Delete(c fiber.Ctx) error {
 
 	_, exists := h.Service.GetByID(id)
 	if !exists {
-		return sendError(
+		return utils.SendError(
 			c,
 			fiber.StatusNotFound,
 			constants.ErrProductNotFound,
@@ -304,7 +305,7 @@ func (h *ProductController) Delete(c fiber.Ctx) error {
 	logger.Log.Info("Map size before delete:", len(h.Service.Store.Products))
 	err := h.Service.RewriteCSV(constants.CSVProductsPath)
 	if err != nil {
-		return sendError(
+		return utils.SendError(
 			c,
 			fiber.StatusInternalServerError,
 			constants.ErrInternal,

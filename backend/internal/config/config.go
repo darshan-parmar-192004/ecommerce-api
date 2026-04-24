@@ -1,75 +1,75 @@
 package config
 
 import (
-	"backend/internal/constants"
+	"fmt"
 	"os"
 	"strconv"
 
+	"backend/internal/constants"
 	"github.com/joho/godotenv"
+	"github.com/kelseyhightower/envconfig"
 )
 
 type AppConfig struct {
-	Port     int    `envconfig:"APP_PORT"`
-	DBHost   string `envconfig:"APP_DB_HOST"`
-	DBPort   string `envconfig:"APP_DB_PORT"`
-	DBName   string `envconfig:"APP_DB_NAME"`
-	DBUser   string `envconfig:"APP_DB_USER"`
-	DBPass   string `envconfig:"APP_DB_PASS"`
-	DBSchema string `envconfig:"APP_DB_SCHEMA"`
+	Port int      `envconfig:"APP_PORT"`
+	DB   DBConfig `envconfig:"-"`
 }
 
+type DBConfig struct {
+	Host     string `envconfig:"DB_HOST"`
+	Port     string `envconfig:"DB_PORT"`
+	Username string `envconfig:"DB_USERNAME"`
+	Password string `envconfig:"DB_PASSWORD"`
+	DBName   string `envconfig:"DB_NAME"`
+	Schema   string `envconfig:"DB_SCHEMA"`
+}
+
+// Load loads configuration from .env file or OS environment using envconfig
 func Load() (*AppConfig, error) {
 	_ = godotenv.Load()
 
-	cfg := &AppConfig{
-		Port:     constants.DefaultPort,
-		DBSchema: "public",
+	var cfg AppConfig
+
+	// envconfig automatically maps environment variables to struct fields
+	err := envconfig.Process("", &cfg)
+	if err != nil {
+		return nil, fmt.Errorf("config error: %w", err)
 	}
 
-	if v := os.Getenv("APP_PORT"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil {
-			cfg.Port = p
-		}
-	}
-	if v := os.Getenv("APP_DB_HOST"); v != "" {
-		cfg.DBHost = v
-	}
-	if v := os.Getenv("APP_DB_PORT"); v != "" {
-		cfg.DBPort = v
-	}
-	if v := os.Getenv("APP_DB_NAME"); v != "" {
-		cfg.DBName = v
-	}
-	if v := os.Getenv("APP_DB_USER"); v != "" {
-		cfg.DBUser = v
-	}
-	if v := os.Getenv("APP_DB_PASS"); v != "" {
-		cfg.DBPass = v
-	}
-	if v := os.Getenv("APP_DB_SCHEMA"); v != "" {
-		cfg.DBSchema = v
+	if cfg.Port == 0 {
+		cfg.Port = constants.DefaultPort
 	}
 
-	return cfg, nil
+	if cfg.DB.Schema == "" {
+		cfg.DB.Schema = "public"
+	}
+
+	return &cfg, nil
 }
 
 func LoadTest(dbHost, dbPort, dbName, dbUser, dbPwd string) (*AppConfig, error) {
 	return &AppConfig{
-		Port:     constants.DefaultPort,
-		DBHost:   dbHost,
-		DBPort:   dbPort,
-		DBName:   dbName,
-		DBUser:   dbUser,
-		DBPass:   dbPwd,
-		DBSchema: "public",
+		Port: constants.DefaultPort,
+		DB: DBConfig{
+			Host:     dbHost,
+			Port:     dbPort,
+			DBName:   dbName,
+			Username: dbUser,
+			Password: dbPwd,
+			Schema:   "public",
+		},
 	}, nil
 }
 
 func (c *AppConfig) GetDSN() string {
-	return "postgres://" + c.DBUser + ":" + c.DBPass + "@" + c.DBHost + ":" + c.DBPort + "/" + c.DBName + "?sslmode=disable&search_path=" + c.DBSchema
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s",
+		c.DB.Username, c.DB.Password, c.DB.Host, c.DB.Port, c.DB.DBName, c.DB.Schema,
+	)
 }
 
 func GetPort() int {
+
 	if v := os.Getenv("APP_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil && p > 0 {
 			return p
