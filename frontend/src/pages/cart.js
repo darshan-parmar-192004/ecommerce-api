@@ -42,16 +42,16 @@ export async function renderCartPage(container, { navigate, showToast, getCart, 
     container.innerHTML = `
       <div class="animate-fade-in-up">
         <article class="text-center py-20 lg:py-32">
-          <div class="inline-flex items-center justify-center w-32 h-32 lg:w-40 lg:h-40 rounded-3xl bg-gradient-to-br from-gray-50 to-indigo-50/50 border border-gray-100 mb-8">
+          <div class="inline-flex items-center justify-center w-32 h-32 lg:w-40 lg:h-40 rounded-3xl bg-gradient-to-br from-gray-50 to-indigo-50/50 border border-gray-100 mb-8 dark:from-gray-800 dark:to-indigo-900/20 dark:border-gray-700">
             <div class="relative">
               <div class="absolute inset-0 bg-indigo-500/10 rounded-2xl blur-xl"></div>
-              <svg class="w-16 h-16 lg:w-20 lg:h-20 text-indigo-600 relative" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg class="w-16 h-16 lg:w-20 lg:h-20 text-indigo-600 relative dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
               </svg>
             </div>
           </div>
-          <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Your cart is empty</h1>
-          <p class="text-gray-500 text-lg lg:text-xl mb-10 max-w-md mx-auto leading-relaxed">
+          <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight dark:text-white">Your cart is empty</h1>
+          <p class="text-gray-500 text-lg lg:text-xl mb-10 max-w-md mx-auto leading-relaxed dark:text-gray-400">
             Looks like you haven't added anything to your cart yet. Start exploring our curated collection.
           </p>
            <button onclick="router.navigate('/products')" class="inline-flex items-center gap-3 bg-indigo-600 text-white px-10 py-4 rounded-2xl hover:bg-indigo-700 active:scale-95 transition-all duration-200 font-semibold text-lg shadow-xl shadow-indigo-500/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
@@ -72,57 +72,57 @@ export async function renderCartPage(container, { navigate, showToast, getCart, 
   const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
   container.innerHTML = `
-    <section aria-labelledby="cart-heading">
-      <h1 id="cart-heading" class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+    <section aria-labelledby="cart-heading" class="pt-20 md:pt-24">
+      <h1 id="cart-heading" class="text-3xl font-bold text-gray-900 mb-8 dark:text-white">Shopping Cart</h1>
       
       <div class="grid lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2">
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <ul id="cart-items" class="divide-y divide-gray-100" role="list">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden dark:bg-gray-800 dark:border-gray-700">
+            <ul id="cart-items" class="divide-y divide-gray-100 dark:divide-gray-700" role="list">
               ${cart.map((item, index) => `
-                <li class="flex items-center justify-between p-5 hover:bg-gray-50 transition-colors" data-index="${index}">
+                <li class="flex items-center justify-between p-5 hover:bg-gray-50 transition-colors dark:hover:bg-gray-700" data-index="${index}">
                   <div class="flex items-center gap-4">
-                    <div class="bg-gray-200 border-2 border-dashed rounded-lg w-20 h-20 flex items-center justify-center flex-shrink-0" aria-label="Product image placeholder">
-                      <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <div class="bg-gray-200 border-2 border-dashed rounded-lg w-20 h-20 flex items-center justify-center flex-shrink-0 dark:bg-gray-700 dark:border-gray-600" aria-label="Product image placeholder">
+                      <svg class="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                       </svg>
                     </div>
                     <div>
-                      <h3 class="font-semibold text-gray-900">${escapeHtml(item.name)}</h3>
-                      <p class="text-gray-500 text-sm mt-1">$${item.price?.toFixed(2) || '0.00'} each</p>
+                      <h3 class="font-semibold text-gray-900 dark:text-white">${escapeHtml(item.name)}</h3>
+                      <p class="text-gray-500 text-sm mt-1 dark:text-gray-400">₹${item.price?.toFixed(2) || '0.00'} each</p>
                     </div>
                   </div>
                   <div class="flex items-center gap-4">
-                    <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden">
+                    <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden dark:border-gray-600">
                        <button 
-                         class="qty-btn px-3 py-2 hover:bg-gray-100 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" 
+                         class="qty-btn px-3 py-2 hover:bg-gray-100 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:hover:bg-gray-700" 
                          data-action="decrease" 
                          data-index="${index}"
                          aria-label="Decrease quantity"
                        >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
                         </svg>
                       </button>
-                      <span class="px-4 py-2 font-medium border-x border-gray-300 min-w-[3rem] text-center" aria-label="Quantity: ${item.quantity}">
+                      <span class="px-4 py-2 font-medium border-x border-gray-300 min-w-[3rem] text-center dark:border-gray-600 dark:text-white" aria-label="Quantity: ${item.quantity}">
                         ${item.quantity}
                       </span>
                        <button 
-                         class="qty-btn px-3 py-2 hover:bg-gray-100 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" 
+                         class="qty-btn px-3 py-2 hover:bg-gray-100 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:hover:bg-gray-700" 
                          data-action="increase" 
                          data-index="${index}"
                          aria-label="Increase quantity"
                        >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <svg class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
                       </button>
                     </div>
-                    <p class="font-bold text-lg w-24 text-right" aria-label="Item total: $${((item.price || 0) * item.quantity).toFixed(2)}">
-                      $${((item.price || 0) * item.quantity).toFixed(2)}
+                    <p class="font-bold text-lg w-24 text-right dark:text-white" aria-label="Item total: ₹${((item.price || 0) * item.quantity).toFixed(2)}">
+                      ₹${((item.price || 0) * item.quantity).toFixed(2)}
                     </p>
                      <button 
-                       class="remove-btn text-gray-400 hover:text-red-500 p-2 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500 rounded-lg"
+                       class="remove-btn text-gray-400 hover:text-red-500 p-2 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500 rounded-lg dark:text-gray-500 dark:hover:text-red-400"
                        data-index="${index}"
                        aria-label="Remove ${escapeHtml(item.name)} from cart"
                      >
@@ -146,21 +146,21 @@ export async function renderCartPage(container, { navigate, showToast, getCart, 
         </div>
         
         <div class="lg:col-span-1">
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24">
-            <h2 class="text-lg font-bold text-gray-900 mb-4">Order Summary</h2>
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24 dark:bg-gray-800 dark:border-gray-700">
+            <h2 class="text-lg font-bold text-gray-900 mb-4 dark:text-white">Order Summary</h2>
             <dl class="space-y-3 text-sm">
-              <div class="flex justify-between">
-                <dt class="text-gray-600">Subtotal</dt>
-                <dd class="font-medium">$${total.toFixed(2)}</dd>
-              </div>
-              <div class="flex justify-between">
-                <dt class="text-gray-600">Shipping</dt>
-                <dd class="font-medium text-green-600">Free</dd>
-              </div>
-              <div class="border-t border-gray-200 pt-3 flex justify-between">
-                <dt class="font-bold text-gray-900">Total</dt>
-                <dd class="font-bold text-xl text-indigo-600">$${total.toFixed(2)}</dd>
-              </div>
+<div class="flex justify-between">
+                 <dt class="text-gray-600 dark:text-gray-400">Subtotal</dt>
+                 <dd class="font-medium dark:text-white">₹${total.toFixed(2)}</dd>
+               </div>
+               <div class="flex justify-between">
+                 <dt class="text-gray-600 dark:text-gray-400">Shipping</dt>
+                 <dd class="font-medium text-green-600">Free</dd>
+               </div>
+<div class="border-t border-gray-200 pt-3 flex justify-between dark:border-gray-700">
+                 <dt class="font-bold text-gray-900 dark:text-white">Total</dt>
+                 <dd class="font-bold text-xl text-indigo-600 dark:text-indigo-400">₹${total.toFixed(2)}</dd>
+               </div>
             </dl>
             <button
                  id="checkout-btn"

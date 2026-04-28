@@ -14,13 +14,13 @@ function LoadingSpinner() {
 
 function SkeletonCard() {
   return `
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
-      <div class="bg-gray-100 w-full h-48"></div>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse dark:bg-gray-800 dark:border-gray-700">
+      <div class="bg-gray-100 w-full h-48 dark:bg-gray-700"></div>
       <div class="p-4 space-y-3">
-        <div class="h-4 bg-gray-200 rounded w-1/3"></div>
-        <div class="h-6 bg-gray-200 rounded w-3/4"></div>
-        <div class="h-8 bg-gray-200 rounded w-1/4"></div>
-        <div class="h-4 bg-gray-200 rounded w-full"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/3 dark:bg-gray-600"></div>
+        <div class="h-6 bg-gray-200 rounded w-3/4 dark:bg-gray-600"></div>
+        <div class="h-8 bg-gray-200 rounded w-1/4 dark:bg-gray-600"></div>
+        <div class="h-4 bg-gray-200 rounded w-full dark:bg-gray-600"></div>
       </div>
     </div>
   `;
@@ -41,33 +41,33 @@ export async function renderHomePage(container, { navigate, showToast }) {
   container.innerHTML = `
     <section aria-labelledby="products-heading" class="pt-20 md:pt-24 py-6 lg:py-10">
       <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <p id="results-count" class="text-gray-500 text-sm" aria-live="polite"></p>
+        <p id="results-count" class="text-gray-500 text-sm dark:text-gray-400" aria-live="polite"></p>
       </div>
 
-      <aside class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8" aria-label="Product filters">
+      <aside class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8 dark:bg-gray-800 dark:border-gray-700" aria-label="Product filters">
         <form id="filter-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div class="space-y-1">
-            <label for="search-input" class="block text-sm font-medium text-gray-700">Search</label>
+            <label for="search-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
             <input
               type="text"
               id="search-input"
               name="search"
               placeholder="Search products..."
-              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div class="space-y-1">
-            <label for="category-select" class="block text-sm font-medium text-gray-700">Category</label>
+            <label for="category-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
             <select
               id="category-select"
               name="category"
-              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             >
               <option value="">All Categories</option>
             </select>
           </div>
           <div class="space-y-1">
-            <label for="min-price" class="block text-sm font-medium text-gray-700">Min Price</label>
+            <label for="min-price" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Min Price</label>
             <input
               type="number"
               id="min-price"
@@ -75,11 +75,11 @@ export async function renderHomePage(container, { navigate, showToast }) {
               placeholder="0"
               min="0"
               step="0.01"
-              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div class="space-y-1">
-            <label for="max-price" class="block text-sm font-medium text-gray-700">Max Price</label>
+            <label for="max-price" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Max Price</label>
             <input
               type="number"
               id="max-price"
@@ -87,7 +87,7 @@ export async function renderHomePage(container, { navigate, showToast }) {
               placeholder="9999"
               min="0"
               step="0.01"
-              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
           <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
@@ -241,20 +241,20 @@ export async function renderHomePage(container, { navigate, showToast }) {
         .map((product) => {
           const categoryName = categoryMap[product.category_id] || "";
           return `
-        <article class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 hover:border-indigo-200 transition-all duration-300 overflow-hidden" role="listitem">
+        <article class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 hover:border-indigo-200 transition-all duration-300 overflow-hidden dark:bg-gray-800 dark:border-gray-700" role="listitem">
            <a href="/products/${product.product_id}" class="product-link block focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 active:scale-95 transition-all duration-200" data-route>
-            <div class="bg-gradient-to-br from-gray-100 to-gray-200 w-full h-48 flex items-center justify-center relative overflow-hidden group">
-              <svg class="w-16 h-16 text-gray-400 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <div class="bg-gradient-to-br from-gray-100 to-gray-200 w-full h-48 flex items-center justify-center relative overflow-hidden group dark:from-gray-700 dark:to-gray-600">
+              <svg class="w-16 h-16 text-gray-400 transition-transform duration-300 group-hover:scale-110 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
               </svg>
             </div>
             <div class="p-5">
-              ${categoryName ? `<span class="inline-block px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-full uppercase tracking-wide">${escapeHtml(categoryName)}</span>` : ""}
-               <h2 class="font-semibold text-lg text-gray-900 mt-3 line-clamp-2 group-hover:text-indigo-600 transition-all duration-200">${escapeHtml(product.name)}</h2>
-              <p class="text-2xl font-bold text-gray-900 mt-2">$${product.price?.toFixed(2) || "0.00"}</p>
-              <p class="text-gray-500 text-sm mt-3 line-clamp-2">${escapeHtml(product.description || "No description available.")}</p>
-               <div class="mt-4 flex items-center text-indigo-600 font-medium text-sm group-hover:gap-2 transition-all duration-200 active:scale-95">
-                 <span>View Details</span>
+              ${categoryName ? `<span class="inline-block px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-full uppercase tracking-wide dark:text-indigo-400 dark:bg-indigo-900/30">${escapeHtml(categoryName)}</span>` : ""}
+               <h2 class="font-semibold text-lg text-gray-900 mt-3 line-clamp-2 group-hover:text-indigo-600 transition-all duration-200 dark:text-white">${escapeHtml(product.name)}</h2>
+              <p class="text-2xl font-bold text-gray-900 mt-2 dark:text-white">₹${product.price?.toFixed(2) || "0.00"}</p>
+              <p class="text-gray-500 text-sm mt-3 line-clamp-2 dark:text-gray-400">${escapeHtml(product.description || "No description available.")}</p>
+               <div class="mt-4 flex items-center text-indigo-600 font-medium text-sm group-hover:gap-2 transition-all duration-200 active:scale-95 dark:text-indigo-400">
+                  <span>View Details</span>
                 <svg class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                 </svg>

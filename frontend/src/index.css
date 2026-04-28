@@ -1,5 +1,36 @@
 @import "tailwindcss";
 
+/* Hide scrollbar globally */
+/* Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Dark mode base styles */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #111827;
+  color: #f9fafb;
+}
+
+/* Smooth theme transitions */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
 /* Custom component styles */
 .toast-success {
   background-color: #22c55e;

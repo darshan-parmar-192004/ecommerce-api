@@ -142,7 +142,15 @@ async function router() {
   
   // Render header and footer
   renderHeader({ transparent: isTransparent, hidden: isAuthPage })
-  renderFooter()
+  
+  // Only show footer on non-auth pages
+  if (!isAuthPage) {
+    renderFooter()
+  } else {
+    // Clear footer on auth pages
+    const footerRoot = document.getElementById('footer-root')
+    if (footerRoot) footerRoot.innerHTML = ''
+  }
   
   // Route handling
   if (path.startsWith('/products/')) {
@@ -197,9 +205,25 @@ window.addEventListener('auth:change', () => {
 })
 window.addEventListener('cart:update', updateCartBadge)
 
+// Re-render page on theme change
+window.addEventListener('theme:change', () => {
+  router()
+})
+
 // Global exports
 window.router = { navigate, showToast }
 window.Auth = { updateAuthUI }
+
+// Initialize theme from localStorage or system preference
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme')
+  if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}
+initTheme()
 
 // Initialize
 setupKeyboardShortcuts()

@@ -1,4 +1,6 @@
-const API_BASE = "";
+// In development, API calls go to backend directly (via Vite dev server)
+// In production, this should be set to the API base URL (e.g., window.location.origin)
+const API_BASE = import.meta.env.PROD ? '' : 'http://127.0.0.1:8080';
 
 let _isAuthenticated = false;
 let _authCheckDone = false;
@@ -9,10 +11,14 @@ export function isAuthenticated() {
 
 export async function checkAuth() {
   try {
-    await fetchJSON("/auth/me", { method: "GET" });
+    const data = await fetchJSON("/auth/me", { method: "GET" });
     window._isAuthenticated = true;
+    window._userName = data.name || '';
+    window._userEmail = data.email || '';
   } catch (err) {
     window._isAuthenticated = false;
+    window._userName = '';
+    window._userEmail = '';
   }
   window._authCheckDone = true;
   return window._isAuthenticated;
