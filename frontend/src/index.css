@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@custom-variant dark {
+  html.dark & {
+    @slot;
+  }
+}
+
 /* Hide scrollbar globally */
 /* Chrome, Safari and Opera */
 ::-webkit-scrollbar {
@@ -15,11 +21,6 @@
 /* Dark mode base styles */
 html.dark {
   color-scheme: dark;
-}
-
-html.dark body {
-  background-color: #111827;
-  color: #f9fafb;
 }
 
 /* Smooth theme transitions */

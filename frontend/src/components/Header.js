@@ -1,4 +1,3 @@
-let headerEventsInitialized = false;
 let searchTimeout = null;
 
 export function renderHeader({ transparent = false, hidden = false } = {}) {
@@ -249,95 +248,121 @@ export function renderHeader({ transparent = false, hidden = false } = {}) {
   updateCartBadge();
 }
 
+let headerClickInitialized = false;
+let documentEventsInitialized = false;
+
 function setupHeaderEvents() {
-  if (headerEventsInitialized) return;
-  
   const headerRoot = document.getElementById('header-root');
   if (!headerRoot) return;
   
   // Theme toggle
-  const themeToggleBtn = document.getElementById('theme-toggle-btn');
-  const mobileThemeToggleBtn = document.getElementById('mobile-theme-toggle-btn');
-  
   function toggleTheme() {
     const isDark = document.documentElement.classList.contains('dark');
     if (isDark) {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
-      updateThemeIcons(false);
     } else {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
-      updateThemeIcons(true);
     }
     // Dispatch event to notify app of theme change
     window.dispatchEvent(new CustomEvent('theme:change'));
   }
   
-  themeToggleBtn?.addEventListener('click', toggleTheme);
-  mobileThemeToggleBtn?.addEventListener('click', toggleTheme);
-  
-  // Event delegation for all header interactions
-  headerRoot.addEventListener('click', async (e) => {
-    const target = e.target;
-    
-    // Mobile menu toggle
-    if (target.closest('#mobile-menu-btn')) {
-      e.preventDefault();
-      toggleMobileMenu();
-    }
-    
-    // User dropdown toggle
-    if (target.closest('#user-avatar-btn')) {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleUserDropdown();
-    }
-    
-    // Logout handler
-    if (target.closest('[data-action="logout"]')) {
-      e.preventDefault();
-      await handleLogout();
-    }
-    
-    // Search result click
-    if (target.closest('.search-result-item')) {
-      const productId = target.closest('.search-result-item').dataset.productId;
-      if (productId && window.router) {
-        window.router.navigate(`/products/${productId}`);
-        hideSearchResults();
+  // Setup click delegation on headerRoot only once (headerRoot element persists across re-renders)
+  if (!headerClickInitialized) {
+    headerRoot.addEventListener('click', async (e) => {
+      const target = e.target;
+      
+      // Theme toggle (desktop & mobile)
+      if (target.closest('#theme-toggle-btn') || target.closest('#mobile-theme-toggle-btn')) {
+        e.preventDefault();
+        toggleTheme();
       }
-    }
-  });
+      
+      // Mobile menu toggle
+      if (target.closest('#mobile-menu-btn')) {
+        e.preventDefault();
+        toggleMobileMenu();
+      }
+      
+      // User dropdown toggle
+      if (target.closest('#user-avatar-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleUserDropdown();
+      }
+      
+      // Logout handler
+      if (target.closest('[data-action="logout"]')) {
+        e.preventDefault();
+        await handleLogout();
+      }
+      
+      // Search result click
+      if (target.closest('.search-result-item')) {
+        const productId = target.closest('.search-result-item').dataset.productId;
+        if (productId && window.router) {
+          window.router.navigate(`/products/${productId}`);
+          hideSearchResults();
+        }
+      }
+    });
+    headerClickInitialized = true;
+  }
   
-  // Search input handler
+  // Search input handler - needs to be re-attached each render since input is re-created
   const searchInput = document.getElementById('header-search-input');
   const searchDropdown = document.getElementById('search-results-dropdown');
   
-  searchInput?.addEventListener('input', (e) => {
-    const query = e.target.value.trim();
+  if (searchInput) {
+    // Remove old listeners by cloning and replacing
+    const newSearchInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newSearchInput, searchInput);
     
-    if (query.length < 2) {
-      hideSearchResults();
-      return;
-    }
-    
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(async () => {
-      try {
-        const { api } = await import('../api.js');
-        const data = await api.products.list({ search: query, limit: 5 });
-        displaySearchResults(data.data || []);
-      } catch (err) {
-        console.error('Search failed:', err);
+    newSearchInput.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+      
+      if (query.length < 2) {
+        hideSearchResults();
+        return;
       }
-    }, 300);
-  });
+      
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(async () => {
+        try {
+          const { api } = await import('../api.js');
+          const data = await api.products.list({ search: query, limit: 5 });
+          displaySearchResults(data.data || []);
+        } catch (err) {
+          console.error('Search failed:', err);
+        }
+      }, 300);
+    });
+    
+    // Close search on Escape
+    newSearchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        hideSearchResults();
+        newSearchInput.blur();
+      }
+    });
+  }
   
-  // Close search results on outside click or Escape
+   // Setup document-level events only once
+  if (!documentEventsInitialized) {
+    setupDocumentEvents();
+    documentEventsInitialized = true;
+  }
+}
+
+function setupDocumentEvents() {
+  // Close dropdowns on outside click
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('user-dropdown-menu');
     const avatarBtn = document.getElementById('user-avatar-btn');
+    const searchInput = document.getElementById('header-search-input');
+    const searchDropdown = document.getElementById('search-results-dropdown');
     
     // Close user dropdown on outside click
     if (dropdown && avatarBtn && 
@@ -354,16 +379,6 @@ function setupHeaderEvents() {
       hideSearchResults();
     }
   });
-  
-  // Close search on Escape
-  searchInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      hideSearchResults();
-      searchInput.blur();
-    }
-  });
-  
-  headerEventsInitialized = true;
 }
 
 function displaySearchResults(products) {
