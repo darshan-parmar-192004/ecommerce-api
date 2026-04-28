@@ -1,12 +1,15 @@
+import { api } from "../api.js";
+import { isAuthenticated, getUserName, getUserEmail } from "../api.js";
+
 let searchTimeout = null;
 
 export function renderHeader({ transparent = false, hidden = false } = {}) {
   const headerRoot = document.getElementById('header-root');
   if (!headerRoot) return;
 
-  const isLoggedIn = window._isAuthenticated || false;
-  const userName = window._userName || '';
-  const userEmail = window._userEmail || '';
+  const isLoggedIn = isAuthenticated() || false;
+  const userName = getUserName() || '';
+  const userEmail = getUserEmail() || '';
 
   const isDark = document.documentElement.classList.contains('dark');
 
@@ -453,13 +456,12 @@ function toggleUserDropdown() {
 async function handleLogout() {
   const { api } = await import('../api.js');
   await api.auth.logout();
-  window._isAuthenticated = false;
-  window._userName = '';
-  window._userEmail = '';
-   
+  const { resetAuthState } = await import('../api.js');
+  resetAuthState();
+  
   // Dispatch auth:change event
   window.dispatchEvent(new CustomEvent('auth:change'));
-   
+  
   // Show toast if available
   if (window.router?.showToast) {
     window.router.showToast('Logged out successfully', 'success');

@@ -4,31 +4,41 @@ const API_BASE = import.meta.env.PROD ? '' : 'http://127.0.0.1:8080';
 
 let _isAuthenticated = false;
 let _authCheckDone = false;
+let _userName = '';
+let _userEmail = '';
 
 export function isAuthenticated() {
   return _isAuthenticated;
 }
 
+export function getUserName() {
+  return _userName;
+}
+
+export function getUserEmail() {
+  return _userEmail;
+}
+
 export async function checkAuth() {
   try {
     const data = await fetchJSON("/auth/me", { method: "GET" });
-    window._isAuthenticated = true;
-    window._userName = data.name || '';
-    window._userEmail = data.email || '';
+    _isAuthenticated = true;
+    _userName = data.name || '';
+    _userEmail = data.email || '';
   } catch (err) {
-    window._isAuthenticated = false;
-    window._userName = '';
-    window._userEmail = '';
+    _isAuthenticated = false;
+    _userName = '';
+    _userEmail = '';
   }
-  window._authCheckDone = true;
-  return window._isAuthenticated;
+  _authCheckDone = true;
+  return _isAuthenticated;
 }
 
 export function resetAuthState() {
   _isAuthenticated = false;
   _authCheckDone = false;
-  window._isAuthenticated = false;
-  window._authCheckDone = false;
+  _userName = '';
+  _userEmail = '';
 }
 
 export class ApiError extends Error {

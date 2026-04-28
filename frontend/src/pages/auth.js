@@ -1,7 +1,10 @@
 import { api, checkAuth } from '../api.js'
+import { isAuthenticated, getUserName } from '../api.js'
+
+let _welcomeShown = false
 
 export async function renderLoginPage(container, { navigate, showToast }) {
-  if (window._isAuthenticated) {
+  if (isAuthenticated()) {
     navigate('/')
     return
   }
@@ -109,13 +112,13 @@ export async function renderLoginPage(container, { navigate, showToast }) {
     try {
       const response = await api.auth.login({ email, password })
       
-      // Verify session with API
-      await checkAuth()
-      window._welcomeShown = true
-      
-      window.dispatchEvent(new CustomEvent('auth:change'))
-      showToast(`Welcome back, ${window._userName}!`, 'success')
-      navigate('/')
+       // Verify session with API
+       await checkAuth()
+       _welcomeShown = true
+       
+       window.dispatchEvent(new CustomEvent('auth:change'))
+       showToast(`Welcome back, ${getUserName()}!`, 'success')
+       navigate('/')
     } catch (err) {
       errorText.textContent = err.message
       errorEl.classList.remove('hidden')
@@ -127,7 +130,7 @@ export async function renderLoginPage(container, { navigate, showToast }) {
 }
 
 export async function renderRegisterPage(container, { navigate, showToast }) {
-  if (window._isAuthenticated) {
+  if (isAuthenticated()) {
     navigate('/')
     return
   }
@@ -274,13 +277,13 @@ export async function renderRegisterPage(container, { navigate, showToast }) {
     try {
       const response = await api.auth.register({ name, email, password })
       
-      // Verify session with API
-      await checkAuth()
-      window._welcomeShown = true
-      
-      window.dispatchEvent(new CustomEvent('auth:change'))
-      showToast(`Welcome, ${name}! Your account has been created.`, 'success')
-      navigate('/')
+       // Verify session with API
+       await checkAuth()
+       _welcomeShown = true
+       
+       window.dispatchEvent(new CustomEvent('auth:change'))
+       showToast(`Welcome, ${name}! Your account has been created.`, 'success')
+       navigate('/')
     } catch (err) {
       errorText.textContent = err.message
       errorEl.classList.remove('hidden')

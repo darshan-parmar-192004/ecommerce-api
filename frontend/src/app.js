@@ -1,4 +1,4 @@
-import { checkAuth, api } from './api.js'
+import { checkAuth, api, isAuthenticated, getUserName, getUserEmail, resetAuthState } from './api.js'
 import { renderHomePage } from './pages/home.js'
 import { renderProductPage } from './pages/product.js'
 import { renderCartPage, getCart, saveCart, updateCartCount } from './pages/cart.js'
@@ -34,13 +34,6 @@ function navigate(path, { replace = false } = {}) {
 }
 
 function updateAuthUI() {
-  const loggedIn = window._isAuthenticated
-  const userName = window._userName || ''
-  const userEmail = window._userEmail || ''
-  
-  window._userName = userName
-  window._userEmail = userEmail
-  
   updateCartBadge()
 }
 
@@ -188,9 +181,7 @@ document.addEventListener('click', async (e) => {
   if (e.target.id === 'logout-btn' || e.target.id === 'logout-btn-mobile') {
     e.preventDefault()
     await api.auth.logout()
-    window._isAuthenticated = false
-    window._userName = ''
-    window._userEmail = ''
+    resetAuthState()
     updateAuthUI()
     navigate('/')
     showToast('Logged out successfully', 'success')

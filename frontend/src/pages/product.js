@@ -144,7 +144,7 @@ export async function renderProductPage(
     descEl.textContent = product.description || "No description available.";
 
     if (product.category_name) {
-      categoryEl.innerHTML = `<span class="inline-block px-3 py-1.5 text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-full uppercase tracking-wide">${escapeHtml(product.category_name)}</span>`;
+      categoryEl.innerHTML = `<span class="inline-block px-3 py-1.5 text-sm font-semibold text-indigo-700 bg-indigo-50 rounded-full uppercase tracking-wide dark:text-indigo-400 dark:bg-indigo-900/30">${escapeHtml(product.category_name)}</span>`;
     }
 
     addBtn.addEventListener("click", () => {
