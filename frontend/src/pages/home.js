@@ -14,8 +14,8 @@ function LoadingSpinner() {
 
 function SkeletonCard() {
   return `
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
-      <div class="bg-gray-200 w-full h-48"></div>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
+      <div class="bg-gray-100 w-full h-48"></div>
       <div class="p-4 space-y-3">
         <div class="h-4 bg-gray-200 rounded w-1/3"></div>
         <div class="h-6 bg-gray-200 rounded w-3/4"></div>
@@ -39,13 +39,12 @@ export async function renderHomePage(container, { navigate, showToast }) {
   };
 
   container.innerHTML = `
-    <section aria-labelledby="products-heading">
+    <section aria-labelledby="products-heading" class="pt-20 md:pt-24 py-6 lg:py-10">
       <div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <h1 id="products-heading" class="text-3xl font-bold text-gray-900">Products</h1>
         <p id="results-count" class="text-gray-500 text-sm" aria-live="polite"></p>
       </div>
 
-      <aside class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-8" aria-label="Product filters">
+      <aside class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8" aria-label="Product filters">
         <form id="filter-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div class="space-y-1">
             <label for="search-input" class="block text-sm font-medium text-gray-700">Search</label>
@@ -54,7 +53,7 @@ export async function renderHomePage(container, { navigate, showToast }) {
               id="search-input"
               name="search"
               placeholder="Search products..."
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
             />
           </div>
           <div class="space-y-1">
@@ -62,7 +61,7 @@ export async function renderHomePage(container, { navigate, showToast }) {
             <select
               id="category-select"
               name="category"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors bg-white"
             >
               <option value="">All Categories</option>
             </select>
@@ -76,7 +75,7 @@ export async function renderHomePage(container, { navigate, showToast }) {
               placeholder="0"
               min="0"
               step="0.01"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
             />
           </div>
           <div class="space-y-1">
@@ -88,13 +87,13 @@ export async function renderHomePage(container, { navigate, showToast }) {
               placeholder="9999"
               min="0"
               step="0.01"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
             />
           </div>
           <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
             <button
               type="submit"
-              class="flex-1 sm:flex-none px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              class="flex-1 sm:flex-none px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
               <span class="flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -106,7 +105,7 @@ export async function renderHomePage(container, { navigate, showToast }) {
             <button
               type="button"
               id="clear-filters"
-              class="px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
+              class="px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2"
             >
               Clear
             </button>
@@ -118,38 +117,40 @@ export async function renderHomePage(container, { navigate, showToast }) {
       <div id="skeleton-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" aria-hidden="true">
         ${Array(PRODUCTS_PER_PAGE).fill(SkeletonCard()).join("")}
       </div>
-      <div id="error" class="hidden bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-xl text-center" role="alert">
-        <svg class="w-6 h-6 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <div id="error" class="hidden bg-red-50 border border-red-200 text-red-700 px-5 py-5 rounded-2xl text-center" role="alert">
+        <svg class="w-12 h-12 mx-auto mb-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
         <p id="error-message"></p>
       </div>
       <div id="empty" class="hidden text-center py-16">
-        <svg class="w-20 h-20 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
-        </svg>
-        <p class="text-xl font-medium text-gray-500 mb-2">No products found</p>
-        <p class="text-gray-400">Try adjusting your filters or search terms</p>
+        <div class="inline-flex items-center justify-center w-32 h-32 rounded-3xl bg-gradient-to-br from-gray-50 to-indigo-50/50 border border-gray-100 mb-6">
+          <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+          </svg>
+        </div>
+        <p class="text-xl font-semibold text-gray-900 mb-2">No products found</p>
+        <p class="text-gray-500">Try adjusting your filters or search terms</p>
       </div>
       <div id="products" class="hidden grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" role="list" aria-label="Products"></div>
 
       <nav id="pagination" class="hidden flex items-center justify-center gap-3 mt-10" aria-label="Product pagination">
-        <button
-          id="prev-btn"
-          class="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          aria-label="Previous page"
-        >
+          <button
+            id="prev-btn"
+            class="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            aria-label="Previous page"
+          >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
           Previous
         </button>
         <span id="page-info" class="px-4 py-2 text-gray-600 font-medium" aria-current="page"></span>
-        <button
-          id="next-btn"
-          class="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          aria-label="Next page"
-        >
+          <button
+            id="next-btn"
+            class="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            aria-label="Next page"
+          >
           Next
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -240,21 +241,21 @@ export async function renderHomePage(container, { navigate, showToast }) {
         .map((product) => {
           const categoryName = categoryMap[product.category_id] || "";
           return `
-        <article class="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-indigo-200 transition-all duration-200 overflow-hidden" role="listitem">
-          <a href="#/products/${product.product_id}" class="block focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500">
+        <article class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:-translate-y-1 hover:border-indigo-200 transition-all duration-300 overflow-hidden" role="listitem">
+           <a href="/products/${product.product_id}" class="product-link block focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 active:scale-95 transition-all duration-200" data-route>
             <div class="bg-gradient-to-br from-gray-100 to-gray-200 w-full h-48 flex items-center justify-center relative overflow-hidden group">
-              <svg class="w-16 h-16 text-gray-400 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <svg class="w-16 h-16 text-gray-400 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
               </svg>
             </div>
             <div class="p-5">
-              ${categoryName ? `<span class="inline-block px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-full uppercase tracking-wide">${escapeHtml(categoryName)}</span>` : ""}
-              <h2 class="font-semibold text-lg text-gray-900 mt-3 line-clamp-2 group-hover:text-indigo-600 transition-colors">${escapeHtml(product.name)}</h2>
-              <p class="text-2xl font-bold text-gray-900 mt-2">₹${product.price?.toFixed(2) || "0.00"}</p>
+              ${categoryName ? `<span class="inline-block px-3 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 rounded-full uppercase tracking-wide">${escapeHtml(categoryName)}</span>` : ""}
+               <h2 class="font-semibold text-lg text-gray-900 mt-3 line-clamp-2 group-hover:text-indigo-600 transition-all duration-200">${escapeHtml(product.name)}</h2>
+              <p class="text-2xl font-bold text-gray-900 mt-2">$${product.price?.toFixed(2) || "0.00"}</p>
               <p class="text-gray-500 text-sm mt-3 line-clamp-2">${escapeHtml(product.description || "No description available.")}</p>
-              <div class="mt-4 flex items-center text-indigo-600 font-medium text-sm group-hover:gap-2 transition-all">
-                <span>View Details</span>
-                <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+               <div class="mt-4 flex items-center text-indigo-600 font-medium text-sm group-hover:gap-2 transition-all duration-200 active:scale-95">
+                 <span>View Details</span>
+                <svg class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                 </svg>
               </div>

@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:8080";
+const API_BASE = "";
 
 let _isAuthenticated = false;
 let _authCheckDone = false;
@@ -14,7 +14,7 @@ export async function checkAuth() {
   } catch (err) {
     window._isAuthenticated = false;
   }
-  window._authCheckDone = true
+  window._authCheckDone = true;
   return window._isAuthenticated;
 }
 
@@ -52,7 +52,7 @@ function getErrorMessage(error, status) {
   }
 
   const errorStr = String(error || "");
-  
+
   if (errorStr.includes("network") || errorStr.includes("fetch")) {
     return "Network error. Please check your connection.";
   }
@@ -76,11 +76,11 @@ async function fetchJSON(url, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      let message = 'Request failed';
+      let message = "Request failed";
       let code = null;
-      
-      if (data.error && typeof data.error === 'object') {
-        message = data.error.message || 'Request failed';
+
+      if (data.error && typeof data.error === "object") {
+        message = data.error.message || "Request failed";
         code = data.error.code || null;
       } else if (data.message) {
         message = data.message;

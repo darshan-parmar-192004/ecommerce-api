@@ -40,24 +40,31 @@ export async function renderCartPage(container, { navigate, showToast, getCart, 
   
   if (cart.length === 0) {
     container.innerHTML = `
-      <article class="text-center py-16">
-        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-          </svg>
-        </div>
-        <h1 class="text-2xl font-bold text-gray-900 mb-3">Your cart is empty</h1>
-        <p class="text-gray-500 mb-8">Looks like you haven't added anything to your cart yet.</p>
-        <a 
-          href="#/" 
-          class="inline-flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-          </svg>
-          Browse Products
-        </a>
-      </article>
+      <div class="animate-fade-in-up">
+        <article class="text-center py-20 lg:py-32">
+          <div class="inline-flex items-center justify-center w-32 h-32 lg:w-40 lg:h-40 rounded-3xl bg-gradient-to-br from-gray-50 to-indigo-50/50 border border-gray-100 mb-8">
+            <div class="relative">
+              <div class="absolute inset-0 bg-indigo-500/10 rounded-2xl blur-xl"></div>
+              <svg class="w-16 h-16 lg:w-20 lg:h-20 text-indigo-600 relative" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+              </svg>
+            </div>
+          </div>
+          <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Your cart is empty</h1>
+          <p class="text-gray-500 text-lg lg:text-xl mb-10 max-w-md mx-auto leading-relaxed">
+            Looks like you haven't added anything to your cart yet. Start exploring our curated collection.
+          </p>
+           <button onclick="router.navigate('/products')" class="inline-flex items-center gap-3 bg-indigo-600 text-white px-10 py-4 rounded-2xl hover:bg-indigo-700 active:scale-95 transition-all duration-200 font-semibold text-lg shadow-xl shadow-indigo-500/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+            </svg>
+            Return to Shop
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          </button>
+        </article>
+      </div>
     `
     return
   }
@@ -87,12 +94,12 @@ export async function renderCartPage(container, { navigate, showToast, getCart, 
                   </div>
                   <div class="flex items-center gap-4">
                     <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                      <button 
-                        class="qty-btn px-3 py-2 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" 
-                        data-action="decrease" 
-                        data-index="${index}"
-                        aria-label="Decrease quantity"
-                      >
+                       <button 
+                         class="qty-btn px-3 py-2 hover:bg-gray-100 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" 
+                         data-action="decrease" 
+                         data-index="${index}"
+                         aria-label="Decrease quantity"
+                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
                         </svg>
@@ -100,12 +107,12 @@ export async function renderCartPage(container, { navigate, showToast, getCart, 
                       <span class="px-4 py-2 font-medium border-x border-gray-300 min-w-[3rem] text-center" aria-label="Quantity: ${item.quantity}">
                         ${item.quantity}
                       </span>
-                      <button 
-                        class="qty-btn px-3 py-2 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" 
-                        data-action="increase" 
-                        data-index="${index}"
-                        aria-label="Increase quantity"
-                      >
+                       <button 
+                         class="qty-btn px-3 py-2 hover:bg-gray-100 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" 
+                         data-action="increase" 
+                         data-index="${index}"
+                         aria-label="Increase quantity"
+                       >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
@@ -114,11 +121,11 @@ export async function renderCartPage(container, { navigate, showToast, getCart, 
                     <p class="font-bold text-lg w-24 text-right" aria-label="Item total: $${((item.price || 0) * item.quantity).toFixed(2)}">
                       $${((item.price || 0) * item.quantity).toFixed(2)}
                     </p>
-                    <button 
-                      class="remove-btn text-gray-400 hover:text-red-500 p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 rounded-lg"
-                      data-index="${index}"
-                      aria-label="Remove ${escapeHtml(item.name)} from cart"
-                    >
+                     <button 
+                       class="remove-btn text-gray-400 hover:text-red-500 p-2 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500 rounded-lg"
+                       data-index="${index}"
+                       aria-label="Remove ${escapeHtml(item.name)} from cart"
+                     >
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                       </svg>
@@ -130,7 +137,7 @@ export async function renderCartPage(container, { navigate, showToast, getCart, 
             <div class="p-5 border-t border-gray-100">
               <button 
                 id="clear-cart-btn" 
-                class="text-red-500 hover:text-red-700 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 rounded px-2 py-1"
+                 class="text-red-500 hover:text-red-700 font-medium transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500 rounded px-2 py-1"
               >
                 Clear Cart
               </button>
@@ -156,8 +163,8 @@ export async function renderCartPage(container, { navigate, showToast, getCart, 
               </div>
             </dl>
             <button
-              id="checkout-btn"
-              class="w-full mt-6 bg-indigo-600 text-white py-3.5 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center gap-2"
+                 id="checkout-btn"
+                 class="w-full mt-6 bg-indigo-600 text-white py-3.5 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 font-semibold transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center gap-2"
             >
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>

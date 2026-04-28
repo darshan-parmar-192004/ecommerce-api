@@ -4,86 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>E-Commerce Store</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/src/index.css">
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
-  <header class="bg-white shadow-sm sticky top-0 z-50">
-    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4" role="navigation" aria-label="Main navigation">
-      <div class="flex items-center justify-between">
-        <a href="/products" class="text-xl font-bold text-indigo-600 hover:text-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded-md px-2 py-1" aria-label="E-Commerce Store Home">
-          E-Commerce Store
-        </a>
-        
-        <button 
-          id="mobile-menu-btn" 
-          class="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500" 
-          aria-label="Toggle menu"
-          aria-expanded="false"
-          aria-controls="mobile-menu"
-        >
-          <svg id="menu-icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-          </svg>
-          <svg id="menu-icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
-
-        <div id="nav-links" class="hidden md:flex gap-6 items-center">
-          <a href="/products" class="text-gray-600 hover:text-indigo-600 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md px-3 py-2">
-            Products
-          </a>
-          <a href="/cart" class="text-gray-600 hover:text-indigo-600 font-medium transition-colors flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md px-3 py-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-            Cart
-            <span id="cart-count" class="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full hidden" aria-label="Cart items count">0</span>
-          </a>
-          <a href="/login" id="login-link" class="text-gray-600 hover:text-indigo-600 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md px-3 py-2">
-            Login
-          </a>
-          <a href="/register" id="register-link" class="text-gray-600 hover:text-indigo-600 font-medium transition-colors hidden focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md px-3 py-2">
-            Register
-          </a>
-          <button id="logout-btn" class="text-gray-600 hover:text-red-600 font-medium transition-colors hidden focus:outline-none focus:ring-2 focus:ring-red-500 rounded-md px-3 py-2">
-            Logout
-          </button>
-          <div id="profile-container"></div>
-        </div>
-      </div>
-
-      <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 border-t border-gray-200 pt-4" role="menu">
-        <div class="flex flex-col gap-2">
-          <a href="/products" class="text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500" role="menuitem">
-            Products
-          </a>
-          <a href="/cart" class="text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors flex items-center gap-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" role="menuitem">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-            </svg>
-            Cart
-            <span id="cart-count-mobile" class="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded-full hidden" aria-label="Cart items count">0</span>
-          </a>
-          <a href="/login" id="login-link-mobile" class="text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500" role="menuitem">
-            Login
-          </a>
-          <a href="/register" id="register-link-mobile" class="text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 font-medium py-3 px-4 rounded-lg transition-colors hidden focus:outline-none focus:ring-2 focus:ring-indigo-500" role="menuitem">
-            Register
-          </a>
-          <button id="logout-btn-mobile" class="text-left text-gray-600 hover:text-red-600 hover:bg-red-50 font-medium py-3 px-4 rounded-lg transition-colors hidden focus:outline-none focus:ring-2 focus:ring-red-500" role="menuitem">
-            Logout
-          </button>
-          <div id="profile-container-mobile"></div>
-        </div>
-      </div>
-    </nav>
-  </header>
-
-  <main id="app" class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full" role="main">
-  </main>
-
+  <div id="header-root"></div>
+  
+  <main id="app" class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" role="main"></main>
+  
+  <div id="footer-root"></div>
+  
   <div id="loading-overlay" class="fixed inset-0 bg-white/90 z-50 flex items-center justify-center hidden transition-opacity duration-300">
     <div class="text-center">
       <div class="relative w-16 h-16 mx-auto mb-4">
@@ -93,17 +22,9 @@
       <p class="text-gray-600 font-medium">Loading...</p>
     </div>
   </div>
-
-  <footer class="bg-white border-t border-gray-200 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <p class="text-center text-gray-500 text-sm">
-        &copy; 2026 E-Commerce Store. All rights reserved.
-      </p>
-    </div>
-  </footer>
-
+  
   <div id="toast-container" class="fixed bottom-4 right-4 z-50" role="alert" aria-live="polite"></div>
-
+  
   <script type="module" src="/src/app.js"></script>
 </body>
 </html>
