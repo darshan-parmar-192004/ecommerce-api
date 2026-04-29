@@ -6,6 +6,7 @@ import (
 	"backend/internal/errors"
 	"backend/internal/middleware"
 	"backend/internal/models"
+	"backend/internal/querybuilder"
 	"context"
 	"database/sql"
 	"strings"
@@ -142,10 +143,10 @@ func (h *Handler) Register(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 
-	_, err = db.ExecContext(ctx, `
-		INSERT INTO customers (customer_id, email, name, country, phone, created_at, status, password_hash, role)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-	`, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer")
+	_, err = querybuilder.NewInsert(db, "customers").
+		Columns("customer_id", "email", "name", "country", "phone", "created_at", "status", "password_hash", "role").
+		Values(customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer").
+		Exec(ctx)
 
 	if err != nil {
 		return errors.SendError(
@@ -167,8 +168,55 @@ func (h *Handler) Register(c fiber.Ctx) error {
 		Status:     "active",
 	}
 
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, JWTClaims{
+		CustomerID: customer.CustomerID,
+		Email:      customer.Email,
+		Role:       "customer",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	})
+
+	tokenString, err := token.SignedString(h.jwtSecret)
+	if err != nil {
+		return errors.SendError(
+			c,
+			fiber.StatusInternalServerError,
+			errors.ErrDatabase,
+			"Failed to generate token",
+			fiber.Map{"details": err.Error()},
+		)
+	}
+
+	sessionData := fiber.Map{
+		"customer_id": customer.CustomerID,
+		"email":       customer.Email,
+		"role":        "customer",
+	}
+	if err := StoreSession(&h.cache, tokenString, sessionData); err != nil {
+		return errors.SendError(
+			c,
+			fiber.StatusInternalServerError,
+			errors.ErrDatabase,
+			"Failed to store session",
+			fiber.Map{"details": err.Error()},
+		)
+	}
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "auth_token",
+		Value:    tokenString,
+		Expires:  time.Now().Add(24 * time.Hour),
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Lax",
+		Path:     "/",
+	})
+
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"data": customer,
+		"data":  customer,
+		"token": tokenString,
 	})
 }
 
@@ -297,6 +345,16 @@ func (h *Handler) Login(c fiber.Ctx) error {
 		)
 	}
 
+	c.Cookie(&fiber.Cookie{
+		Name:     "auth_token",
+		Value:    tokenString,
+		Expires:  time.Now().Add(24 * time.Hour),
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Lax",
+		Path:     "/",
+	})
+
 	return c.JSON(fiber.Map{
 		"token": tokenString,
 		"customer": fiber.Map{
@@ -309,18 +367,20 @@ func (h *Handler) Login(c fiber.Ctx) error {
 }
 
 func (h *Handler) Logout(c fiber.Ctx) error {
-	token := c.Get("Authorization")
+	token := c.Cookies("auth_token")
 	if token == "" {
-		return errors.SendError(
-			c,
-			fiber.StatusBadRequest,
-			errors.ErrValidation,
-			"Authorization token required",
-			nil,
-		)
+		token = c.Get("Authorization")
+		if token == "" {
+			return errors.SendError(
+				c,
+				fiber.StatusBadRequest,
+				errors.ErrValidation,
+				"Authorization token required",
+				nil,
+			)
+		}
+		token = token[len("Bearer "):]
 	}
-
-	token = token[len("Bearer "):]
 
 	if err := DeleteSession(&h.cache, token); err != nil {
 		return errors.SendError(
@@ -332,42 +392,55 @@ func (h *Handler) Logout(c fiber.Ctx) error {
 		)
 	}
 
+	c.Cookie(&fiber.Cookie{
+		Name:     "auth_token",
+		Value:    "",
+		MaxAge:   -1,
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Lax",
+		Path:     "/",
+	})
+
 	return c.JSON(fiber.Map{
 		"message": "Logged out successfully",
 	})
 }
 
 func (h *Handler) ValidateToken(c fiber.Ctx) error {
-	token := c.Get("Authorization")
+	token := c.Cookies("auth_token")
 	if token == "" {
-		return errors.SendError(
-			c,
-			fiber.StatusBadRequest,
-			errors.ErrValidation,
-			"Authorization token required",
-			nil,
-		)
-	}
+		token = c.Get("Authorization")
+		if token == "" {
+			return errors.SendError(
+				c,
+				fiber.StatusBadRequest,
+				errors.ErrValidation,
+				"Authorization token required",
+				nil,
+			)
+		}
 
-	if !strings.HasPrefix(token, "Bearer ") {
-		return errors.SendError(
-			c,
-			fiber.StatusBadRequest,
-			errors.ErrValidation,
-			"Invalid authorization format",
-			nil,
-		)
-	}
+		if !strings.HasPrefix(token, "Bearer ") {
+			return errors.SendError(
+				c,
+				fiber.StatusBadRequest,
+				errors.ErrValidation,
+				"Invalid authorization format",
+				nil,
+			)
+		}
 
-	token = strings.TrimPrefix(token, "Bearer ")
-	if token == "" {
-		return errors.SendError(
-			c,
-			fiber.StatusBadRequest,
-			errors.ErrValidation,
-			"Invalid authorization format",
-			nil,
-		)
+		token = strings.TrimPrefix(token, "Bearer ")
+		if token == "" {
+			return errors.SendError(
+				c,
+				fiber.StatusBadRequest,
+				errors.ErrValidation,
+				"Invalid authorization format",
+				nil,
+			)
+		}
 	}
 
 	claims := &JWTClaims{}

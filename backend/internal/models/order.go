@@ -35,17 +35,19 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order Order, items []
 		_ = tx.Rollback()
 	}()
 
-	orderQuery := `INSERT INTO orders (order_id, customer_id, total_amount, status, order_date) 
-	               VALUES ($1, $2, $3, $4, $5)`
-	_, err = tx.ExecContext(ctx, orderQuery, order.OrderID, order.CustomerID, order.TotalAmount, order.Status, order.OrderDate)
+	_, err = querybuilder.NewInsertWithDB(tx, "orders").
+		Columns("order_id", "customer_id", "total_amount", "status", "order_date").
+		Values(order.OrderID, order.CustomerID, order.TotalAmount, order.Status, order.OrderDate).
+		Exec(ctx)
 	if err != nil {
 		return err
 	}
 
-	itemQuery := `INSERT INTO order_items (order_id, product_id, quantity, unit_price) 
-	              VALUES ($1, $2, $3, $4)`
 	for _, item := range items {
-		_, err = tx.ExecContext(ctx, itemQuery, order.OrderID, item.ProductID, item.Quantity, item.UnitPrice)
+		_, err = querybuilder.NewInsertWithDB(tx, "order_items").
+			Columns("order_id", "product_id", "quantity", "unit_price").
+			Values(item.OrderID, item.ProductID, item.Quantity, item.UnitPrice).
+			Exec(ctx)
 		if err != nil {
 			return err
 		}

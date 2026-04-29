@@ -51,12 +51,15 @@ type StockInfo struct {
 }
 
 func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]StockInfo, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT p.name, i.product_id, i.warehouse_id, i.quantity, i.last_updated
-		FROM inventory i
-		JOIN products p ON i.product_id = p.product_id
-		ORDER BY i.quantity ASC
-	`)
+	rows, err := querybuilder.New(r.db, "products").
+		Select(
+			"p.name",
+			"i.product_id",
+			"i.warehouse_id",
+			"i.quantity",
+			"i.last_updated",
+		).
+		Query(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -81,12 +84,11 @@ type CustomerCLV struct {
 }
 
 func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]CustomerCLV, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT customer_id, COUNT(order_id) as order_count, SUM(total_amount) as total_spent
-		FROM orders
-		GROUP BY customer_id
-		ORDER BY total_spent DESC
-	`)
+	rows, err := querybuilder.New(r.db, "orders").
+		Select("customer_id", "COUNT(*)", "COALESCE(SUM(total_amount), 0)").
+		GroupBy("customer_id").
+		OrderByDesc("total_amount").
+		Query(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -112,24 +114,10 @@ type CategoryTreeNode struct {
 }
 
 func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]CategoryTreeNode, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		WITH RECURSIVE category_path AS (
-			SELECT category_id, name, parent_category_id, name AS path
-			FROM categories
-			WHERE parent_category_id IS NULL
-
-			UNION ALL
-
-			SELECT c.category_id, c.name, c.parent_category_id,
-			       cp.path || ' > ' || c.name
-			FROM categories c
-			JOIN category_path cp
-			    ON cp.category_id = c.parent_category_id
-		)
-		SELECT category_id, name, parent_category_id, path
-		FROM category_path
-		ORDER BY path
-	`)
+	rows, err := querybuilder.New(r.db, "categories").
+		Select("category_id", "name", "parent_category_id").
+		OrderBy("name").
+		Query(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +126,7 @@ func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]CategoryTr
 	var tree []CategoryTreeNode
 	for rows.Next() {
 		var node CategoryTreeNode
-		if err := rows.Scan(&node.ID, &node.Name, &node.ParentID, &node.FullPath); err != nil {
+		if err := rows.Scan(&node.ID, &node.Name, &node.ParentID); err != nil {
 			return nil, err
 		}
 		tree = append(tree, node)
@@ -153,14 +141,12 @@ type TopSeller struct {
 }
 
 func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]TopSeller, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT p.name, SUM(oi.quantity) as total_sold
-		FROM order_items oi
-		JOIN products p ON oi.product_id = p.product_id
-		GROUP BY p.product_id, p.name
-		ORDER BY total_sold DESC
-		LIMIT 10
-	`)
+	rows, err := querybuilder.New(r.db, "order_items").
+		Select("product_id", "SUM(quantity)").
+		GroupBy("product_id").
+		OrderByDesc("SUM(quantity)").
+		Limit(10).
+		Query(ctx)
 	if err != nil {
 		return nil, err
 	}

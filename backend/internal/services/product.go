@@ -23,7 +23,7 @@ func NewProductService(repo ProductRepository, cache *cache.RedisService) *Produ
 }
 
 func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]models.Product, map[string]interface{}, error) {
-	key := "products:all"
+	key := fmt.Sprintf("products:all:%s:%s:%s:%s:%d:%d", category, minPriceStr, maxPriceStr, search, page, limit)
 
 	if s.cache != nil && s.cache.Client != nil {
 		cached, err := s.cache.Client.Get(cache.Ctx, key).Result()
