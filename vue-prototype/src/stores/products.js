@@ -21,11 +21,13 @@ export const useProductsStore = defineStore('products', () => {
     error.value = null
     try {
       const params = { ...filters.value, ...pagination.value }
-      const { data } = await productService.getProducts(params)
-      products.value = data.products
-      pagination.value.total = data.total
+      const response = await productService.getProducts(params)
+      const responseData = response.data || response
+      products.value = responseData.data || []
+      pagination.value.total = responseData.pagination?.total_items || 0
+      pagination.value.total_pages = responseData.pagination?.total_pages || 1
     } catch (err) {
-      error.value = err.response?.data?.message || 'Failed to fetch products'
+      error.value = err.response?.data?.message || err.message || 'Failed to fetch products'
     } finally {
       loading.value = false
     }
@@ -35,10 +37,11 @@ export const useProductsStore = defineStore('products', () => {
     loading.value = true
     error.value = null
     try {
-      const { data } = await productService.getProductById(id)
-      currentProduct.value = data
+      const response = await productService.getProductById(id)
+      const responseData = response.data || response
+      currentProduct.value = responseData.data || responseData
     } catch (err) {
-      error.value = err.response?.data?.message || 'Failed to fetch product'
+      error.value = err.response?.data?.message || err.message || 'Failed to fetch product'
     } finally {
       loading.value = false
     }

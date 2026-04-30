@@ -11,12 +11,12 @@ export const useCartStore = defineStore('cart', () => {
   const saveCart = () => localStorage.setItem('cart', JSON.stringify(items.value))
 
   const addToCart = (product, quantity = 1) => {
-    const existing = items.value.find(item => item.id === product.id)
+    const existing = items.value.find(item => item.id === product.product_id)
     if (existing) {
       existing.quantity += quantity
     } else {
       items.value.push({
-        id: product.id,
+        id: product.product_id,
         name: product.name,
         price: product.price,
         image: product.images?.[0] || '',

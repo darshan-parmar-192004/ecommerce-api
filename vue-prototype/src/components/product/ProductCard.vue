@@ -18,7 +18,7 @@ const addToCart = (e) => {
 }
 
 const goToDetail = () => {
-  router.push({ name: 'ProductDetail', params: { id: props.product.id } })
+  router.push({ name: 'ProductDetail', params: { id: props.product.product_id } })
 }
 </script>
 
@@ -49,7 +49,7 @@ const goToDetail = () => {
       <!-- Category Badge -->
       <div class="absolute top-4 left-4">
         <span class="px-3 py-1 bg-white/90 backdrop-blur-sm text-xs font-medium text-gray-900 rounded-full">
-          {{ product.category }}
+          {{ product.category_name || 'Uncategorized' }}
         </span>
       </div>
     </div>
