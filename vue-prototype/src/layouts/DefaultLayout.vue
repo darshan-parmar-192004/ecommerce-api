@@ -1,8 +1,10 @@
 <script setup>
 import Navbar from '@/components/layout/Navbar.vue'
 import Footer from '@/components/layout/Footer.vue'
-// Simplified transition - let CSS handle the animation
+import ToastContainer from '@/components/common/ToastContainer.vue'
+import CartDrawer from '@/components/layout/CartDrawer.vue'
 </script>
+
 <template>
   <div class="default-layout">
     <Navbar />
@@ -15,6 +17,8 @@ import Footer from '@/components/layout/Footer.vue'
       </router-view>
     </main>
     <Footer />
+    <ToastContainer />
+    <CartDrawer />
   </div>
 </template>
 <style scoped>

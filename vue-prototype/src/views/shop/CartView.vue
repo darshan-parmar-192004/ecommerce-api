@@ -44,7 +44,7 @@ const hasItems = computed(() => cartStore.items.length > 0)
             <img :src="item.image || '/placeholder.jpg'" :alt="item.name" class="w-24 h-24 object-cover rounded-lg" />
             <div class="flex-1">
               <h3 class="font-medium text-gray-900">{{ item.name }}</h3>
-              <p class="text-gray-600 mt-1">${{ (item.price * item.quantity).toFixed(2) }}</p>
+              <p class="text-gray-600 mt-1">₹{{ (item.price * item.quantity).toFixed(2) }}</p>
               <div class="flex items-center gap-2 mt-3">
                 <button
                   @click="cartStore.updateQuantity(item.id, item.quantity - 1)"
@@ -83,7 +83,7 @@ const hasItems = computed(() => cartStore.items.length > 0)
         <div class="space-y-3 mb-6">
           <div class="flex justify-between text-gray-600">
             <span>Subtotal ({{ cartStore.cartCount }} items)</span>
-            <span>${{ cartStore.cartTotal.toFixed(2) }}</span>
+            <span>₹{{ cartStore.cartTotal.toFixed(2) }}</span>
           </div>
           <div class="flex justify-between text-gray-600">
             <span>Shipping</span>
@@ -92,7 +92,7 @@ const hasItems = computed(() => cartStore.items.length > 0)
           <hr class="border-gray-200" />
           <div class="flex justify-between text-lg font-semibold text-gray-900">
             <span>Total</span>
-            <span>${{ cartStore.cartTotal.toFixed(2) }}</span>
+            <span>₹{{ cartStore.cartTotal.toFixed(2) }}</span>
           </div>
         </div>
         <button @click="router.push('/checkout')" class="btn-primary w-full">

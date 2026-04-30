@@ -106,7 +106,7 @@ const buyNow = () => {
         </div>
 
         <div class="text-3xl font-bold text-gray-900">
-          ${{ productsStore.currentProduct.price?.toFixed(2) }}
+          ₹{{ productsStore.currentProduct.price?.toFixed(2) }}
         </div>
 
         <p class="text-gray-700 leading-relaxed">

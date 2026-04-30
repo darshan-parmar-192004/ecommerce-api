@@ -3,10 +3,12 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useUserStore } from '@/stores/user'
+import { useToastStore } from '@/stores/toast'
 
 const router = useRouter()
 const cartStore = useCartStore()
 const userStore = useUserStore()
+const toastStore = useToastStore()
 
 const step = ref(1)
 const loading = ref(false)
@@ -43,18 +45,29 @@ onMounted(async () => {
 const placeOrder = async () => {
   loading.value = true
   try {
+    // Transform cart items to order items format matching backend
+    const orderItems = cartStore.items.map(item => ({
+      product_id: item.id,
+      quantity: item.quantity,
+      unit_price: item.price
+    }))
+    
     const orderData = {
-      items: cartStore.items,
-      shipping: shippingInfo.value,
-      total: cartStore.cartTotal
+      order: {
+        customer_id: 'CUST-001', // Should come from auth
+        total_amount: cartStore.cartTotal,
+        status: 'pending',
+        shipping_address: `${shippingInfo.value.address}, ${shippingInfo.value.city}, ${shippingInfo.value.state} ${shippingInfo.value.zip}`
+      },
+      items: orderItems
     }
     const result = await userStore.createOrder(orderData)
-    orderId.value = result.id || 'N/A'
+    orderId.value = result.order_id || 'N/A'
     orderPlaced.value = true
     cartStore.clearCart()
   } catch (err) {
     console.error('Order failed', err)
-    alert('Failed to place order. Please try again.')
+    toastStore.error('Failed to place order. Please try again.')
   } finally {
     loading.value = false
   }
@@ -134,12 +147,12 @@ const placeOrder = async () => {
         <div class="bg-gray-50 p-4 rounded-lg space-y-3">
           <div v-for="item in cartStore.items" :key="item.id" class="flex justify-between text-sm">
             <span>{{ item.name }} x{{ item.quantity }}</span>
-            <span>${{ (item.price * item.quantity).toFixed(2) }}</span>
+            <span>₹{{ (item.price * item.quantity).toFixed(2) }}</span>
           </div>
           <hr class="border-gray-200" />
           <div class="flex justify-between font-semibold">
             <span>Total</span>
-            <span>${{ cartStore.cartTotal.toFixed(2) }}</span>
+            <span>₹{{ cartStore.cartTotal.toFixed(2) }}</span>
           </div>
         </div>
         <div class="flex gap-4">

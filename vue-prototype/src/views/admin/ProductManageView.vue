@@ -1,17 +1,22 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useMotion } from '@vueuse/motion'
 import productService from '@/services/productService'
+import categoryService from '@/services/categoryService'
+import { useToastStore } from '@/stores/toast'
+
+const toastStore = useToastStore()
 
 const products = ref([])
+const categories = ref([])
 const loading = ref(true)
 const showModal = ref(false)
 const editingProduct = ref(null)
 
 const form = ref({
+  product_id: '',
   name: '',
   price: 0,
-  category: '',
+  category_id: '',
   description: '',
   stock: 0
 })
@@ -19,18 +24,37 @@ const form = ref({
 const fetchProducts = async () => {
   loading.value = true
   try {
-    const { data } = await productService.getProducts({ limit: 50 })
-    products.value = data.products
+    const response = await productService.getProducts({ limit: 50 })
+    const responseData = response.data || response
+    products.value = responseData.data || []
   } catch (err) {
     console.error('Failed to fetch products', err)
+    toastStore.error('Failed to fetch products')
   } finally {
     loading.value = false
   }
 }
 
+const fetchCategories = async () => {
+  try {
+    const response = await categoryService.getCategories()
+    const responseData = response.data || response
+    categories.value = responseData.data || []
+  } catch (err) {
+    console.error('Failed to fetch categories', err)
+  }
+}
+
 const editProduct = (product) => {
   editingProduct.value = product
-  form.value = { ...product }
+  form.value = {
+    product_id: product.product_id,
+    name: product.name,
+    price: product.price,
+    category_id: product.category_id,
+    description: product.description || '',
+    stock: product.stock || 0
+  }
   showModal.value = true
 }
 
@@ -39,36 +63,60 @@ const deleteProduct = async (id) => {
     try {
       await productService.deleteProduct(id)
       await fetchProducts()
+      toastStore.success('Product deleted successfully')
     } catch (err) {
       console.error('Delete failed', err)
+      toastStore.error('Failed to delete product')
     }
   }
 }
 
 const saveProduct = async () => {
   try {
+    const payload = {
+      name: form.value.name,
+      price: form.value.price,
+      category_id: form.value.category_id,
+      description: form.value.description || null,
+      stock: form.value.stock || 0
+    }
+    
     if (editingProduct.value) {
-      await productService.updateProduct(editingProduct.value.id, form.value)
+      await productService.updateProduct(editingProduct.value.product_id, payload)
+      toastStore.success('Product updated successfully')
     } else {
-      await productService.createProduct(form.value)
+      await productService.createProduct({
+        ...payload,
+        product_id: `PRD-${Date.now()}` // Generate product ID
+      })
+      toastStore.success('Product created successfully')
     }
     showModal.value = false
     editingProduct.value = null
-    form.value = { name: '', price: 0, category: '', description: '', stock: 0 }
+    form.value = { product_id: '', name: '', price: 0, category_id: '', description: '', stock: 0 }
     await fetchProducts()
   } catch (err) {
     console.error('Save failed', err)
+    toastStore.error('Failed to save product')
   }
 }
 
-onMounted(fetchProducts)
+const getCategoryName = (categoryId) => {
+  const category = categories.value.find(c => c.category_id === categoryId)
+  return category?.name || 'Unknown'
+}
+
+onMounted(() => {
+  fetchCategories()
+  fetchProducts()
+})
 </script>
 
 <template>
   <div>
     <div class="flex items-center justify-between mb-8">
       <h1 class="text-3xl font-bold text-gray-900">Manage Products</h1>
-      <button @click="showModal = true; editingProduct.value = null; form.value = { name: '', price: 0, category: '', description: '', stock: 0 }" class="btn-primary">
+      <button @click="showModal = true; editingProduct.value = null; form.value = { product_id: '', name: '', price: 0, category_id: '', description: '', stock: 0 }" class="btn-primary">
         Add Product
       </button>
     </div>
@@ -89,14 +137,14 @@ onMounted(fetchProducts)
           </tr>
         </thead>
         <tbody>
-          <tr v-for="product in products" :key="product.id" class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+          <tr v-for="product in products" :key="product.product_id" class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
             <td class="p-4 text-sm text-gray-900">{{ product.name }}</td>
-            <td class="p-4 text-sm text-gray-600">{{ product.category }}</td>
-            <td class="p-4 text-sm text-gray-900">${{ product.price?.toFixed(2) }}</td>
-            <td class="p-4 text-sm text-gray-600">{{ product.stock }}</td>
+            <td class="p-4 text-sm text-gray-600">{{ getCategoryName(product.category_id) }}</td>
+            <td class="p-4 text-sm text-gray-900">₹{{ product.price?.toFixed(2) }}</td>
+            <td class="p-4 text-sm text-gray-600">{{ product.stock ?? 0 }}</td>
             <td class="p-4 text-right space-x-2">
               <button @click="editProduct(product)" class="text-sm text-gray-600 hover:text-gray-900">Edit</button>
-              <button @click="deleteProduct(product.id)" class="text-sm text-red-600 hover:text-red-700">Delete</button>
+              <button @click="deleteProduct(product.product_id)" class="text-sm text-red-600 hover:text-red-700">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -113,7 +161,12 @@ onMounted(fetchProducts)
           <form @submit.prevent="saveProduct" class="space-y-4">
             <input v-model="form.name" placeholder="Product Name" class="input" required />
             <input v-model.number="form.price" type="number" step="0.01" placeholder="Price" class="input" required />
-            <input v-model="form.category" placeholder="Category" class="input" required />
+            <select v-model="form.category_id" class="input" required>
+              <option value="">Select Category</option>
+              <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
+                {{ category.name }}
+              </option>
+            </select>
             <textarea v-model="form.description" placeholder="Description" rows="3" class="input" />
             <input v-model.number="form.stock" type="number" placeholder="Stock" class="input" required />
             <div class="flex gap-3">

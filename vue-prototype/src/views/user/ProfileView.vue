@@ -2,15 +2,17 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useUserStore } from '@/stores/user'
-import { useMotion } from '@vueuse/motion'
+import { useToastStore } from '@/stores/toast'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
+const toastStore = useToastStore()
 
 const form = ref({
   name: '',
   email: '',
   phone: '',
+  country: '',
   address: ''
 })
 
@@ -24,6 +26,7 @@ onMounted(async () => {
       name: userStore.profile.name || '',
       email: userStore.profile.email || '',
       phone: userStore.profile.phone || '',
+      country: userStore.profile.country || '',
       address: userStore.profile.address || ''
     }
   } else if (authStore.user) {
@@ -31,6 +34,7 @@ onMounted(async () => {
       name: authStore.user.name || '',
       email: authStore.user.email || '',
       phone: '',
+      country: '',
       address: ''
     }
   }
@@ -40,10 +44,12 @@ const updateProfile = async () => {
   try {
     await userStore.updateProfile(form.value)
     successMessage.value = 'Profile updated successfully!'
+    toastStore.success('Profile updated successfully!')
     isEditing.value = false
     setTimeout(() => { successMessage.value = '' }, 3000)
   } catch (err) {
     console.error('Update failed', err)
+    toastStore.error('Failed to update profile.')
   }
 }
 </script>
@@ -79,6 +85,10 @@ const updateProfile = async () => {
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
           <input v-model="form.phone" :disabled="!isEditing" type="tel" class="input" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
+          <input v-model="form.country" :disabled="!isEditing" type="text" class="input" />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>

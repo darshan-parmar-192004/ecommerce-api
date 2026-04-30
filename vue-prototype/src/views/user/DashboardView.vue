@@ -51,7 +51,7 @@ onMounted(() => {
             <p class="text-sm text-gray-600">{{ order.date }}</p>
           </div>
           <div class="text-right">
-            <p class="font-semibold text-gray-900">${{ order.total?.toFixed(2) }}</p>
+            <p class="font-semibold text-gray-900">₹{{ order.total?.toFixed(2) }}</p>
             <span class="text-xs px-2 py-1 rounded-full" :class="order.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'">
               {{ order.status }}
             </span>

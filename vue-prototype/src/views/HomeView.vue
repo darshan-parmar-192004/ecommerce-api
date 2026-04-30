@@ -94,7 +94,7 @@ onMounted(async () => {
             <div class="p-5">
               <h3 class="text-sm font-medium text-gray-900 line-clamp-2">{{ product.name }}</h3>
               <div class="flex items-center justify-between mt-3">
-                <span class="text-xl font-bold text-gray-900">${{ product.price?.toFixed(2) }}</span>
+                <span class="text-xl font-bold text-gray-900">₹{{ product.price?.toFixed(2) }}</span>
               </div>
             </div>
           </div>

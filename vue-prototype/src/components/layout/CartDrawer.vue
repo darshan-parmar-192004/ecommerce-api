@@ -29,7 +29,7 @@ const cartStore = useCartStore()
               <img :src="item.image || '/placeholder.jpg'" :alt="item.name" class="w-20 h-20 object-cover rounded-md" />
               <div class="flex-1">
                 <h3 class="text-sm font-medium text-gray-900">{{ item.name }}</h3>
-                <p class="text-sm text-gray-600 mt-1">${{ (item.price * item.quantity).toFixed(2) }}</p>
+                <p class="text-sm text-gray-600 mt-1">₹{{ (item.price * item.quantity).toFixed(2) }}</p>
                 <div class="flex items-center gap-2 mt-2">
                   <button
                     @click="cartStore.updateQuantity(item.id, item.quantity - 1)"
@@ -62,7 +62,7 @@ const cartStore = useCartStore()
         <div v-if="cartStore.items.length > 0" class="border-t border-gray-200 p-4 space-y-4">
           <div class="flex justify-between text-base font-semibold text-gray-900">
             <span>Total</span>
-            <span>${{ cartStore.cartTotal.toFixed(2) }}</span>
+            <span>₹{{ cartStore.cartTotal.toFixed(2) }}</span>
           </div>
           <RouterLink
             to="/checkout"

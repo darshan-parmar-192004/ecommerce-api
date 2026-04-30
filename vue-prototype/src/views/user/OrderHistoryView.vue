@@ -1,13 +1,22 @@
 <script setup>
 import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { useMotion } from '@vueuse/motion'
+import { useToastStore } from '@/stores/toast'
 
+const router = useRouter()
 const userStore = useUserStore()
+const toastStore = useToastStore()
 
 onMounted(() => {
-  userStore.fetchOrders()
+  userStore.fetchOrders().catch(() => {
+    toastStore.error('Failed to load orders')
+  })
 })
+
+const viewOrder = (orderId) => {
+  router.push({ name: 'OrderDetail', params: { id: orderId } })
+}
 </script>
 
 <template>
@@ -21,17 +30,17 @@ onMounted(() => {
     <div v-else-if="userStore.orders.length > 0" class="space-y-4">
       <div
         v-for="order in userStore.orders"
-        :key="order.id"
-        useMotion="{ initial: { opacity: 0, y: 20 }, enter: { opacity: 1, y: 0 } }"
-        class="bg-white p-6 rounded-xl border border-gray-200 flex items-center justify-between hover:shadow-md transition-shadow"
+        :key="order.order_id"
+        class="bg-white p-6 rounded-xl border border-gray-200 flex items-center justify-between hover:shadow-md transition-colors cursor-pointer"
+        @click="viewOrder(order.order_id)"
       >
         <div>
-          <p class="font-semibold text-gray-900">Order #{{ order.id }}</p>
+          <p class="font-semibold text-gray-900">Order #{{ order.order_id }}</p>
           <p class="text-sm text-gray-600 mt-1">{{ order.items?.length || 0 }} items</p>
-          <p class="text-sm text-gray-500">{{ order.date }}</p>
+          <p class="text-sm text-gray-500">{{ order.order_date }}</p>
         </div>
         <div class="text-right">
-          <p class="text-xl font-bold text-gray-900">${{ order.total?.toFixed(2) }}</p>
+          <p class="text-xl font-bold text-gray-900">₹{{ order.total_amount?.toFixed(2) }}</p>
           <span
             class="inline-block mt-1 px-3 py-1 text-xs font-medium rounded-full"
             :class="{

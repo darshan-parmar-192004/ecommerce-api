@@ -75,6 +75,12 @@ const router = createRouter({
           meta: { title: 'Order History' }
         },
         {
+          path: 'orders/:id',
+          name: 'OrderDetail',
+          component: () => import('@/views/user/OrderDetailView.vue'),
+          meta: { title: 'Order Details' }
+        },
+        {
           path: 'profile',
           name: 'Profile',
           component: () => import('@/views/user/ProfileView.vue'),
@@ -104,6 +110,12 @@ const router = createRouter({
           name: 'AdminInventory',
           component: () => import('@/views/admin/InventoryView.vue'),
           meta: { title: 'Inventory Management' }
+        },
+        {
+          path: 'categories',
+          name: 'AdminCategories',
+          component: () => import('@/views/admin/CategoryManageView.vue'),
+          meta: { title: 'Category Management' }
         }
       ]
     },

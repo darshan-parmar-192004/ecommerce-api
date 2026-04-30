@@ -1,12 +1,13 @@
 import api from './api'
 
 const userService = {
-  getOrders: (params) => api.get('/orders', { params }),
+  getOrders: (customerId, params) => api.get(`/customers/${customerId}/orders`, { params }),
   getOrderById: (id) => api.get(`/orders/${id}`),
+  getOrderDetail: (id) => api.get(`/orders/${id}/detail`),
   createOrder: (data) => api.post('/orders', data),
   cancelOrder: (id) => api.put(`/orders/${id}/cancel`),
-  getProfile: () => api.get('/users/profile'),
-  updateProfile: (data) => api.put('/users/profile', data)
+  getProfile: () => api.get('/customers/me'),
+  updateProfile: (data) => api.put('/customers/me', data)
 }
 
 export default userService
