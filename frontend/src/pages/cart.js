@@ -5,7 +5,8 @@ const CART_KEY = 'ecommerce_cart'
 export function getCart() {
   try {
     return JSON.parse(localStorage.getItem(CART_KEY)) || []
-  } catch {
+  } catch (e) {
+    console.error('Failed to parse cart from localStorage:', e)
     return []
   }
 }

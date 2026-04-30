@@ -259,18 +259,39 @@ function setupHeaderEvents() {
   if (!headerRoot) return;
   
   // Theme toggle
-  function toggleTheme() {
-    const isDark = document.documentElement.classList.contains('dark');
-    if (isDark) {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    } else {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    }
-    // Dispatch event to notify app of theme change
-    window.dispatchEvent(new CustomEvent('theme:change'));
+function toggleTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  if (isDark) {
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+  } else {
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
   }
+  // Toggle icon visibility and button text directly (no re-render needed)
+  const nowDark = document.documentElement.classList.contains('dark');
+
+  // Desktop icons
+  const sunIcon = document.getElementById('theme-icon-sun');
+  const moonIcon = document.getElementById('theme-icon-moon');
+  if (sunIcon) sunIcon.classList.toggle('hidden', !nowDark);
+  if (moonIcon) moonIcon.classList.toggle('hidden', nowDark);
+
+  // Mobile icons
+  const mobileSunIcon = document.getElementById('mobile-theme-icon-sun');
+  const mobileMoonIcon = document.getElementById('mobile-theme-icon-moon');
+  if (mobileSunIcon) mobileSunIcon.classList.toggle('hidden', !nowDark);
+  if (mobileMoonIcon) mobileMoonIcon.classList.toggle('hidden', nowDark);
+
+  // Mobile button text
+  const mobileThemeBtn = document.getElementById('mobile-theme-toggle-btn');
+  if (mobileThemeBtn) {
+    const textNode = mobileThemeBtn.lastChild;
+    if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+      textNode.textContent = nowDark ? 'Light Mode' : 'Dark Mode';
+    }
+  }
+}
   
   // Setup click delegation on headerRoot only once (headerRoot element persists across re-renders)
   if (!headerClickInitialized) {

@@ -196,11 +196,6 @@ window.addEventListener('auth:change', () => {
 })
 window.addEventListener('cart:update', updateCartBadge)
 
-// Re-render page on theme change
-window.addEventListener('theme:change', () => {
-  router()
-})
-
 // Global exports
 window.router = { navigate, showToast }
 window.Auth = { updateAuthUI }
