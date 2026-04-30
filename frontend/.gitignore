@@ -35,4 +35,4 @@ Thumbs.db
 coverage/
 
 # Vite cache
-.vite/
+.vite
