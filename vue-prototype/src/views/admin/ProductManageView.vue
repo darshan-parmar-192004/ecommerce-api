@@ -72,6 +72,14 @@ const deleteProduct = async (id) => {
 }
 
 const saveProduct = async () => {
+  if (!form.value.category_id) {
+    toastStore.error('Please select a category')
+    return
+  }
+  if (!form.value.name || form.value.price <= 0) {
+    toastStore.error('Product name and valid price are required')
+    return
+  }
   try {
     const payload = {
       name: form.value.name,
@@ -87,7 +95,7 @@ const saveProduct = async () => {
     } else {
       await productService.createProduct({
         ...payload,
-        product_id: `PRD-${Date.now()}` // Generate product ID
+        product_id: `PRD-${Date.now()}`
       })
       toastStore.success('Product created successfully')
     }
@@ -96,8 +104,14 @@ const saveProduct = async () => {
     form.value = { product_id: '', name: '', price: 0, category_id: '', description: '', stock: 0 }
     await fetchProducts()
   } catch (err) {
+    const backendErrors = err.response?.data?.errors
+    if (backendErrors) {
+      const messages = Object.values(backendErrors).flat()
+      toastStore.error(messages.join(', '))
+    } else {
+      toastStore.error('Failed to save product')
+    }
     console.error('Save failed', err)
-    toastStore.error('Failed to save product')
   }
 }
 
@@ -159,16 +173,31 @@ onMounted(() => {
             {{ editingProduct ? 'Edit Product' : 'Add Product' }}
           </h2>
           <form @submit.prevent="saveProduct" class="space-y-4">
-            <input v-model="form.name" placeholder="Product Name" class="input" required />
-            <input v-model.number="form.price" type="number" step="0.01" placeholder="Price" class="input" required />
-            <select v-model="form.category_id" class="input" required>
-              <option value="">Select Category</option>
-              <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
-                {{ category.name }}
-              </option>
-            </select>
-            <textarea v-model="form.description" placeholder="Description" rows="3" class="input" />
-            <input v-model.number="form.stock" type="number" placeholder="Stock" class="input" required />
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+              <input v-model="form.name" placeholder="Product Name" class="input" required />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Price</label>
+              <input v-model.number="form.price" type="number" step="0.01" placeholder="Price" class="input" required />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <select v-model="form.category_id" class="input" required>
+                <option value="">Select Category</option>
+                <option v-for="category in categories" :key="category.category_id" :value="category.category_id">
+                  {{ category.name }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea v-model="form.description" placeholder="Description" rows="3" class="input" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+              <input v-model.number="form.stock" type="number" placeholder="Stock" class="input" required />
+            </div>
             <div class="flex gap-3">
               <button type="button" @click="showModal = false" class="btn-secondary flex-1">Cancel</button>
               <button type="submit" class="btn-primary flex-1">Save</button>

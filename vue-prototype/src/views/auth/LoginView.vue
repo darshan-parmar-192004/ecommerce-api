@@ -2,11 +2,13 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToastStore } from '@/stores/toast'
 import { useMotion } from '@vueuse/motion'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 
 const form = ref({
   email: '',
@@ -17,8 +19,13 @@ const showPassword = ref(false)
 const handleLogin = async () => {
   try {
     await authStore.login(form.value)
-    const redirect = route.query.redirect || '/'
-    router.push(redirect)
+    toastStore.success(`Welcome back, ${authStore.user?.name || 'User'}!`)
+    if (authStore.isAdmin) {
+      router.push({ name: 'AdminDashboard' })
+    } else {
+      const redirect = route.query.redirect || '/'
+      router.push(redirect)
+    }
   } catch (err) {
     console.error('Login failed', err)
   }

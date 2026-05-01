@@ -11,9 +11,46 @@ const loading = ref(true)
 const fetchInventory = async () => {
   loading.value = true
   try {
-    const response = await productService.getInventory({ limit: 50 })
-    const responseData = response.data || response
-    inventory.value = responseData.data || responseData || []
+    const productsRes = await productService.getProducts({ limit: 200 })
+    const productsData = productsRes.data?.data || productsRes.data || []
+
+    let inventoryData = []
+    try {
+      const inventoryRes = await productService.getInventory({ limit: 100 })
+      inventoryData = Array.isArray(inventoryRes.data)
+        ? inventoryRes.data
+        : (inventoryRes.data?.data || [])
+    } catch {
+      // Inventory endpoint may have issues; continue with just products
+    }
+
+    const inventoryByProduct = {}
+    inventoryData.forEach(item => {
+      if (!inventoryByProduct[item.product_id]) {
+        inventoryByProduct[item.product_id] = []
+      }
+      inventoryByProduct[item.product_id].push(item)
+    })
+
+    inventory.value = productsData.map(product => {
+      const inv = inventoryByProduct[product.product_id]
+      if (inv && inv.length > 0) {
+        return {
+          product_name: product.name,
+          product_id: product.product_id,
+          warehouse_id: inv[0].warehouse_id,
+          quantity: inv.reduce((sum, i) => sum + i.quantity, 0),
+          last_updated: inv[0].last_updated
+        }
+      }
+      return {
+        product_name: product.name,
+        product_id: product.product_id,
+        warehouse_id: 'N/A',
+        quantity: 0,
+        last_updated: null
+      }
+    })
   } catch (err) {
     console.error('Failed to fetch inventory', err)
     toastStore.error('Failed to fetch inventory')
@@ -47,6 +84,7 @@ onMounted(fetchInventory)
       <table class="w-full">
         <thead class="bg-gray-50 border-b border-gray-200">
           <tr>
+            <th class="text-left p-4 text-sm font-medium text-gray-700">Product Name</th>
             <th class="text-left p-4 text-sm font-medium text-gray-700">Product ID</th>
             <th class="text-left p-4 text-sm font-medium text-gray-700">Warehouse</th>
             <th class="text-left p-4 text-sm font-medium text-gray-700">Current Stock</th>
@@ -56,6 +94,7 @@ onMounted(fetchInventory)
         </thead>
         <tbody>
           <tr v-for="item in inventory" :key="item.product_id" class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+            <td class="p-4 text-sm text-gray-900">{{ item.product_name || '(no product data)' }}</td>
             <td class="p-4 text-sm text-gray-900">{{ item.product_id }}</td>
             <td class="p-4 text-sm text-gray-600">{{ item.warehouse_id || 'N/A' }}</td>
             <td class="p-4">

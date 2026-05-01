@@ -2,10 +2,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToastStore } from '@/stores/toast'
 import { useMotion } from '@vueuse/motion'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const toastStore = useToastStore()
 
 const form = ref({
   name: '',
@@ -26,7 +28,12 @@ const handleRegister = async () => {
       email: form.value.email,
       password: form.value.password
     })
-    router.push('/')
+    toastStore.success(`Welcome, ${authStore.user?.name || 'User'}!`)
+    if (authStore.isAdmin) {
+      router.push({ name: 'AdminDashboard' })
+    } else {
+      router.push('/')
+    }
   } catch (err) {
     console.error('Registration failed', err)
   }

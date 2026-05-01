@@ -42,6 +42,14 @@ const logout = async () => {
               Products
               <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-900 group-hover:w-full transition-all duration-300" />
             </RouterLink>
+            <RouterLink 
+              v-if="authStore.isAdmin"
+              to="/admin" 
+              class="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors relative group"
+            >
+              Admin Panel
+              <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-gray-900 group-hover:w-full transition-all duration-300" />
+            </RouterLink>
           </div>
         </div>
 
@@ -81,6 +89,9 @@ const logout = async () => {
               </button>
               <!-- Dropdown menu - works on hover for desktop, click for mobile via group -->
               <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <RouterLink v-if="authStore.isAdmin" to="/admin" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-lg mx-2">
+                  Admin Panel
+                </RouterLink>
                 <RouterLink to="/user/dashboard" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors rounded-lg mx-2">
                   Dashboard
                 </RouterLink>
@@ -144,6 +155,9 @@ const logout = async () => {
                 Products
               </RouterLink>
             <template v-if="authStore.isAuthenticated">
+              <RouterLink v-if="authStore.isAdmin" to="/admin" class="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors" @click="mobileMenuOpen = false">
+                Admin Panel
+              </RouterLink>
               <RouterLink to="/user/dashboard" class="block px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors" @click="mobileMenuOpen = false">
                 Dashboard
               </RouterLink>

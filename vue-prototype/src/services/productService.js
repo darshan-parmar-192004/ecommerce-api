@@ -21,7 +21,8 @@ const productService = {
   getInventory: (params) => api.get('/inventory', { params }),
   updateInventory: (id, data) => api.put(`/inventory/${id}`, data),
   getTopSellers: () => api.get('/inventory/top-sellers'),
-  getCustomerLifetimeValue: () => api.get('/inventory/customer-lifetime-value')
+  getCustomerLifetimeValue: () => api.get('/inventory/customer-lifetime-value'),
+  getStockLevels: () => api.get('/inventory/stock')
 }
 
 export default productService
