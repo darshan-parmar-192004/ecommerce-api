@@ -35,7 +35,7 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 
 func main() {
 	if err := logger.Init(); err != nil {
-		fmt.Printf("failed to initialize logger: %v\n", err)
+		logger.Log.Errorf("failed to initialize logger: %v", err)
 		return
 	}
 	defer logger.Sync()

@@ -1,15 +1,14 @@
 package controllers
 
 import (
-	"backend/internal/constants"
-	"backend/internal/models"
-	"backend/internal/services"
-	"backend/internal/utils"
-	"fmt"
-	"math/rand/v2"
+	"errors"
 	"strconv"
 	"strings"
-	"time"
+
+	"backend/internal/constants"
+	apperrors "backend/internal/utils"
+	"backend/internal/models"
+	"backend/internal/services"
 
 	"backend/internal/logger"
 
@@ -21,20 +20,18 @@ type ProductController struct {
 }
 
 func NewProductController(service *services.ProductService) *ProductController {
-	return &ProductController{
-		Service: service,
-	}
+	return &ProductController{Service: service}
 }
 
 func (h *ProductController) GetAll(c fiber.Ctx) error {
-
 	category := c.Query("category")
-	MinPriceStr := c.Query("min_price")
-	MaxPriceStr := c.Query("max_price")
+	minPriceStr := c.Query("min_price")
+	maxPriceStr := c.Query("max_price")
 	search := c.Query("search")
 
 	pageStr := c.Query("page", strconv.Itoa(constants.DefaultPage))
 	limitStr := c.Query("limit", strconv.Itoa(constants.DefaultLimit))
+<<<<<<< HEAD
 
 	var page, limit int
 	var err error
@@ -50,9 +47,22 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 				nil,
 			)
 		}
+=======
+>>>>>>> feature/issue-7-database-integration-and-sql
 
+	page, _ := strconv.Atoi(pageStr)
+	if page < 1 {
+		page = constants.DefaultPage
+	}
+	limit, _ := strconv.Atoi(limitStr)
+	if limit < 1 {
+		limit = constants.DefaultLimit
+	}
+	if limit > constants.MaxLimit {
+		limit = constants.MaxLimit
 	}
 
+<<<<<<< HEAD
 	if limitStr != "" {
 		limit, err = strconv.Atoi(limitStr)
 
@@ -172,12 +182,23 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 			constants.JSONFieldTotalItems: totalItems,
 			constants.JSONFieldTotalPages: totalPages,
 		},
+=======
+	products, pagination, err := h.Service.GetAll(c.Context(), category, minPriceStr, maxPriceStr, search, page, limit)
+	if err != nil {
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch products", fiber.Map{"debug": err.Error()})
+	}
+
+	return c.JSON(fiber.Map{
+		"data":       products,
+		"pagination": pagination,
+>>>>>>> feature/issue-7-database-integration-and-sql
 	})
 }
 
 func (h *ProductController) GetById(c fiber.Ctx) error {
 	id := c.Params("id")
 
+<<<<<<< HEAD
 	product, exists := h.Service.GetByID(id)
 	if !exists {
 		return utils.SendError(
@@ -187,16 +208,29 @@ func (h *ProductController) GetById(c fiber.Ctx) error {
 			fmt.Sprintf(constants.MsgProductNotFound, id),
 			nil,
 		)
+=======
+	product, err := h.Service.GetByID(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRows) {
+			return apperrors.SendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
+		}
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch product", fiber.Map{"error": err.Error()})
+>>>>>>> feature/issue-7-database-integration-and-sql
 	}
 	return c.JSON(product)
 }
 
+<<<<<<< HEAD
 func generateProductID() string {
 	return fmt.Sprintf(constants.ProductIDPrefix+constants.ProductIDFormat, rand.IntN(100000000))
 }
 
+=======
+>>>>>>> feature/issue-7-database-integration-and-sql
 func (h *ProductController) Create(c fiber.Ctx) error {
+	var input services.ProductInput
 
+<<<<<<< HEAD
 	var product models.Product
 
 	if err := c.Bind().Body(&product); err != nil {
@@ -234,15 +268,33 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 				constants.MsgPersistFailed,
 				nil,
 			)
-		}
+=======
+	if err := c.Bind().Body(&input); err != nil {
+		return apperrors.SendError(c, fiber.StatusBadRequest, "INVALID_INPUT", "Malformed JSON", fiber.Map{"details": err.Error()})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(product)
+	if validation := h.Service.ValidateProductInput(input); validation.Errors != nil {
+		return apperrors.SendError(c, fiber.StatusUnprocessableEntity, validation.Code, "Validation failed", validation.Errors)
+	}
+
+	productID := h.Service.GenerateProductID()
+
+	newProduct, err := h.Service.Create(c.Context(), productID, input)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			return apperrors.SendError(c, fiber.StatusConflict, "DUPLICATE_KEY", "Product ID already exists", nil)
+>>>>>>> feature/issue-7-database-integration-and-sql
+		}
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to create product", fiber.Map{"debug": err.Error()})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(newProduct)
 }
 
 func (h *ProductController) Update(c fiber.Ctx) error {
 	id := c.Params("id")
 
+<<<<<<< HEAD
 	var input models.Product
 
 	if err := c.Bind().Body(&input); err != nil {
@@ -253,10 +305,14 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 			constants.MsgInvalidJSON,
 			nil,
 		)
+=======
+	exists, err := h.Service.Exists(c.Context(), id)
+	if err != nil {
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to check product", fiber.Map{"debug": err.Error()})
+>>>>>>> feature/issue-7-database-integration-and-sql
 	}
-
-	existing, exists := h.Service.GetByID(id)
 	if !exists {
+<<<<<<< HEAD
 		return utils.SendError(
 			c,
 			fiber.StatusNotFound,
@@ -275,21 +331,37 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 			nil,
 		)
 
+=======
+		return apperrors.SendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
 	}
 
-	input.ProductID = existing.ProductID
-	input.CreatedAt = existing.CreatedAt
+	var input services.ProductInput
+	if err := c.Bind().Body(&input); err != nil {
+		return apperrors.SendError(c, fiber.StatusBadRequest, "INVALID_INPUT", "Invalid JSON format/malformed JSON", nil)
+>>>>>>> feature/issue-7-database-integration-and-sql
+	}
 
-	h.Service.Update(id, input)
+	if validation := h.Service.ValidateProductInput(input); validation.Errors != nil {
+		return apperrors.SendError(c, fiber.StatusUnprocessableEntity, validation.Code, "Validation failed", validation.Errors)
+	}
 
-	return c.JSON(input)
+	updatedProduct, err := h.Service.Update(c.Context(), id, input)
+	if err != nil {
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to update product", fiber.Map{"debug": err.Error()})
+	}
+
+	return c.JSON(updatedProduct)
 }
 
 func (h *ProductController) Delete(c fiber.Ctx) error {
 	id := c.Params("id")
 
-	_, exists := h.Service.GetByID(id)
+	exists, err := h.Service.Exists(c.Context(), id)
+	if err != nil {
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to check product", fiber.Map{"debug": err.Error()})
+	}
 	if !exists {
+<<<<<<< HEAD
 		return utils.SendError(
 			c,
 			fiber.StatusNotFound,
@@ -312,6 +384,14 @@ func (h *ProductController) Delete(c fiber.Ctx) error {
 			constants.MsgStorageFailed,
 			nil,
 		)
+=======
+		return apperrors.SendError(c, fiber.StatusNotFound, "PRODUCT_NOT_FOUND", "Product not found", nil)
+	}
+
+	err = h.Service.Delete(c.Context(), id)
+	if err != nil {
+		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to delete product", fiber.Map{"debug": err.Error()})
+>>>>>>> feature/issue-7-database-integration-and-sql
 	}
 
 	return c.JSON(fiber.Map{constants.JSONFieldMessage: constants.ResponseMessageDeleted})

@@ -12,4 +12,10 @@ bin/
 # OS
 .DS_Store
 
+<<<<<<< HEAD
+
+# datasets are tracked in backend/datasets/ for seeding
 **/datasets
+=======
+**/datasets
+>>>>>>> d1685cdec2fb8ca0da8482c783cb46379593078e

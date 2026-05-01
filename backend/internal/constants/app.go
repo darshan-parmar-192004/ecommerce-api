@@ -54,9 +54,32 @@ const (
 	ErrInternalServer = "internal_server_error"
 	MsgSomethingWrong = "Something went wrong"
 
-	RouteProducts   = "/products"
-	RouteProductsID = "/products/:id"
-	RouteHealth     = "/health"
+	DBDriverPostgres = "postgres"
+	DBDriverMysql    = "mysql"
+	DBDriverSQLite   = "sqlite3"
+
+	DBMaxOpenConns    = 20
+	DBMaxIdleConns    = 5
+	DBConnMaxLifetime = 30
+
+	RouteProducts       = "/products"
+	RouteProductsID     = "/products/:id"
+	RouteHealth         = "/health"
+	RouteCategories     = "/categories"
+	RouteCategoriesID   = "/categories/:id"
+	RouteCategoriesProd = "/categories/:id/products"
+	RouteCategoriesHier = "/categories/hierarchy"
+	RouteCustomers      = "/customers"
+	RouteCustomersID    = "/customers/:id"
+	RouteCustomersOrd   = "/customers/:id/orders"
+	RouteCustomersLTV   = "/customers/:id/lifetime-value"
+	RouteOrders         = "/orders"
+	RouteOrdersID       = "/orders/:id"
+	RouteInventory      = "/inventory"
+	RouteInvStock       = "/inventory/stock"
+	RouteInvCLV         = "/inventory/customer-lifetime-value"
+	RouteInvHier        = "/inventory/hierarchy"
+	RouteInvTopSell     = "/inventory/top-sellers"
 )
 
 var (
