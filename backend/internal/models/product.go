@@ -12,5 +12,3 @@ type Product struct {
 	Description string    `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
 }
-
-

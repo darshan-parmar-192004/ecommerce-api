@@ -1,11 +1,12 @@
 package database
 
 import (
+	"backend/internal/config"
+	"backend/internal/constants"
+	"backend/internal/logger"
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
-	"os"
 	"strconv"
 	"time"
 
@@ -13,14 +14,8 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-// Service represents a service that interacts with a database.
 type Service interface {
-	// Health returns a map of health status information.
-	// The keys and values in the map are service-specific.
 	Health() map[string]string
-
-	// Close terminates the database connection.
-	// It returns an error if the connection cannot be closed.
 	Close() error
 }
 
@@ -28,54 +23,51 @@ type service struct {
 	db *sql.DB
 }
 
-var (
-	database   = os.Getenv("BLUEPRINT_DB_DATABASE")
-	password   = os.Getenv("BLUEPRINT_DB_PASSWORD")
-	username   = os.Getenv("BLUEPRINT_DB_USERNAME")
-	port       = os.Getenv("BLUEPRINT_DB_PORT")
-	host       = os.Getenv("BLUEPRINT_DB_HOST")
-	schema     = os.Getenv("BLUEPRINT_DB_SCHEMA")
-	dbInstance *service
-)
+var dbInstance *service
 
 func New() Service {
-	// Reuse Connection
 	if dbInstance != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
-	db, err := sql.Open("pgx", connStr)
+
+	cfg, err := config.Load()
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatalf("failed to load config: %v", err)
 	}
-	dbInstance = &service{
-		db: db,
-	}
-	return dbInstance
+
+	return newWithConfig(cfg)
 }
 
-// Health checks the health of the database connection by pinging the database.
-// It returns a map with keys indicating various health statistics.
+func newWithConfig(cfg *config.AppConfig) *service {
+	db, err := sql.Open("pgx", cfg.GetDSN())
+	if err != nil {
+		logger.Log.Fatalf("failed to open database: %v", err)
+	}
+
+	svc := &service{
+		db: db,
+	}
+	dbInstance = svc
+	return svc
+}
+
 func (s *service) Health() map[string]string {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	stats := make(map[string]string)
 
-	// Ping the database
 	err := s.db.PingContext(ctx)
 	if err != nil {
-		stats["status"] = "down"
-		stats["error"] = fmt.Sprintf("db down: %v", err)
-		log.Printf("db down: %v", err) // Log the error and terminate the program
+		stats[constants.JSONFieldStatus] = constants.ResponseStatusDown
+		stats[constants.JSONFieldError] = fmt.Sprintf("db down: %v", err)
+		logger.Log.Errorf("db down: %v", err)
 		return stats
 	}
 
-	// Database is up, add more statistics
-	stats["status"] = "up"
-	stats["message"] = "It's healthy"
+	stats[constants.JSONFieldStatus] = constants.ResponseStatusUp
+	stats[constants.JSONFieldMessage] = constants.HealthDBUp
 
-	// Get database stats (like open connections, in use, idle, etc.)
 	dbStats := s.db.Stats()
 	stats["open_connections"] = strconv.Itoa(dbStats.OpenConnections)
 	stats["in_use"] = strconv.Itoa(dbStats.InUse)
@@ -85,31 +77,26 @@ func (s *service) Health() map[string]string {
 	stats["max_idle_closed"] = strconv.FormatInt(dbStats.MaxIdleClosed, 10)
 	stats["max_lifetime_closed"] = strconv.FormatInt(dbStats.MaxLifetimeClosed, 10)
 
-	// Evaluate stats to provide a health message
-	if dbStats.OpenConnections > 40 { // Assuming 50 is the max for this example
-		stats["message"] = "The database is experiencing heavy load."
+	if dbStats.OpenConnections > 40 {
+		stats[constants.JSONFieldMessage] = constants.HealthDBHeavyLoad
 	}
 
 	if dbStats.WaitCount > 1000 {
-		stats["message"] = "The database has a high number of wait events, indicating potential bottlenecks."
+		stats[constants.JSONFieldMessage] = constants.HealthDBHighWaits
 	}
 
 	if dbStats.MaxIdleClosed > int64(dbStats.OpenConnections)/2 {
-		stats["message"] = "Many idle connections are being closed, consider revising the connection pool settings."
+		stats[constants.JSONFieldMessage] = constants.HealthDBIdleClosing
 	}
 
 	if dbStats.MaxLifetimeClosed > int64(dbStats.OpenConnections)/2 {
-		stats["message"] = "Many connections are being closed due to max lifetime, consider increasing max lifetime or revising the connection usage pattern."
+		stats[constants.JSONFieldMessage] = constants.HealthDBLifetimeClose
 	}
 
 	return stats
 }
 
-// Close closes the database connection.
-// It logs a message indicating the disconnection from the specific database.
-// If the connection is successfully closed, it returns nil.
-// If an error occurs while closing the connection, it returns the error.
 func (s *service) Close() error {
-	log.Printf("Disconnected from database: %s", database)
+	logger.Log.Info("Disconnected from database")
 	return s.db.Close()
 }

@@ -1,6 +1,6 @@
 # Build stage
 
-FROM golang:1.25.6-alpine AS build
+FROM golang:1.26-alpine AS build
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=build /app/main .
 
-COPY --from=build /app/datasets ./datasets
+COPY --from=build /app/internal/datasets ./internal/datasets
 
 RUN chown -R appuser:appgroup /app
 

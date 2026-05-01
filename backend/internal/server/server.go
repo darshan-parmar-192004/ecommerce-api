@@ -2,7 +2,6 @@ package server
 
 import (
 	"backend/internal/database"
-	"backend/internal/views"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -23,7 +22,7 @@ func New() *FiberServer {
 		db: database.New(),
 	}
 
-	views.RegisterRoutes(server.App)
+	RegisterRoutes(server.App)
 
 	return server
 }
