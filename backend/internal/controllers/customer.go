@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	apperrors "backend/internal/utils"
 	"backend/internal/services"
+	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -27,7 +27,7 @@ func (h *CustomerController) GetAll(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"data": customers,
 	})
 }
@@ -46,7 +46,7 @@ func (h *CustomerController) GetByID(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(customer)
+	return apperrors.SendSuccess(c, 200, customer)
 }
 
 func (h *CustomerController) GetCustomerOrders(c fiber.Ctx) error {
@@ -63,7 +63,7 @@ func (h *CustomerController) GetCustomerOrders(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"data": orders,
 	})
 }
@@ -82,7 +82,7 @@ func (h *CustomerController) GetCustomerLifetimeValue(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"customer_id":    customerID,
 		"total_orders":   totalOrders,
 		"lifetime_value": totalValue,
@@ -103,7 +103,7 @@ func (h *CustomerController) GetLifetimeValue(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"customer_id":    customerID,
 		"total_orders":   totalOrders,
 		"lifetime_value": totalValue,

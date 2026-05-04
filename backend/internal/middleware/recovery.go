@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"backend/internal/constants"
 	"backend/internal/logger"
+	apperrors "backend/internal/utils"
 	"runtime/debug"
 
 	"github.com/gofiber/fiber/v3"
@@ -20,14 +20,9 @@ func Recovery() fiber.Handler {
 					requestID,
 				)
 
-				response := map[string]interface{}{
-					constants.JSONFieldError:   constants.ErrInternalServer,
-					constants.JSONFieldMessage: constants.MsgSomethingWrong,
-					"request_id":               requestID,
-				}
-
-				c.Status(fiber.StatusInternalServerError)
-				_ = c.JSON(response)
+				_ = apperrors.SendError(c, fiber.StatusInternalServerError, "PANIC", "Internal server error", map[string]interface{}{
+					"request_id": requestID,
+				})
 			}
 		}()
 

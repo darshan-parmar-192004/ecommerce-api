@@ -8,8 +8,8 @@ import (
 
 	"backend/internal/constants"
 	"backend/internal/models"
-	apperrors "backend/internal/utils"
 	"backend/internal/services"
+	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -49,7 +49,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch products", fiber.Map{"debug": err.Error()})
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"data":       products,
 		"pagination": pagination,
 	})
@@ -65,7 +65,7 @@ func (h *ProductController) GetById(c fiber.Ctx) error {
 		}
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to fetch product", fiber.Map{"error": err.Error()})
 	}
-	return c.JSON(product)
+	return apperrors.SendSuccess(c, 200, product)
 }
 
 func (h *ProductController) Create(c fiber.Ctx) error {
@@ -89,7 +89,7 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to create product", fiber.Map{"debug": err.Error()})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(newProduct)
+	return apperrors.SendSuccess(c, fiber.StatusCreated, newProduct)
 }
 
 func (h *ProductController) Update(c fiber.Ctx) error {
@@ -117,7 +117,7 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to update product", fiber.Map{"debug": err.Error()})
 	}
 
-	return c.JSON(updatedProduct)
+	return apperrors.SendSuccess(c, 200, updatedProduct)
 }
 
 func (h *ProductController) Delete(c fiber.Ctx) error {
@@ -136,5 +136,5 @@ func (h *ProductController) Delete(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DB_ERROR", "Failed to delete product", fiber.Map{"debug": err.Error()})
 	}
 
-	return c.JSON(fiber.Map{constants.JSONFieldMessage: constants.ResponseMessageDeleted})
+	return apperrors.SendSuccess(c, 200, fiber.Map{constants.JSONFieldMessage: constants.ResponseMessageDeleted})
 }

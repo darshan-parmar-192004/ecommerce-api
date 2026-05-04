@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	apperrors "backend/internal/utils"
 	"backend/internal/services"
+	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -21,7 +21,7 @@ func (h *InventoryController) GetAll(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DATABASE_ERROR", "Failed to retrieve inventory list", nil)
 	}
 
-	return c.JSON(inventory)
+	return apperrors.SendSuccess(c, 200, inventory)
 }
 
 func (h *InventoryController) GetStockLevels(c fiber.Ctx) error {
@@ -30,7 +30,7 @@ func (h *InventoryController) GetStockLevels(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DATABASE_ERROR", "Failed to fetch stock", nil)
 	}
 
-	return c.JSON(results)
+	return apperrors.SendSuccess(c, 200, results)
 }
 
 func (h *InventoryController) GetCustomerCLV(c fiber.Ctx) error {
@@ -39,7 +39,7 @@ func (h *InventoryController) GetCustomerCLV(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DATABASE_ERROR", "Failed to calculate CLV", nil)
 	}
 
-	return c.JSON(stats)
+	return apperrors.SendSuccess(c, 200, stats)
 }
 
 func (h *InventoryController) GetCategoryTree(c fiber.Ctx) error {
@@ -54,7 +54,7 @@ func (h *InventoryController) GetCategoryTree(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"data": tree,
 	})
 }
@@ -65,5 +65,5 @@ func (h *InventoryController) GetTopSellers(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, "DATABASE_ERROR", "Failed to fetch top sellers", nil)
 	}
 
-	return c.JSON(topProducts)
+	return apperrors.SendSuccess(c, 200, topProducts)
 }
