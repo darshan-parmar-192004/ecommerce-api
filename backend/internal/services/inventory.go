@@ -14,7 +14,7 @@ func NewInventoryService(repo *models.InventoryRepository) *InventoryService {
 	return &InventoryService{repo: repo}
 }
 
-func (s *InventoryService) GetAll(ctx context.Context) ([]map[string]interface{}, error) {
+func (s *InventoryService) GetAll(ctx context.Context) ([]models.Inventory, error) {
 	return s.repo.GetAll(ctx)
 }
 
@@ -26,7 +26,7 @@ func (s *InventoryService) GetCustomerCLV(ctx context.Context) ([]map[string]int
 	return s.repo.GetCustomerCLV(ctx)
 }
 
-func (s *InventoryService) GetCategoryTree(ctx context.Context) ([]map[string]interface{}, error) {
+func (s *InventoryService) GetCategoryTree(ctx context.Context) ([]models.Category, error) {
 	return s.repo.GetCategoryTree(ctx)
 }
 

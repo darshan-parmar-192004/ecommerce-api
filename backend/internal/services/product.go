@@ -68,19 +68,19 @@ func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResu
 	return ValidationResult{Errors: nil}
 }
 
-func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]map[string]interface{}, map[string]interface{}, error) {
+func (s *ProductService) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]models.Product, map[string]interface{}, error) {
 	return s.repo.GetAll(ctx, category, minPriceStr, maxPriceStr, search, page, limit)
 }
 
-func (s *ProductService) GetByID(ctx context.Context, id string) (map[string]interface{}, error) {
+func (s *ProductService) GetByID(ctx context.Context, id string) (*models.Product, error) {
 	return s.repo.GetByID(ctx, id)
 }
 
-func (s *ProductService) Create(ctx context.Context, productID string, input ProductInput) (map[string]interface{}, error) {
+func (s *ProductService) Create(ctx context.Context, productID string, input ProductInput) (*models.Product, error) {
 	return s.repo.Create(ctx, productID, input.Name, input.CategoryID, input.Price, input.Description, time.Now())
 }
 
-func (s *ProductService) Update(ctx context.Context, id string, input ProductInput) (map[string]interface{}, error) {
+func (s *ProductService) Update(ctx context.Context, id string, input ProductInput) (*models.Product, error) {
 	return s.repo.Update(ctx, id, input.Name, input.CategoryID, input.Price, input.Description)
 }
 

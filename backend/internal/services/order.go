@@ -15,6 +15,10 @@ func NewOrderService(repo *models.OrderRepository) *OrderService {
 	return &OrderService{repo: repo}
 }
 
+func (s *OrderService) GetAll(ctx context.Context) ([]models.Order, error) {
+	return s.repo.GetAll(ctx)
+}
+
 type CreateOrderInput struct {
 	OrderID     string                   `json:"order_id"`
 	CustomerID  string                   `json:"customer_id"`
@@ -27,11 +31,11 @@ func (s *OrderService) CreateOrder(ctx context.Context, input CreateOrderInput) 
 	return s.repo.CreateOrder(ctx, input.OrderID, input.CustomerID, input.TotalAmount, input.Status, input.Items)
 }
 
-func (s *OrderService) GetOrderItems(ctx context.Context, orderID string) ([]map[string]interface{}, error) {
+func (s *OrderService) GetOrderItems(ctx context.Context, orderID string) ([]models.OrderItem, error) {
 	return s.repo.GetOrderItems(ctx, orderID)
 }
 
-func (s *OrderService) GetByID(ctx context.Context, orderID string) (map[string]interface{}, error) {
+func (s *OrderService) GetByID(ctx context.Context, orderID string) (*models.Order, error) {
 	return s.repo.GetByID(ctx, orderID)
 }
 

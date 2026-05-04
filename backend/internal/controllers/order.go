@@ -15,6 +15,23 @@ func NewOrderController(service *services.OrderService) *OrderController {
 	return &OrderController{Service: service}
 }
 
+func (h *OrderController) GetAll(c fiber.Ctx) error {
+	orders, err := h.Service.GetAll(c.Context())
+	if err != nil {
+		return apperrors.SendError(
+			c,
+			fiber.StatusInternalServerError,
+			"DATABASE_ERROR",
+			"Failed to fetch orders",
+			nil,
+		)
+	}
+
+	return c.JSON(fiber.Map{
+		"data": orders,
+	})
+}
+
 func (h *OrderController) CreateOrder(c fiber.Ctx) error {
 	var req services.CreateOrderInput
 

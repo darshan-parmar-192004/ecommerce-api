@@ -42,7 +42,7 @@ itest:
 # Clean the binary
 clean:
 	@echo "Cleaning..."
-	@rm -f main migrate
+	@rm -f main migrate seed
 
 # Live Reload
 watch:
@@ -61,4 +61,44 @@ watch:
             fi; \
         fi
 
-.PHONY: all build run test clean watch docker-run docker-down itest
+# Migration Commands (like boilerplate)
+
+# Run all pending migrations
+migrate-up:
+	BLUEPRINT_DB_HOST=localhost go run ./cmd/migrate up
+
+# Rollback last migration
+migrate-down:
+	BLUEPRINT_DB_HOST=localhost go run ./cmd/migrate down
+
+# Re-run last migration
+migrate-redo:
+	BLUEPRINT_DB_HOST=localhost go run ./cmd/migrate redo
+
+# Show migration status
+migrate-status:
+	BLUEPRINT_DB_HOST=localhost go run ./cmd/migrate status
+
+# Force database to specific version (for dirty DB recovery)
+# Usage: make migrate-force version=2
+migrate-force:
+	BLUEPRINT_DB_HOST=localhost go run ./cmd/migrate force $(version)
+
+# Drop all migrations (destructive)
+migrate-drop:
+	BLUEPRINT_DB_HOST=localhost go run ./cmd/migrate drop
+
+# Create new migration files
+# Usage: make migrate-create name=add_users_table
+migrate-create:
+	@migrate create -ext sql -dir internal/migrations -seq $(name)
+
+# Seed database with CSV data (local)
+seed:
+	BLUEPRINT_DB_HOST=localhost go run ./cmd/seed
+
+# Run seed inside the container
+seed-container:
+	cd .. && podman-compose exec app ./seed
+
+.PHONY: all build run test clean watch docker-run docker-down itest migrate-up migrate-down migrate-redo migrate-status migrate-force migrate-drop migrate-create seed seed-container
