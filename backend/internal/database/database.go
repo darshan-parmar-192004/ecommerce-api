@@ -9,10 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"backend/internal/config"
-	"backend/internal/constants"
-	"backend/internal/logger"
-
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -89,6 +85,13 @@ func (s *service) Health() map[string]string {
 }
 
 func (s *service) Close() error {
-	logger.Log.Info("Closing database connection")
+	if logger.Log != nil {
+		logger.Log.Info("Closing database connection")
+	}
 	return s.db.Close()
+}
+
+// NewWithDB creates a new database service with an existing DB connection (for testing)
+func NewWithDB(db *sql.DB) Service {
+	return &service{db: db}
 }

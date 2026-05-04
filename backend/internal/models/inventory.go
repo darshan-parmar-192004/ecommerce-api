@@ -9,49 +9,26 @@ import (
 )
 
 type InventoryRepository struct {
-	db *sql.DB
+	db *goqu.Database
 }
 
 func NewInventoryRepository(db *sql.DB) *InventoryRepository {
-	return &InventoryRepository{db: db}
+	return &InventoryRepository{db: goqu.New("postgres", db)}
 }
 
-func (r *InventoryRepository) GetAll(ctx context.Context) ([]map[string]interface{}, error) {
+func (r *InventoryRepository) GetAll(ctx context.Context) ([]Inventory, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := goqu.From("inventory").Select(
-		goqu.I("product_id"),
-		goqu.I("warehouse_id"),
-		goqu.I("quantity"),
-		goqu.I("last_updated"),
-	)
-
-	sqlStr, args, err := ds.ToSql()
+	var inventory []Inventory
+	err := r.db.From("inventory").Select(
+		"product_id",
+		"warehouse_id",
+		"quantity",
+		"last_updated",
+	).ScanStructsContext(ctx, &inventory)
 	if err != nil {
 		return nil, err
-	}
-
-	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	inventory := []map[string]interface{}{}
-	for rows.Next() {
-		var productID, warehouseID string
-		var quantity int
-		var lastUpdated time.Time
-		if err := rows.Scan(&productID, &warehouseID, &quantity, &lastUpdated); err != nil {
-			return nil, err
-		}
-		inventory = append(inventory, map[string]interface{}{
-			"product_id":   productID,
-			"warehouse_id": warehouseID,
-			"quantity":     quantity,
-			"last_updated": lastUpdated,
-		})
 	}
 
 	return inventory, nil
@@ -61,8 +38,17 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := goqu.From("inventory").Select(
-		goqu.I("p.name"),
+	type StockLevel struct {
+		ProductName string    `db:"product_name"`
+		ProductID   string    `db:"product_id"`
+		WarehouseID string    `db:"warehouse_id"`
+		Quantity    int       `db:"quantity"`
+		LastUpdated time.Time `db:"last_updated"`
+	}
+
+	var results []StockLevel
+	err := r.db.From("inventory").As("i").Select(
+		goqu.I("p.name").As("product_name"),
 		goqu.I("i.product_id"),
 		goqu.I("i.warehouse_id"),
 		goqu.I("i.quantity"),
@@ -70,108 +56,69 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 	).Join(
 		goqu.I("products").As("p"),
 		goqu.On(goqu.I("i.product_id").Eq(goqu.I("p.product_id"))),
-	).Order(goqu.I("i.quantity").Asc())
-
-	sqlStr, args, err := ds.ToSql()
+	).Order(goqu.I("i.quantity").Asc()).ScanStructsContext(ctx, &results)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	results := []map[string]interface{}{}
-	for rows.Next() {
-		var productName, productID, warehouseID string
-		var quantity int
-		var lastUpdated time.Time
-		if err := rows.Scan(&productName, &productID, &warehouseID, &quantity, &lastUpdated); err != nil {
-			return nil, err
-		}
-		results = append(results, map[string]interface{}{
-			"product_name": productName,
-			"product_id":   productID,
-			"warehouse_id": warehouseID,
-			"quantity":     quantity,
-			"last_updated": lastUpdated,
+	stockLevels := make([]map[string]interface{}, 0, len(results))
+	for _, r := range results {
+		stockLevels = append(stockLevels, map[string]interface{}{
+			"product_name":  r.ProductName,
+			"product_id":    r.ProductID,
+			"warehouse_id":  r.WarehouseID,
+			"quantity":       r.Quantity,
+			"last_updated":  r.LastUpdated,
 		})
 	}
 
-	return results, nil
+	return stockLevels, nil
 }
 
 func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := goqu.From("orders").Select(
+	type clvRow struct {
+		CustomerID  string  `db:"customer_id"`
+		OrderCount  int     `db:"order_count"`
+		TotalSpent  float64 `db:"total_spent"`
+	}
+
+	var statsRows []clvRow
+	err := r.db.From("orders").Select(
 		goqu.I("customer_id"),
 		goqu.COUNT("order_id").As("order_count"),
 		goqu.COALESCE(goqu.SUM("total_amount"), 0).As("total_spent"),
-	).GroupBy(goqu.I("customer_id")).Order(goqu.I("total_spent").Desc())
-
-	sqlStr, args, err := ds.ToSql()
+	).GroupBy(goqu.I("customer_id")).Order(goqu.I("total_spent").Desc()).ScanStructsContext(ctx, &statsRows)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	stats := []map[string]interface{}{}
-	for rows.Next() {
-		var id string
-		var count int
-		var total float64
-		if err := rows.Scan(&id, &count, &total); err != nil {
-			return nil, err
-		}
+	stats := make([]map[string]interface{}, 0, len(statsRows))
+	for _, row := range statsRows {
 		stats = append(stats, map[string]interface{}{
-			"customer_id":    id,
-			"order_count":    count,
-			"lifetime_value": total,
+			"customer_id":    row.CustomerID,
+			"order_count":    row.OrderCount,
+			"lifetime_value": row.TotalSpent,
 		})
 	}
 
 	return stats, nil
 }
 
-func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]map[string]interface{}, error) {
-	ds := goqu.From("categories").Select(
-		goqu.I("category_id"),
-		goqu.I("name"),
-		goqu.I("parent_category_id"),
-	)
+func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]Category, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-	sqlStr, args, err := ds.ToSql()
+	var categories []Category
+	err := r.db.From("categories").Select(
+		"category_id",
+		"name",
+		"parent_category_id",
+	).Order(goqu.I("category_id").Asc()).ScanStructsContext(ctx, &categories)
 	if err != nil {
 		return nil, err
-	}
-
-	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	categories := []map[string]interface{}{}
-	for rows.Next() {
-		var categoryID, name string
-		var parentCategoryID sql.NullString
-		if err := rows.Scan(&categoryID, &name, &parentCategoryID); err != nil {
-			return nil, err
-		}
-		cat := map[string]interface{}{"category_id": categoryID, "name": name}
-		if parentCategoryID.Valid {
-			cat["parent_category_id"] = parentCategoryID.String
-		}
-		categories = append(categories, cat)
 	}
 
 	return categories, nil
@@ -181,8 +128,14 @@ func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]map[string]i
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := goqu.From("order_items").Select(
-		goqu.I("p.name"),
+	type topRow struct {
+		ProductName string `db:"product_name"`
+		TotalSold   int    `db:"total_sold"`
+	}
+
+	var topRows []topRow
+	err := r.db.From("order_items").Select(
+		goqu.I("p.name").As("product_name"),
 		goqu.SUM("order_items.quantity").As("total_sold"),
 	).Join(
 		goqu.I("products").As("p"),
@@ -192,29 +145,16 @@ func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]map[string]i
 		goqu.I("p.name"),
 	).Order(
 		goqu.I("total_sold").Desc(),
-	).Limit(10)
-
-	sqlStr, args, err := ds.ToSql()
+	).Limit(10).ScanStructsContext(ctx, &topRows)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	topProducts := []map[string]interface{}{}
-	for rows.Next() {
-		var name string
-		var total int
-		if err := rows.Scan(&name, &total); err != nil {
-			return nil, err
-		}
+	topProducts := make([]map[string]interface{}, 0, len(topRows))
+	for _, row := range topRows {
 		topProducts = append(topProducts, map[string]interface{}{
-			"product":    name,
-			"units_sold": total,
+			"product":    row.ProductName,
+			"units_sold": row.TotalSold,
 		})
 	}
 

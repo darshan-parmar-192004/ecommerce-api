@@ -9,53 +9,49 @@ import (
 )
 
 type CustomerRepository struct {
-	db *sql.DB
+	db *goqu.Database
 }
 
 func NewCustomerRepository(db *sql.DB) *CustomerRepository {
-	return &CustomerRepository{db: db}
+	return &CustomerRepository{db: goqu.New("postgres", db)}
 }
 
-func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID string) ([]map[string]interface{}, error) {
+func (r *CustomerRepository) GetAll(ctx context.Context) ([]Customer, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := goqu.From("orders").Select(
-		goqu.I("order_id"),
-		goqu.I("customer_id"),
-		goqu.I("order_date"),
-		goqu.I("status"),
-		goqu.I("total_amount"),
-		goqu.I("shipping_address"),
-	).Where(goqu.Ex(map[string]interface{}{"customer_id": customerID})).Order(goqu.I("order_date").Desc())
-
-	sqlStr, args, err := ds.ToSql()
+	var customers []Customer
+	err := r.db.From("customers").Select(
+		"customer_id",
+		"email",
+		"name",
+		"country",
+		"phone",
+		"created_at",
+		"status",
+	).Order(goqu.I("name").Asc()).ScanStructsContext(ctx, &customers)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := r.db.QueryContext(ctx, sqlStr, args...)
+	return customers, nil
+}
+
+func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID string) ([]Order, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var orders []Order
+	err := r.db.From("orders").Select(
+		"order_id",
+		"customer_id",
+		"order_date",
+		"status",
+		"total_amount",
+		"shipping_address",
+	).Where(goqu.Ex{"customer_id": customerID}).Order(goqu.I("order_date").Desc()).ScanStructsContext(ctx, &orders)
 	if err != nil {
 		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	orders := []map[string]interface{}{}
-	for rows.Next() {
-		var orderID, custID, status, shippingAddress string
-		var orderDate time.Time
-		var totalAmount float64
-		if err := rows.Scan(&orderID, &custID, &orderDate, &status, &totalAmount, &shippingAddress); err != nil {
-			return nil, err
-		}
-		orders = append(orders, map[string]interface{}{
-			"order_id":         orderID,
-			"customer_id":      custID,
-			"order_date":       orderDate,
-			"status":           status,
-			"total_amount":     totalAmount,
-			"shipping_address": shippingAddress,
-		})
 	}
 
 	return orders, nil
@@ -65,56 +61,39 @@ func (r *CustomerRepository) GetCustomerLifetimeValue(ctx context.Context, custo
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	ds := goqu.From("orders").Select(
-		goqu.COUNT("order_id"),
-		goqu.COALESCE(goqu.SUM("total_amount"), 0),
-	).Where(goqu.Ex(map[string]interface{}{"customer_id": customerID}))
+	type clvResult struct {
+		Count     int     `db:"count"`
+		TotalValue float64 `db:"coalesce"`
+	}
 
-	sqlStr, args, err := ds.ToSql()
+	var result clvResult
+	_, err := r.db.From("orders").Select(
+		goqu.COUNT("order_id").As("count"),
+		goqu.COALESCE(goqu.SUM("total_amount"), 0).As("coalesce"),
+	).Where(goqu.Ex{"customer_id": customerID}).ScanStructContext(ctx, &result)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	var totalOrders int
-	var totalValue float64
-
-	if err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&totalOrders, &totalValue); err != nil {
-		return 0, 0, err
-	}
-
-	return totalOrders, totalValue, nil
+	return result.Count, result.TotalValue, nil
 }
 
-func (r *CustomerRepository) GetByID(ctx context.Context, customerID string) (map[string]interface{}, error) {
-	ds := goqu.From("customers").Select(
-		goqu.I("customer_id"),
-		goqu.I("email"),
-		goqu.I("name"),
-		goqu.I("country"),
-		goqu.I("phone"),
-		goqu.I("created_at"),
-		goqu.I("status"),
-	).Where(goqu.Ex(map[string]interface{}{"customer_id": customerID}))
-
-	sqlStr, args, err := ds.ToSql()
+func (r *CustomerRepository) GetByID(ctx context.Context, customerID string) (*Customer, error) {
+	var customer Customer
+	found, err := r.db.From("customers").Select(
+		"customer_id",
+		"email",
+		"name",
+		"country",
+		"phone",
+		"created_at",
+		"status",
+	).Where(goqu.Ex{"customer_id": customerID}).ScanStructContext(ctx, &customer)
 	if err != nil {
 		return nil, err
 	}
-
-	var custID, email, name, country, phone, status string
-	var createdAt time.Time
-
-	if err := r.db.QueryRowContext(ctx, sqlStr, args...).Scan(&custID, &email, &name, &country, &phone, &createdAt, &status); err != nil {
-		return nil, err
+	if !found {
+		return nil, sql.ErrNoRows
 	}
-
-	return map[string]interface{}{
-		"customer_id": custID,
-		"email":       email,
-		"name":        name,
-		"country":     country,
-		"phone":       phone,
-		"created_at":  createdAt,
-		"status":      status,
-	}, nil
+	return &customer, nil
 }
