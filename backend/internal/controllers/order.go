@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	apperrors "backend/internal/utils"
 	"backend/internal/services"
+	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -27,7 +27,7 @@ func (h *OrderController) GetAll(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"data": orders,
 	})
 }
@@ -56,7 +56,7 @@ func (h *OrderController) CreateOrder(c fiber.Ctx) error {
 		)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+	return apperrors.SendSuccess(c, fiber.StatusCreated, fiber.Map{
 		"order_id":     req.OrderID,
 		"customer_id":  req.CustomerID,
 		"total_amount": req.TotalAmount,
@@ -78,5 +78,5 @@ func (h *OrderController) GetOrder(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(items)
+	return apperrors.SendSuccess(c, 200, items)
 }

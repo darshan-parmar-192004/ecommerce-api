@@ -220,15 +220,6 @@ func forceVersion(m *migrate.Migrate, args []string) {
 	fmt.Printf("Database forced to version %d successfully\n", version)
 }
 
-// buildDSN constructs the database connection string from config
-func buildDSN() string {
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
-	}
-	return cfg.GetDSN()
-}
-
 // checkDBConnection verifies the database connection works
 func checkDBConnection(dsn string) error {
 	db, err := sql.Open("postgres", dsn)
@@ -241,4 +232,13 @@ func checkDBConnection(dsn string) error {
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
 	return nil
+}
+
+// buildDSN constructs the database connection string from config
+func buildDSN() string {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+	return cfg.GetDSN()
 }

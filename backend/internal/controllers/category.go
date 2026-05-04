@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	apperrors "backend/internal/utils"
 	"backend/internal/services"
+	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 )
@@ -27,7 +27,7 @@ func (h *CategoryController) GetAll(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"data": categories,
 	})
 }
@@ -46,7 +46,7 @@ func (h *CategoryController) GetCategoryProducts(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"data": products,
 	})
 }
@@ -63,7 +63,7 @@ func (h *CategoryController) GetHierarchy(c fiber.Ctx) error {
 		)
 	}
 
-	return c.JSON(fiber.Map{
+	return apperrors.SendSuccess(c, 200, fiber.Map{
 		"data": categories,
 	})
 }
