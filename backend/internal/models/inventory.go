@@ -25,7 +25,7 @@ func (r *InventoryRepository) GetAll(ctx context.Context) ([]Inventory, error) {
 		"product_id",
 		"warehouse_id",
 		"quantity",
-		"last_updated",
+		"updated_at",
 	).ScanStructsContext(ctx, &inventory)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 		ProductID   string    `db:"product_id"`
 		WarehouseID string    `db:"warehouse_id"`
 		Quantity    int       `db:"quantity"`
-		LastUpdated time.Time `db:"last_updated"`
+		UpdatedAt   time.Time `db:"updated_at"`
 	}
 
 	var results []StockLevel
@@ -52,7 +52,7 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 		goqu.I("i.product_id"),
 		goqu.I("i.warehouse_id"),
 		goqu.I("i.quantity"),
-		goqu.I("i.last_updated"),
+		goqu.I("i.updated_at"),
 	).Join(
 		goqu.I("products").As("p"),
 		goqu.On(goqu.I("i.product_id").Eq(goqu.I("p.product_id"))),
@@ -68,7 +68,7 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 			"product_id":    r.ProductID,
 			"warehouse_id":  r.WarehouseID,
 			"quantity":       r.Quantity,
-			"last_updated":  r.LastUpdated,
+			"updated_at":  r.UpdatedAt,
 		})
 	}
 

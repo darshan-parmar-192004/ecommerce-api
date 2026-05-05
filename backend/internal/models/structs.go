@@ -31,7 +31,7 @@ type Inventory struct {
 	ProductID   string    `json:"product_id" db:"product_id"`
 	WarehouseID string    `json:"warehouse_id" db:"warehouse_id"`
 	Quantity    int       `json:"quantity" db:"quantity"`
-	LastUpdated time.Time `json:"last_updated" db:"last_updated"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type Order struct {

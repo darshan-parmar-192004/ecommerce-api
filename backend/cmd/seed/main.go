@@ -37,19 +37,13 @@ func main() {
 	log.Println("Starting high-speed migration (Staging + DB-Side FK Resolution)...")
 	start := time.Now()
 
-	// Determine CSV base path (Docker vs local)
-	csvBasePath := "./internal/datasets/ecommerce"
-	if _, err := os.Stat("/app/datasets/ecommerce"); err == nil {
-		csvBasePath = "/app/datasets/ecommerce"
-	}
-
-	// Sequential execution with dependency order
-	mustImport(ctx, pool, "categories", fmt.Sprintf("%s/categories.csv", csvBasePath), seedCategories)
-	mustImport(ctx, pool, "customers", fmt.Sprintf("%s/customers.csv", csvBasePath), seedCustomers)
-	mustImport(ctx, pool, "products", fmt.Sprintf("%s/products.csv", csvBasePath), seedProducts)
-	mustImport(ctx, pool, "orders", fmt.Sprintf("%s/orders.csv", csvBasePath), seedOrders)
-	mustImport(ctx, pool, "inventory", fmt.Sprintf("%s/inventory.csv", csvBasePath), seedInventory)
-	mustImport(ctx, pool, "order_items", fmt.Sprintf("%s/order_items.csv", csvBasePath), seedOrderItems)
+	// Use CSV paths from config
+	mustImport(ctx, pool, "categories", cfg.GetCSVPath("categories"), seedCategories)
+	mustImport(ctx, pool, "customers", cfg.GetCSVPath("customers"), seedCustomers)
+	mustImport(ctx, pool, "products", cfg.GetCSVPath("products"), seedProducts)
+	mustImport(ctx, pool, "orders", cfg.GetCSVPath("orders"), seedOrders)
+	mustImport(ctx, pool, "inventory", cfg.GetCSVPath("inventory"), seedInventory)
+	mustImport(ctx, pool, "order_items", cfg.GetCSVPath("order_items"), seedOrderItems)
 
 	log.Printf("Migration complete! Total time: %v", time.Since(start))
 }
@@ -234,7 +228,7 @@ func seedOrders(ctx context.Context, tx pgx.Tx, r *csv.Reader) error {
 
 // --- INVENTORY (Staging -> Join with Products) ---
 func seedInventory(ctx context.Context, tx pgx.Tx, r *csv.Reader) error {
-	if _, err := tx.Exec(ctx, `CREATE TEMPORARY TABLE inv_stage (p_code TEXT, warehouse_id TEXT, quantity TEXT, last_updated TEXT) ON COMMIT DROP`); err != nil {
+	if _, err := tx.Exec(ctx, `CREATE TEMPORARY TABLE inv_stage (p_code TEXT, warehouse_id TEXT, quantity TEXT, updated_at TEXT) ON COMMIT DROP`); err != nil {
 		return fmt.Errorf("failed to create temp table: %w", err)
 	}
 
@@ -247,17 +241,17 @@ func seedInventory(ctx context.Context, tx pgx.Tx, r *csv.Reader) error {
 		if err != nil {
 			return fmt.Errorf("reading CSV: %w", err)
 		}
-		// product_id(p_code), warehouse_id, quantity, last_updated
+		// product_id(p_code), warehouse_id, quantity, updated_at
 		rows = append(rows, []any{rec[0], rec[1], rec[2], rec[3]})
 	}
 
-	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"inv_stage"}, []string{"p_code", "warehouse_id", "quantity", "last_updated"}, pgx.CopyFromRows(rows)); err != nil {
+	if _, err := tx.CopyFrom(ctx, pgx.Identifier{"inv_stage"}, []string{"p_code", "warehouse_id", "quantity", "updated_at"}, pgx.CopyFromRows(rows)); err != nil {
 		return fmt.Errorf("copying data: %w", err)
 	}
 
 	_, err := tx.Exec(ctx, `
-		INSERT INTO inventory (product_id, warehouse_id, quantity, last_updated, created_at, updated_at)
-		SELECT p.product_id, s.warehouse_id, s.quantity::int, s.last_updated::timestamp, NOW(), NOW()
+		INSERT INTO inventory (product_id, warehouse_id, quantity, updated_at, created_at, updated_at)
+		SELECT p.product_id, s.warehouse_id, s.quantity::int, s.updated_at::timestamp, NOW(), NOW()
 		FROM inv_stage s
 		JOIN products p ON s.p_code = p.code
 		ON CONFLICT (product_id, warehouse_id) DO NOTHING`)

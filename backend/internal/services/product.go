@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"time"
 
+	"backend/internal/constants"
 	"backend/internal/models"
 )
 
@@ -37,8 +38,8 @@ func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResu
 
 	if input.Name == "" {
 		errors["name"] = "Name is required cannot be empty"
-	} else if len(input.Name) > 200 {
-		errors["name"] = "Name must not exceed 200 characters"
+	} else if len(input.Name) > constants.MaxProductNameLength {
+		errors["name"] = fmt.Sprintf("Name must not exceed %d characters", constants.MaxProductNameLength)
 	}
 
 	if input.Price == 0 {
@@ -53,8 +54,8 @@ func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResu
 		errors["category_id"] = "Category id must match CAT-xxxxxxxx format"
 	}
 
-	if len(input.Description) > 500 {
-		errors["description"] = "Description must not exceed 500 characters"
+	if len(input.Description) > constants.MaxProductDescLength {
+		errors["description"] = fmt.Sprintf("Description must not exceed %d characters", constants.MaxProductDescLength)
 	}
 
 	if len(errors) > 0 {

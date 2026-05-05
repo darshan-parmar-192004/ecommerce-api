@@ -49,7 +49,10 @@ const (
 	ProductIDPrefix = "PROD-"
 	ProductIDFormat = "%08d"
 
-	CSVProductsPath = "./internal/datasets/ecommerce/products.csv"
+	MaxProductNameLength = 200
+	MaxProductDescLength = 500
+	OrderIDTimeFormat     = "20060102150405"
+	ErrCodeDuplicateKey  = "23505"
 
 	ErrInternalServer = "internal_server_error"
 	MsgSomethingWrong = "Something went wrong"

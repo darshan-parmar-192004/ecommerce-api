@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"backend/internal/constants"
 	"backend/internal/models"
 )
 
@@ -40,5 +41,5 @@ func (s *OrderService) GetByID(ctx context.Context, orderID string) (*models.Ord
 }
 
 func (s *OrderService) GenerateOrderID() string {
-	return time.Now().Format("20060102150405")
+	return time.Now().Format(constants.OrderIDTimeFormat)
 }
