@@ -9,10 +9,10 @@ const cartStore = useCartStore()
   <Transition name="drawer">
     <div v-if="cartStore.isDrawerOpen" class="fixed inset-0 z-50 overflow-hidden">
       <div class="absolute inset-0 bg-black/50" @click="cartStore.toggleDrawer()" />
-      <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col">
+      <div class="absolute right-0 top-0 h-full w-full sm:w-full sm:max-w-md md:max-w-lg bg-white dark:bg-brand-800 shadow-xl flex flex-col" role="dialog" aria-modal="true" aria-label="Shopping Cart">
         <div class="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900">Shopping Cart</h2>
-          <button @click="cartStore.toggleDrawer()" class="p-2 text-gray-500 hover:text-gray-700">
+          <button @click="cartStore.toggleDrawer()" class="p-2 text-gray-500 hover:text-gray-700" aria-label="Close cart">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -31,25 +31,28 @@ const cartStore = useCartStore()
                 <h3 class="text-sm font-medium text-gray-900">{{ item.name }}</h3>
                 <p class="text-sm text-gray-600 mt-1">₹{{ (item.price * item.quantity).toFixed(2) }}</p>
                 <div class="flex items-center gap-2 mt-2">
-                  <button
-                    @click="cartStore.updateQuantity(item.id, item.quantity - 1)"
-                    class="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100"
-                  >
-                    -
-                  </button>
+<button
+                      @click="cartStore.updateQuantity(item.id, item.quantity - 1)"
+                      class="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100"
+                      :aria-label="`Decrease quantity of ${item.name}`"
+                    >
+                      -
+                    </button>
                   <span class="text-sm w-8 text-center">{{ item.quantity }}</span>
-                  <button
-                    @click="cartStore.updateQuantity(item.id, item.quantity + 1)"
-                    class="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100"
-                  >
-                    +
-                  </button>
-                  <button
-                    @click="cartStore.removeFromCart(item.id)"
-                    class="ml-auto text-sm text-red-600 hover:text-red-700"
-                  >
-                    Remove
-                  </button>
+<button
+                      @click="cartStore.updateQuantity(item.id, item.quantity + 1)"
+                      class="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100"
+                      :aria-label="`Increase quantity of ${item.name}`"
+                    >
+                      +
+                    </button>
+<button
+                      @click="cartStore.removeFromCart(item.id)"
+                      class="ml-auto text-sm text-red-600 hover:text-red-700"
+                      :aria-label="`Remove ${item.name} from cart`"
+                    >
+                      Remove
+                    </button>
                 </div>
               </div>
             </div>

@@ -6,16 +6,17 @@ import CartDrawer from '@/components/layout/CartDrawer.vue'
 </script>
 
 <template>
-  <div class="default-layout">
+  <div class="default-layout dark:bg-brand-900">
     <Navbar />
 
-    <main class="main-content">
+    <main class="main-content dark:bg-brand-900">
       <router-view v-slot="{ Component }">
         <Transition name="page" mode="out-in">
           <component :is="Component" class="page-content" />
         </Transition>
       </router-view>
     </main>
+
     <Footer />
     <ToastContainer />
     <CartDrawer />
