@@ -28,8 +28,8 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 	maxPriceStr := c.Query("max_price")
 	search := c.Query("search")
 
-	pageStr := c.Query("page", "1")
-	limitStr := c.Query("limit", "10")
+	pageStr := c.Query("page", strconv.Itoa(constants.DefaultPage))
+	limitStr := c.Query("limit", strconv.Itoa(constants.DefaultLimit))
 
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {

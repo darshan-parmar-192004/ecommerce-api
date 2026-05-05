@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"backend/internal/constants"
+
 	"github.com/doug-martin/goqu"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -99,11 +101,11 @@ func (r *ProductRepository) Create(ctx context.Context, productID, name, categor
 		"created_at":  createdAt,
 	}
 
-	_, err := r.db.From("products").Insert(rec).ExecContext(ctx)
+		_, err := r.db.From("products").Insert(rec).ExecContext(ctx)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
+			if pgErr.Code == constants.ErrCodeDuplicateKey {
 				return nil, fmt.Errorf("duplicate key")
 			}
 		}

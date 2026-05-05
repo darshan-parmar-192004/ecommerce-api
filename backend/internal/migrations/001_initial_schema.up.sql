@@ -8,7 +8,9 @@ CREATE TABLE IF NOT EXISTS categories (
     name TEXT NOT NULL,
     parent_category_id TEXT REFERENCES categories(category_id)
         ON DELETE SET NULL
-        ON UPDATE CASCADE
+        ON UPDATE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS customers (
@@ -17,7 +19,8 @@ CREATE TABLE IF NOT EXISTS customers (
     name TEXT NOT NULL,
     country TEXT,
     phone VARCHAR(50),
-    created_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     status VARCHAR(50),
     password_hash TEXT
 );
@@ -30,7 +33,8 @@ CREATE TABLE IF NOT EXISTS products (
         ON UPDATE CASCADE,
     price NUMERIC NOT NULL CHECK (price > 0),
     description TEXT,
-    created_at TIMESTAMP NOT NULL
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -41,7 +45,9 @@ CREATE TABLE IF NOT EXISTS orders (
     order_date TIMESTAMP NOT NULL,
     status TEXT,
     total_amount NUMERIC NOT NULL CHECK (total_amount >= 0),
-    shipping_address TEXT
+    shipping_address TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
@@ -53,7 +59,9 @@ CREATE TABLE IF NOT EXISTS order_items (
         ON DELETE RESTRICT
         ON UPDATE CASCADE,
     quantity INT NOT NULL CHECK (quantity >= 0),
-    unit_price NUMERIC NOT NULL CHECK (unit_price >= 0)
+    unit_price NUMERIC NOT NULL CHECK (unit_price >= 0),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS inventory (
@@ -62,6 +70,6 @@ CREATE TABLE IF NOT EXISTS inventory (
         ON UPDATE CASCADE,
     warehouse_id VARCHAR(50) NOT NULL,
     quantity INT NOT NULL CHECK (quantity >= 0),
-    last_updated TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (product_id, warehouse_id)
 );

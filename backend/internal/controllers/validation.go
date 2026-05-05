@@ -16,7 +16,7 @@ func validateProductInput(p models.Product) (map[string]interface{}, int, string
 
 	if p.Name == "" {
 		errors["name"] = "Name is required cannot be empty"
-	} else if len(p.Name) > 200 {
+	} else if len(p.Name) > constants.MaxProductNameLength {
 		errors["name"] = "Name must not exceed 200 characters"
 	}
 
@@ -32,7 +32,7 @@ func validateProductInput(p models.Product) (map[string]interface{}, int, string
 		errors["category_id"] = "Category id must match CAT-xxxxxxxx format"
 	}
 
-	if len(p.Description) > 500 {
+	if len(p.Description) > constants.MaxProductDescLength {
 		errors["description"] = "Description must not exceed 500 characters"
 	}
 

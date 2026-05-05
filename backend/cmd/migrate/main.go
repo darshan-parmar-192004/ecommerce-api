@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"fmt"
 	"log"
@@ -27,14 +26,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	dsn := buildDSN()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	dsn := cfg.GetDSN()
 
 	// Ensure migrations directory exists
-	if _, err := os.Stat("internal/migrations"); os.IsNotExist(err) {
+	if _, err := os.Stat(cfg.MigrationPath); os.IsNotExist(err) {
 		log.Fatalf("migrations directory not found: %v", err)
 	}
 
-	m, err := migrate.New("file://internal/migrations", dsn)
+	m, err := migrate.New("file://"+cfg.MigrationPath, dsn)
 	if err != nil {
 		log.Fatalf("failed to create migrate instance: %v", err)
 	}
@@ -221,24 +225,3 @@ func forceVersion(m *migrate.Migrate, args []string) {
 }
 
 // checkDBConnection verifies the database connection works
-func checkDBConnection(dsn string) error {
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		return fmt.Errorf("failed to open database: %w", err)
-	}
-	defer func() { _ = db.Close() }()
-
-	if err := db.Ping(); err != nil {
-		return fmt.Errorf("failed to ping database: %w", err)
-	}
-	return nil
-}
-
-// buildDSN constructs the database connection string from config
-func buildDSN() string {
-	cfg, err := config.Load()
-	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
-	}
-	return cfg.GetDSN()
-}
