@@ -9,7 +9,10 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAuthenticated: (state) => !!state.token,
-    isAdmin: (state) => state.user?.role === 'admin',
+    isAdmin: (state) => {
+      console.log('isAdmin check:', state.user?.role)
+      return ['admin', 'Administrator', 'ADMIN'].includes(state.user?.role)
+    },
     userName: (state) => state.user?.name || 'User',
     userEmail: (state) => state.user?.email || ''
   },
@@ -17,12 +20,14 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async setAuth(data) {
       this.token = data.token
+      const userFromResponse = data.data || data.customer || {}
       this.user = {
-        customer_id: data.data?.customer_id || data.customer_id || data.customer?.customer_id,
-        email: data.data?.email || data.email || data.customer?.email,
-        name: data.data?.name || data.customer?.name,
-        role: data.data?.role || data.customer?.role
+        customer_id: userFromResponse.customer_id || null,
+        email:        userFromResponse.email        || null,
+        name:         userFromResponse.name         || null,
+        role:         userFromResponse.role || 'user'
       }
+      console.log('setAuth - user with role:', this.user)
       this.persistAuth()
 
       if (import.meta.client) {
@@ -65,8 +70,18 @@ export const useAuthStore = defineStore('auth', {
         const userStr = localStorage.getItem('auth_user')
         if (userStr) {
           try {
-            this.user = JSON.parse(userStr)
-          } catch {
+            const parsed = JSON.parse(userStr)
+            this.user = {
+              customer_id: parsed.customer_id || null,
+              email:        parsed.email        || null,
+              name:         parsed.name         || null,
+              role:         parsed.role || 'user'
+            }
+            if (parsed.role) {
+              console.log('Loaded role from localStorage:', parsed.role)
+            }
+          } catch (e) {
+            console.error('Failed to parse stored user:', e)
             this.user = null
           }
         }
@@ -114,7 +129,8 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async verifyAuth() {
-      if (!this.token) return false
+      const token = this.token || localStorage.getItem('auth_token')
+      if (!token) return false
 
       try {
         const config = useRuntimeConfig()
@@ -122,12 +138,13 @@ export const useAuthStore = defineStore('auth', {
 
         const response = await fetch(`${apiBase}/auth/me`, {
           headers: {
-            'Authorization': `Bearer ${this.token}`
+            'Authorization': `Bearer ${token}`
           }
         })
 
         if (response.ok) {
           const data = await response.json()
+          this.token = token
           this.user = {
             customer_id: data.data?.customer_id || data.customer_id,
             email: data.data?.email || data.email,
@@ -145,6 +162,11 @@ export const useAuthStore = defineStore('auth', {
         this.clearAuth()
         return false
       }
+    },
+
+    handleSessionExpiration() {
+      this.clearAuth()
+      navigateTo('/auth/login?message=session_expired')
     }
   }
 })

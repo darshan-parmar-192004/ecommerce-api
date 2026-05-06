@@ -1,0 +1,99 @@
+<script setup>
+</script>
+
+<template>
+  <footer class="bg-white dark:bg-brand-800 border-t border-gray-200 dark:border-brand-700 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <!-- Brand -->
+        <div class="md:col-span-1">
+          <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">E-Commerce</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            Modern shopping experience with premium products and seamless checkout.
+          </p>
+        </div>
+
+        <!-- Quick Links -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Quick Links</h4>
+          <ul class="space-y-2">
+            <li>
+              <RouterLink to="/products" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                Products
+              </RouterLink>
+            </li>
+            <li>
+              <RouterLink to="/cart" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                Cart
+              </RouterLink>
+            </li>
+            <li>
+              <RouterLink to="/user/orders" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                Orders
+              </RouterLink>
+            </li>
+            <li>
+              <RouterLink to="/user/profile" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                Profile
+              </RouterLink>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Account -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Account</h4>
+          <ul class="space-y-2">
+            <li>
+              <RouterLink to="/auth/login" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                Login
+              </RouterLink>
+            </li>
+            <li>
+              <RouterLink to="/auth/register" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                Register
+              </RouterLink>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Newsletter -->
+        <div>
+          <h4 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">Stay Updated</h4>
+          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Subscribe to our newsletter for updates.</p>
+          <div class="flex gap-2">
+            <input
+              type="email"
+              placeholder="your@email.com"
+              class="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-brand-600 dark:bg-brand-700 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-900 focus:border-transparent transition-all duration-200"
+            />
+            <button class="px-4 py-2 text-sm font-medium text-white bg-brand-900 dark:bg-brand-700 rounded-lg hover:bg-brand-800 dark:hover:bg-brand-600 transition-all duration-200">
+              Join
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Bar -->
+      <div class="pt-8 border-t border-gray-200 dark:border-brand-700 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          &copy; {{ new Date().getFullYear() }} E-Commerce. All rights reserved.
+        </p>
+        <div class="flex items-center gap-6">
+          <a href="#" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors">
+            <span class="sr-only">Twitter</span>
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8.29 20.251c7.547 0 11.675-6.155 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477 4.096 4.096 0 00-1.858-.513v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 0022 5.292a11.616 11.616 0 01-3.127.403z" />
+            </svg>
+          </a>
+          <a href="#" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors">
+            <span class="sr-only">GitHub</span>
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.397 1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</template>

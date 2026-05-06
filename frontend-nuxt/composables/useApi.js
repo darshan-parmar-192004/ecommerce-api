@@ -141,5 +141,31 @@ export const useApi = () => {
     create: (data) => fetchJson('/orders', { method: 'POST', body: JSON.stringify(data) })
   }
 
-  return { fetchJson, products, categories, auth, orders }
+  const admin = {
+    products: {
+      list: (params) => fetchJson('/admin/products' + (params ? `?${new URLSearchParams(params)}` : '')),
+      get: (id) => fetchJson(`/admin/products/${id}`),
+      create: (data) => fetchJson('/admin/products', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id, data) => fetchJson(`/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      delete: (id) => fetchJson(`/admin/products/${id}`, { method: 'DELETE' })
+    },
+    categories: {
+      list: () => fetchJson('/admin/categories'),
+      create: (data) => fetchJson('/admin/categories', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id, data) => fetchJson(`/admin/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      delete: (id) => fetchJson(`/admin/categories/${id}`, { method: 'DELETE' })
+    },
+    inventory: {
+      list: () => fetchJson('/admin/inventory'),
+      update: (id, data) => fetchJson(`/admin/inventory/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+    },
+    orders: {
+      list: () => fetchJson('/admin/orders'),
+      get: (id) => fetchJson(`/admin/orders/${id}`),
+      updateStatus: (id, status) => fetchJson(`/admin/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) })
+    },
+    dashboard: () => fetchJson('/admin/dashboard')
+  }
+
+  return { fetchJson, products, categories, auth, orders, admin }
 }

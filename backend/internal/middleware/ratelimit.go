@@ -90,7 +90,7 @@ func RateLimiterMiddleware(rl *RateLimiter) fiber.Handler {
 
 var (
 	GeneralRateLimiter = NewRateLimiter(100, time.Minute)
-	LoginRateLimiter   = NewRateLimiter(5, 15*time.Minute)
+	LoginRateLimiter   = NewRateLimiter(50, time.Minute)
 )
 
 func GeneralRateLimit() fiber.Handler {
@@ -109,7 +109,7 @@ func AuthenticatedRateLimit() fiber.Handler {
 			key = c.IP()
 		}
 
-		rl := NewRateLimiter(20, time.Minute)
+		rl := NewRateLimiter(50, time.Minute)
 
 		if !rl.Allow(key) {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{

@@ -1,4 +1,8 @@
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin(async () => {
   const authStore = useAuthStore()
-  authStore.loadAuthFromCookie()
+
+  if (import.meta.client) {
+    authStore.loadAuth()
+    await authStore.verifyAuth()
+  }
 })

@@ -30,6 +30,7 @@ const handleSubmit = async () => {
 
   try {
     const result = await auth.login(form)
+    console.log('Login result:', result)
 
     success.value = true
     showSuccess(`Welcome back, ${result.customer?.name || 'User'}!`)

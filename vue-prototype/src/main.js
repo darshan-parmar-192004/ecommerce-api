@@ -1,12 +1,12 @@
 import { createApp } from 'vue'
-import { devtools } from '@vue/devtools'
-import './style.css'
+import { createPinia } from 'pinia'
 import App from './App.vue'
+import router from './router'
+import '@/assets/main.css'
 
 const app = createApp(App)
+const pinia = createPinia()
 
-if (import.meta.env.DEV) {
-  app.use(devtools)
-}
-
+app.use(pinia)
+app.use(router)
 app.mount('#app')

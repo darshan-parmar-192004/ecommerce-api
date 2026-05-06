@@ -49,6 +49,10 @@ const handleLogout = async () => {
 
 <template>
   <div ref="layoutEl" class="min-h-screen flex flex-col relative overflow-hidden bg-surface font-body text-on_surface">
+    <!-- Debug info -->
+    <div v-if="isAuthenticated" class="fixed top-4 right-4 bg-red-500 text-white p-2 rounded text-xs z-50">
+      Debug: Role: {{ user?.role }}, IsAdmin: {{ authStore.isAdmin }}
+    </div>
     <div class="pointer-events-none fixed inset-0 z-0" style="background: radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(62, 81, 251, 0.06), transparent 40%);"></div>
     <AnimatedGrid variant="minimal" />
     
@@ -132,6 +136,27 @@ const handleLogout = async () => {
                       </svg>
                       <span class="text-sm font-medium">My Orders</span>
                     </NuxtLink>
+                    <NuxtLink 
+                      to="/user/profile" 
+                      class="flex items-center gap-3 px-5 py-3 transition-colors duration-200 hover:bg-surface-container-low text-on_surface_variant"
+                      @click="closeMenu"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <span class="text-sm font-medium">Profile</span>
+                    </NuxtLink>
+                    <NuxtLink 
+                      v-if="authStore.isAdmin"
+                      to="/admin" 
+                      class="flex items-center gap-3 px-5 py-3 transition-colors duration-200 hover:bg-surface-container-low text-primary"
+                      @click="closeMenu"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.321 3.35.108z" />
+                      </svg>
+                      <span class="text-sm font-medium">Admin Panel</span>
+                    </NuxtLink>
                     <button 
                       @click="handleLogout"
                       class="w-full flex items-center gap-3 px-5 py-3 transition-colors duration-200 hover:bg-error-container/30 text-error"
@@ -152,7 +177,14 @@ const handleLogout = async () => {
               <NuxtLink to="/auth/register" class="px-5 py-2.5 text-white rounded-md font-medium text-sm transition-all duration-300 bg-gradient-to-r from-primary to-primary-container shadow-glow hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
                 Register
               </NuxtLink>
-            </template>
+<NuxtLink 
+                      to="/admin" 
+                      v-if="authStore.isAdmin"
+                      class="text-sm font-medium text-primary"
+                    >
+                      Admin Panel
+                    </NuxtLink>
+                  </template>
 
             <button 
               @click="isMenuOpen = !isMenuOpen"
@@ -165,42 +197,6 @@ const handleLogout = async () => {
             </button>
           </div>
         </div>
-
-        <Transition
-          enter-active-class="transition duration-300 ease-out"
-          enter-from-class="opacity-0 -translate-y-2"
-          enter-to-class="opacity-100 translate-y-0"
-          leave-active-class="transition duration-200 ease-in"
-          leave-from-class="opacity-100 translate-y-0"
-          leave-to-class="opacity-0 -translate-y-2"
-        >
-          <div v-if="isMenuOpen" class="md:hidden py-6 border-t border-outline-variant/20">
-            <div class="flex flex-col gap-5">
-              <NuxtLink to="/products" class="text-xs font-semibold uppercase tracking-widest transition-colors text-on_surface_variant" @click="closeMenu">
-                Products
-              </NuxtLink>
-              <NuxtLink to="/cart" class="text-xs font-semibold uppercase tracking-widest transition-colors text-on_surface_variant" @click="closeMenu">
-                Cart
-              </NuxtLink>
-              <template v-if="isAuthenticated">
-                <NuxtLink to="/orders" class="text-xs font-semibold uppercase tracking-widest transition-colors text-on_surface_variant" @click="closeMenu">
-                  My Orders
-                </NuxtLink>
-                <button @click="handleLogout" class="text-left text-xs font-semibold uppercase tracking-widest transition-colors text-error">
-                  Logout
-                </button>
-              </template>
-              <template v-else>
-                <NuxtLink to="/auth/login" class="text-xs font-semibold uppercase tracking-widest transition-colors text-on_surface_variant" @click="closeMenu">
-                  Login
-                </NuxtLink>
-                <NuxtLink to="/auth/register" class="text-xs font-semibold uppercase tracking-widest text-primary" @click="closeMenu">
-                  Register
-                </NuxtLink>
-              </template>
-            </div>
-          </div>
-        </Transition>
       </nav>
     </header>
 

@@ -6,16 +6,9 @@ const cartStore = useCartStore()
 const authStore = useAuthStore()
 
 onMounted(() => {
-  // Load auth state from localStorage
-  authStore.loadAuth()
-
   // Initialize cart from localStorage
+  // auth is handled by the auth.init plugin to avoid duplicate loading
   cartStore.init()
-
-  // Verify auth token if exists
-  if (authStore.token) {
-    authStore.verifyAuth()
-  }
 })
 </script>
 
