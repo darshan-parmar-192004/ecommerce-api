@@ -10,9 +10,9 @@ const cartStore = useCartStore()
     <div v-if="cartStore.isDrawerOpen" class="fixed inset-0 z-50 overflow-hidden">
       <div class="absolute inset-0 bg-black/50" @click="cartStore.toggleDrawer()" />
       <div class="absolute right-0 top-0 h-full w-full sm:w-full sm:max-w-md md:max-w-lg bg-white dark:bg-brand-800 shadow-xl flex flex-col" role="dialog" aria-modal="true" aria-label="Shopping Cart">
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Shopping Cart</h2>
-          <button @click="cartStore.toggleDrawer()" class="p-2 text-gray-500 hover:text-gray-700" aria-label="Close cart">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-brand-700">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Shopping Cart</h2>
+          <button @click="cartStore.toggleDrawer()" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" aria-label="Close cart">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -24,31 +24,31 @@ const cartStore = useCartStore()
             <div
               v-for="item in cartStore.items"
               :key="item.id"
-              class="flex gap-4 p-4 bg-gray-50 rounded-lg"
+              class="flex gap-4 p-4 bg-gray-50 dark:bg-brand-700/50 rounded-lg"
             >
               <img :src="item.image || '/placeholder.jpg'" :alt="item.name" class="w-20 h-20 object-cover rounded-md" />
               <div class="flex-1">
-                <h3 class="text-sm font-medium text-gray-900">{{ item.name }}</h3>
-                <p class="text-sm text-gray-600 mt-1">₹{{ (item.price * item.quantity).toFixed(2) }}</p>
+                <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ item.name }}</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">₹{{ (item.price * item.quantity).toFixed(2) }}</p>
                 <div class="flex items-center gap-2 mt-2">
 <button
                       @click="cartStore.updateQuantity(item.id, item.quantity - 1)"
-                      class="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100"
+                      class="w-6 h-6 flex items-center justify-center border border-gray-300 dark:border-brand-600 rounded hover:bg-gray-100 dark:hover:bg-brand-700"
                       :aria-label="`Decrease quantity of ${item.name}`"
                     >
                       -
                     </button>
-                  <span class="text-sm w-8 text-center">{{ item.quantity }}</span>
+                  <span class="text-sm w-8 text-center text-gray-900 dark:text-gray-100">{{ item.quantity }}</span>
 <button
                       @click="cartStore.updateQuantity(item.id, item.quantity + 1)"
-                      class="w-6 h-6 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100"
+                      class="w-6 h-6 flex items-center justify-center border border-gray-300 dark:border-brand-600 rounded hover:bg-gray-100 dark:hover:bg-brand-700"
                       :aria-label="`Increase quantity of ${item.name}`"
                     >
                       +
                     </button>
 <button
                       @click="cartStore.removeFromCart(item.id)"
-                      class="ml-auto text-sm text-red-600 hover:text-red-700"
+                      class="ml-auto text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       :aria-label="`Remove ${item.name} from cart`"
                     >
                       Remove
@@ -57,13 +57,13 @@ const cartStore = useCartStore()
               </div>
             </div>
           </TransitionGroup>
-          <div v-else class="text-center py-12 text-gray-500">
+          <div v-else class="text-center py-12 text-gray-500 dark:text-gray-400">
             Your cart is empty
           </div>
         </div>
 
-        <div v-if="cartStore.items.length > 0" class="border-t border-gray-200 p-4 space-y-4">
-          <div class="flex justify-between text-base font-semibold text-gray-900">
+        <div v-if="cartStore.items.length > 0" class="border-t border-gray-200 dark:border-brand-700 p-4 space-y-4">
+          <div class="flex justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
             <span>Total</span>
             <span>₹{{ cartStore.cartTotal.toFixed(2) }}</span>
           </div>
