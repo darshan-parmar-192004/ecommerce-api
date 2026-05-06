@@ -141,13 +141,9 @@ const router = createRouter({
     return { top: 0 }
   }
 })
-// Fixed async guard: waits for auth store initialization if needed
+
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-
-  // OPTIONAL: If your auth store has async initialization (e.g., restoring session from localStorage),
-  // uncomment and adjust the line below to wait for it to complete:
-  // await authStore.initialized // Assuming you expose a promise in your auth store
   const requiresAuth = to.meta.requiresAuth
   const requiresAdmin = to.meta.requiresAdmin
   const isGuestRoute = to.meta.guest
@@ -162,4 +158,5 @@ router.beforeEach(async (to, from, next) => {
     next()
   }
 })
+
 export default router

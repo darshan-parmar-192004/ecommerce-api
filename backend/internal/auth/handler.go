@@ -144,8 +144,8 @@ func (h *Handler) Register(c fiber.Ctx) error {
 	defer cancel()
 
 	_, err = querybuilder.NewInsert(db, "customers").
-		Columns("customer_id", "email", "name", "country", "phone", "created_at", "status", "password_hash", "role").
-		Values(customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer").
+		Columns("customer_id", "code", "email", "name", "country", "phone", "created_at", "status", "password_hash", "role").
+		Values(customerID, customerID, req.Email, req.Name, req.Country, req.Phone, createdAt, "active", string(hashedPassword), "customer").
 		Exec(ctx)
 
 	if err != nil {
@@ -162,10 +162,10 @@ func (h *Handler) Register(c fiber.Ctx) error {
 		CustomerID: customerID,
 		Email:      req.Email,
 		Name:       req.Name,
-		Country:    req.Country,
-		Phone:      req.Phone,
+		Country:    sql.NullString{String: req.Country, Valid: req.Country != ""},
+		Phone:      sql.NullString{String: req.Phone, Valid: req.Phone != ""},
 		CreatedAt:  createdAt,
-		Status:     "active",
+		Status:     sql.NullString{String: "active", Valid: true},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, JWTClaims{
