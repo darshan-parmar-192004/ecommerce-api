@@ -122,7 +122,7 @@ const buyNow = () => {
             >
               -
             </button>
-            <span class="px-4 py-2 border-x border-gray-300 dark:border-brand-600 text-gray-900 dark:text-gray-100">{{ quantity }}</span>
+            <span class="px-4 py-2 border-x border-gray-300 dark:border-brand-600 text-gray-900 dark:text-gray-100" aria-live="polite" aria-atomic="true">{{ quantity }}</span>
             <button
               @click="quantity++"
               class="px-3 py-2 hover:bg-gray-50 dark:hover:bg-brand-700 transition-colors"

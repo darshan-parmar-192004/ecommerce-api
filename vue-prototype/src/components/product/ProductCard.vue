@@ -45,6 +45,7 @@ const handleKeydown = (e) => {
         <img
           :src="product.images?.[0] || '/placeholder.jpg'"
           :alt="product.name"
+          loading="lazy"
           class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
 

@@ -1,6 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import productService from '@/services/productService'
+import { useToastStore } from '@/stores/toast'
+
+const toastStore = useToastStore()
 
 const stats = ref({
   totalProducts: 0,
@@ -17,11 +20,15 @@ const fetchStats = async () => {
     const productsRes = await productService.getProducts({ limit: 1 })
     const productsData = productsRes.data || productsRes
     stats.value.totalProducts = productsData.pagination?.total_items || 0
-    stats.value.totalOrders = 156
-    stats.value.revenue = 24580.50
-    stats.value.activeUsers = 89
+    // TODO: Replace with actual API calls when backend endpoints are ready
+    // stats.value.totalOrders = await orderService.getTotalOrders()
+    // stats.value.revenue = await orderService.getTotalRevenue()
+    // stats.value.activeUsers = await customerService.getActiveUsers()
+    stats.value.totalOrders = 0
+    stats.value.revenue = 0
+    stats.value.activeUsers = 0
   } catch (err) {
-    console.error('Failed to fetch stats', err)
+    toastStore.error('Failed to fetch stats')
   }
 }
 
@@ -31,7 +38,7 @@ const fetchTopSellers = async () => {
     const responseData = response.data || response
     topSellers.value = responseData.data || responseData || []
   } catch (err) {
-    console.error('Failed to fetch top sellers', err)
+    toastStore.error('Failed to fetch top sellers')
   }
 }
 
@@ -41,7 +48,7 @@ const fetchLifetimeValues = async () => {
     const responseData = response.data || response
     lifetimeValues.value = responseData.data || responseData || []
   } catch (err) {
-    console.error('Failed to fetch lifetime values', err)
+    toastStore.error('Failed to fetch lifetime values')
   }
 }
 
@@ -90,7 +97,7 @@ onMounted(async () => {
           No sales data available
         </div>
         <div v-else class="space-y-3">
-          <div v-for="(item, index) in topSellers" :key="index" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-brand-700/50 rounded-lg">
+          <div v-for="(item, index) in topSellers" :key="item.product || 'top-seller-' + index" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-brand-700/50 rounded-lg">
             <div class="flex items-center gap-3">
               <span class="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full flex items-center justify-center text-sm font-bold">
                 {{ index + 1 }}

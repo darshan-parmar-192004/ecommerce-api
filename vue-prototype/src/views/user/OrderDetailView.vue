@@ -19,7 +19,6 @@ onMounted(async () => {
     await userStore.fetchOrderDetail(orderId)
     order.value = userStore.currentOrder
   } catch (err) {
-    console.error('Failed to fetch order details', err)
     toastStore.error('Failed to load order')
   } finally {
     loading.value = false

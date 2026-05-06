@@ -50,14 +50,13 @@ const handleLogin = async () => {
       router.push(redirect)
     }
   } catch (err) {
-    console.error('Login failed', err)
     toastStore.error(err.response?.data?.message || 'Login failed. Please try again.')
   }
 }
 </script>
 
 <template>
-  <div v-motion="{ initial: { opacity: 0, y: 20 }, enter: { opacity: 1, y: 0 } }" class="space-y-6">
+  <div class="space-y-6">
     <div>
       <RouterLink to="/" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-4">
         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

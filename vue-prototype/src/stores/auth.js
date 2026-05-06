@@ -2,28 +2,29 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import authService from '@/services/authService'
 import { useCartStore } from './cart'
+import { STORAGE_KEYS } from '@/constants'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('token') || null)
+  const token = ref(localStorage.getItem(STORAGE_KEYS.TOKEN) || null)
   const user = ref(null)
   const loading = ref(false)
   const error = ref(null)
-  
-  // Initialize user from localStorage safely
+
+  // Initialize user from localStorage safely (call explicitly when needed)
   const initUser = () => {
     try {
-      const userStr = localStorage.getItem('user')
+      const userStr = localStorage.getItem(STORAGE_KEYS.USER)
       if (userStr) {
         user.value = JSON.parse(userStr)
       }
     } catch (error) {
       console.warn('Failed to parse user from localStorage:', error)
       user.value = null
-      localStorage.removeItem('user')
+      localStorage.removeItem(STORAGE_KEYS.USER)
     }
   }
-  
-  // Run initialization
+
+  // Initialize user on store creation (safe to call)
   initUser()
 
   const isAuthenticated = computed(() => !!token.value)
@@ -31,12 +32,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setToken = (newToken) => {
     token.value = newToken
-    localStorage.setItem('token', newToken)
+    localStorage.setItem(STORAGE_KEYS.TOKEN, newToken)
   }
 
   const setUser = (userData) => {
     user.value = userData
-    localStorage.setItem('user', JSON.stringify(userData))
+    try {
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData))
+    } catch (err) {
+      console.error('Failed to save user to localStorage:', err)
+    }
   }
 
   const login = async (credentials) => {
@@ -76,7 +81,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { data } = await authService.getProfile()
       setUser(data)
     } catch (err) {
-      console.error('Failed to fetch user profile', err)
+      error.value = 'Failed to fetch user profile'
     }
   }
 
@@ -88,15 +93,11 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       token.value = null
       user.value = null
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      localStorage.removeItem(STORAGE_KEYS.TOKEN)
+      localStorage.removeItem(STORAGE_KEYS.USER)
       const cartStore = useCartStore()
       cartStore.clearCart()
     }
-  }
-
-  if (isAuthenticated.value && !user.value) {
-    fetchUser()
   }
 
   return {
@@ -113,3 +114,4 @@ export const useAuthStore = defineStore('auth', () => {
     setToken
   }
 })
+

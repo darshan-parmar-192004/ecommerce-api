@@ -4,6 +4,7 @@ import productService from '@/services/productService'
 import categoryService from '@/services/categoryService'
 import { useToastStore } from '@/stores/toast'
 import BaseModal from '@/components/ui/BaseModal.vue'
+import { PAGINATION } from '@/constants'
 
 const toastStore = useToastStore()
 
@@ -27,11 +28,10 @@ const form = ref({
 const fetchProducts = async () => {
   loading.value = true
   try {
-    const response = await productService.getProducts({ limit: 50 })
+    const response = await productService.getProducts({ limit: PAGINATION.PRODUCT_MANAGE_LIMIT })
     const responseData = response.data || response
     products.value = responseData.data || []
   } catch (err) {
-    console.error('Failed to fetch products', err)
     toastStore.error('Failed to fetch products')
   } finally {
     loading.value = false
@@ -44,7 +44,7 @@ const fetchCategories = async () => {
     const responseData = response.data || response
     categories.value = responseData.data || []
   } catch (err) {
-    console.error('Failed to fetch categories', err)
+    toastStore.error('Failed to fetch categories')
   }
 }
 
@@ -76,7 +76,6 @@ const deleteProduct = async () => {
     showDeleteModal.value = false
     productToDelete.value = null
   } catch (err) {
-    console.error('Delete failed', err)
     toastStore.error('Failed to delete product')
   }
 }
@@ -113,7 +112,7 @@ const saveProduct = async () => {
     editingProduct.value = null
     form.value = { product_id: '', name: '', price: 0, category_id: '', description: '', stock: 0 }
     await fetchProducts()
-  } catch (err) {
+    } catch (err) {
     const backendErrors = err.response?.data?.errors
     if (backendErrors) {
       const messages = Object.values(backendErrors).flat()
@@ -121,7 +120,6 @@ const saveProduct = async () => {
     } else {
       toastStore.error('Failed to save product')
     }
-    console.error('Save failed', err)
   }
 }
 

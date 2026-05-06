@@ -88,9 +88,14 @@ const placeOrder = async () => {
       unit_price: item.price
     }))
 
+    if (!userStore.profile?.customer_id) {
+      toastStore.error('User profile not loaded. Please try again.')
+      return
+    }
+
     const orderData = {
       order: {
-        customer_id: userStore.profile?.customer_id || 'CUST-001',
+        customer_id: userStore.profile.customer_id,
         total_amount: cartStore.cartTotal,
         status: 'pending',
         shipping_address: `${shippingInfo.address}, ${shippingInfo.city}, ${shippingInfo.state} ${shippingInfo.zip}, ${shippingInfo.country}`
@@ -104,7 +109,6 @@ const placeOrder = async () => {
     cartStore.clearCart()
     toastStore.success('Order placed successfully!')
   } catch (err) {
-    console.error('Order failed', err)
     toastStore.error('Failed to place order. Please try again.')
   } finally {
     loading.value = false

@@ -1,20 +1,29 @@
 <script setup>
 import { useToastStore } from '@/stores/toast'
-import { onMounted, onUnmounted } from 'vue'
+import { watch, onUnmounted } from 'vue'
+import { TOAST } from '@/constants'
 
 const toastStore = useToastStore()
 let autoDismissInterval = null
 
-onMounted(() => {
-  autoDismissInterval = setInterval(() => {
-    const now = Date.now()
-    toastStore.toasts.forEach(toast => {
-      if (now - toast.timestamp > 5000) {
-        toastStore.removeToast(toast.id)
-      }
-    })
-  }, 1000)
-})
+// Only run interval when there are toasts
+watch(() => toastStore.toasts.length, (newLength, oldLength) => {
+  if (newLength > 0 && !autoDismissInterval) {
+    // Start interval
+    autoDismissInterval = setInterval(() => {
+      const now = Date.now()
+      toastStore.toasts.forEach(toast => {
+        if (now - toast.timestamp > TOAST.DEFAULT_DURATION) {
+          toastStore.removeToast(toast.id)
+        }
+      })
+    }, 1000)
+  } else if (newLength === 0 && autoDismissInterval) {
+    // Stop interval when no toasts
+    clearInterval(autoDismissInterval)
+    autoDismissInterval = null
+  }
+}, { immediate: true })
 
 onUnmounted(() => {
   if (autoDismissInterval) {

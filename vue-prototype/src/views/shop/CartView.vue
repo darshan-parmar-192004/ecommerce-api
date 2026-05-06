@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
+import CartItem from '@/components/cart/CartItem.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -36,41 +37,11 @@ const hasItems = computed(() => cartStore.items.length > 0)
         </div>
 
         <TransitionGroup name="cart-item" tag="div" class="space-y-4">
-          <div
+          <CartItem
             v-for="item in cartStore.items"
             :key="item.id"
-            class="flex gap-4 p-4 bg-white dark:bg-brand-800 rounded-xl border border-gray-200 dark:border-brand-700 hover:shadow-md transition-shadow"
-          >
-            <img :src="item.image || '/placeholder.jpg'" :alt="item.name" class="w-24 h-24 object-cover rounded-lg" />
-            <div class="flex-1">
-              <h3 class="font-medium text-gray-900 dark:text-gray-100">{{ item.name }}</h3>
-              <p class="text-gray-600 dark:text-gray-400 mt-1">₹{{ (item.price * item.quantity).toFixed(2) }}</p>
-              <div class="flex items-center gap-2 mt-3">
-                <button
-                  @click="cartStore.updateQuantity(item.id, item.quantity - 1)"
-                  class="w-8 h-8 flex items-center justify-center border border-gray-300 dark:border-brand-600 rounded hover:bg-gray-50 dark:hover:bg-brand-700"
-                  aria-label="Decrease quantity"
-                >
-                  -
-                </button>
-                <span class="w-8 text-center text-gray-900 dark:text-gray-100">{{ item.quantity }}</span>
-                <button
-                  @click="cartStore.updateQuantity(item.id, item.quantity + 1)"
-                  class="w-8 h-8 flex items-center justify-center border border-gray-300 dark:border-brand-600 rounded hover:bg-gray-50 dark:hover:bg-brand-700"
-                  aria-label="Increase quantity"
-                >
-                  +
-                </button>
-                <button
-                  @click="cartStore.removeFromCart(item.id)"
-                  class="ml-auto text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                  :aria-label="`Remove ${item.name} from cart`"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          </div>
+            :item="item"
+          />
         </TransitionGroup>
 
         <RouterLink to="/" class="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mt-6">

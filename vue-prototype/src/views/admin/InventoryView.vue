@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import productService from '@/services/productService'
 import { useToastStore } from '@/stores/toast'
+import { PAGINATION } from '@/constants'
 
 const toastStore = useToastStore()
 
@@ -11,19 +12,19 @@ const loading = ref(true)
 const fetchInventory = async () => {
   loading.value = true
   try {
-    const productsRes = await productService.getProducts({ limit: 200 })
+    const productsRes = await productService.getProducts({ limit: PAGINATION.INVENTORY_LIMIT })
     const productsData = productsRes.data?.data || productsRes.data || []
-
+    
     let inventoryData = []
     try {
-      const inventoryRes = await productService.getInventory({ limit: 100 })
+      const inventoryRes = await productService.getInventory({ limit: PAGINATION.INVENTORY_LIMIT })
       inventoryData = Array.isArray(inventoryRes.data)
         ? inventoryRes.data
         : (inventoryRes.data?.data || [])
     } catch {
       // Inventory endpoint may have issues; continue with just products
     }
-
+    
     const inventoryByProduct = {}
     inventoryData.forEach(item => {
       if (!inventoryByProduct[item.product_id]) {
@@ -31,7 +32,7 @@ const fetchInventory = async () => {
       }
       inventoryByProduct[item.product_id].push(item)
     })
-
+    
     inventory.value = productsData.map(product => {
       const inv = inventoryByProduct[product.product_id]
       if (inv && inv.length > 0) {
@@ -52,7 +53,6 @@ const fetchInventory = async () => {
       }
     })
   } catch (err) {
-    console.error('Failed to fetch inventory', err)
     toastStore.error('Failed to fetch inventory')
   } finally {
     loading.value = false
@@ -64,7 +64,6 @@ const updateStock = async (item) => {
     await productService.updateInventory(item.product_id, { quantity: item.quantity })
     toastStore.success('Stock updated')
   } catch (err) {
-    console.error('Update failed', err)
     toastStore.error('Failed to update stock')
   }
 }

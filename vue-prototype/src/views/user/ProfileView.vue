@@ -48,7 +48,6 @@ const updateProfile = async () => {
     isEditing.value = false
     setTimeout(() => { successMessage.value = '' }, 3000)
   } catch (err) {
-    console.error('Update failed', err)
     toastStore.error('Failed to update profile.')
   }
 }
