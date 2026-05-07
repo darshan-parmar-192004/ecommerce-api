@@ -1,6 +1,7 @@
 <script setup>
-import { useCartStore } from '@/stores/cart'
-import { useRouter } from 'vue-router'
+import { useCart } from '@/composables/useCart'
+import { RouterLink } from 'vue-router'
+import { Plus, Star, ChevronRight } from 'lucide-vue-next'
 
 const props = defineProps({
   product: {
@@ -9,34 +10,19 @@ const props = defineProps({
   }
 })
 
-const cartStore = useCartStore()
-const router = useRouter()
+const { addToCart: cartAdd } = useCart()
 
 const addToCart = (e) => {
-  e.stopPropagation()
-  cartStore.addToCart(props.product)
-}
-
-const goToDetail = () => {
-  router.push({ name: 'ProductDetail', params: { id: props.product.product_id } })
-}
-
-const handleKeydown = (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault()
-    goToDetail()
-  }
+  e.preventDefault()
+  cartAdd(props.product)
 }
 </script>
 
 <template>
-  <div
-    @click="goToDetail"
-    @keydown="handleKeydown"
-    role="button"
-    tabindex="0"
+  <RouterLink
+    :to="{ name: 'ProductDetail', params: { id: product.productId } }"
     :aria-label="`View details for ${product.name}`"
-    class="group relative cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-900 focus:ring-offset-2 rounded-2xl"
+    class="group relative cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-900 focus:ring-offset-2 rounded-2xl inline-block"
   >
     <!-- Premium Card Container -->
     <div class="relative bg-gradient-to-br from-white/95 to-white/85 dark:from-brand-800/95 dark:to-brand-700/85 backdrop-blur-xl rounded-2xl border border-white/50 dark:border-brand-600/50 shadow-lg shadow-gray-200/50 dark:shadow-brand-900/50 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-gray-900/10 dark:hover:shadow-brand-900/20 hover:scale-[1.02] hover:border-gray-200/60 dark:hover:border-brand-600/60">
@@ -55,19 +41,17 @@ const handleKeydown = (e) => {
         <!-- Category Badge - Premium -->
         <div class="absolute top-4 left-4">
           <span class="px-3 py-1.5 bg-white/95 dark:bg-brand-800/95 backdrop-blur-xl text-xs font-bold text-gray-900 dark:text-gray-100 rounded-xl border border-white/50 dark:border-brand-600/50 shadow-md">
-            {{ product.category_name || 'Uncategorized' }}
+            {{ product.categoryName || 'Uncategorized' }}
           </span>
         </div>
 
         <!-- Add to Cart Button - Premium -->
         <button
-          @click="addToCart"
+          @click.prevent="addToCart"
           class="absolute bottom-4 right-4 bg-gradient-to-br from-gray-900 to-gray-800 dark:from-brand-700 dark:to-brand-800 text-white p-3.5 rounded-xl shadow-xl opacity-0 translate-y-3 hover:from-gray-800 hover:to-gray-700 dark:hover:from-brand-600 dark:hover:to-brand-700 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 hover:scale-110 active:scale-95 border border-gray-700/30 dark:border-brand-600/30"
           :aria-label="`Add ${product.name} to cart`"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-          </svg>
+          <Plus class="w-5 h-5" />
         </button>
       </div>
 
@@ -82,9 +66,7 @@ const handleKeydown = (e) => {
         <!-- Rating Stars -->
         <div v-if="product.rating" class="flex items-center gap-1.5">
           <div class="flex items-center">
-            <svg class="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
+            <Star class="w-4 h-4 text-yellow-400" fill="currentColor" />
             <span class="text-sm font-semibold text-gray-800 dark:text-gray-300 ml-1">{{ product.rating }}</span>
           </div>
           <span class="text-xs text-gray-400 dark:text-gray-500">•</span>
@@ -102,9 +84,7 @@ const handleKeydown = (e) => {
           <!-- Quick view indicator -->
           <div class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <span>View details</span>
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
-            </svg>
+            <ChevronRight class="w-3.5 h-3.5" />
           </div>
         </div>
       </div>
@@ -112,5 +92,5 @@ const handleKeydown = (e) => {
 
     <!-- Premium hover glow effect -->
     <div class="absolute -inset-0.5 bg-gradient-to-r from-gray-900/20 via-gray-700/20 to-gray-600/20 dark:from-brand-600/20 dark:via-brand-500/20 dark:to-brand-400/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur"></div>
-  </div>
+  </RouterLink>
 </template>

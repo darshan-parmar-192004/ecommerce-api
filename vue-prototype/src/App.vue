@@ -1,7 +1,10 @@
 <script setup>
-import { RouterView } from 'vue-router'
-</script>
+import { RouterView } from "vue-router";
+import { useTheme } from "@/composables/useTheme";
+const { initTheme } = useTheme();
 
+initTheme();
+</script>
 <template>
-  <RouterView />
+    <RouterView />
 </template>

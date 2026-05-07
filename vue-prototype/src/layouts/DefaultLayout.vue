@@ -1,7 +1,6 @@
 <script setup>
 import Navbar from '@/components/layout/Navbar.vue'
 import Footer from '@/components/layout/Footer.vue'
-import ToastContainer from '@/components/common/ToastContainer.vue'
 import CartDrawer from '@/components/layout/CartDrawer.vue'
 </script>
 
@@ -18,7 +17,6 @@ import CartDrawer from '@/components/layout/CartDrawer.vue'
     </main>
 
     <Footer />
-    <ToastContainer />
     <CartDrawer />
   </div>
 </template>

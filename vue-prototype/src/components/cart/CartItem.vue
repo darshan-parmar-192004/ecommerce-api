@@ -1,5 +1,5 @@
 <script setup>
-import { useCartStore } from '@/stores/cart'
+import { useCart } from '@/composables/useCart'
 
 const props = defineProps({
   item: {
@@ -8,18 +8,18 @@ const props = defineProps({
   }
 })
 
-const cartStore = useCartStore()
+const { updateQuantity, removeFromCart } = useCart()
 
 const decreaseQuantity = () => {
-  cartStore.updateQuantity(props.item.id, props.item.quantity - 1)
+  updateQuantity(props.item.id, props.item.quantity - 1)
 }
 
 const increaseQuantity = () => {
-  cartStore.updateQuantity(props.item.id, props.item.quantity + 1)
+  updateQuantity(props.item.id, props.item.quantity + 1)
 }
 
 const removeItem = () => {
-  cartStore.removeFromCart(props.item.id)
+  removeFromCart(props.item.id)
 }
 </script>
 

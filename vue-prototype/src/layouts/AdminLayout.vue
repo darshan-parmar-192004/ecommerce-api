@@ -2,7 +2,6 @@
 import { RouterView } from 'vue-router'
 import AdminSidebar from '@/components/layout/AdminSidebar.vue'
 import { useRoute } from 'vue-router'
-import ToastContainer from '@/components/common/ToastContainer.vue'
 
 const route = useRoute()
 </script>
@@ -17,7 +16,6 @@ const route = useRoute()
         </Transition>
       </RouterView>
     </main>
-    <ToastContainer />
   </div>
 </template>
 
