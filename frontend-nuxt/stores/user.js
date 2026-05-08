@@ -76,6 +76,26 @@ export const useUserStore = defineStore('user', {
     clearUserData() {
       this.profile = null
       this.orders = []
+    },
+
+    async cancelOrder(id) {
+      this.loading = true
+      try {
+        const { fetchJson } = useApi()
+        await fetchJson(`/orders/${id}/cancel`, {
+          method: 'PUT'
+        })
+        const orderIndex = this.orders.findIndex(o => o.order_id === id)
+        if (orderIndex !== -1) {
+          this.orders[orderIndex].status = 'cancelled'
+        }
+        return true
+      } catch (error) {
+        console.error('Failed to cancel order:', error)
+        throw error
+      } finally {
+        this.loading = false
+      }
     }
   }
 })

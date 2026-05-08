@@ -7,19 +7,8 @@ const authStore = useAuthStore()
 const route = useRoute()
 const isMenuOpen = ref(false)
 const isUserMenuOpen = ref(false)
-const layoutEl = ref(null)
 
 const { isAuthenticated, user } = storeToRefs(authStore)
-
-onMounted(() => {
-  if (layoutEl.value) {
-    layoutEl.value.addEventListener('mousemove', (e) => {
-      const rect = layoutEl.value.getBoundingClientRect()
-      layoutEl.value.style.setProperty('--x', `${e.clientX - rect.left}px`)
-      layoutEl.value.style.setProperty('--y', `${e.clientY - rect.top}px`)
-    })
-  }
-})
 
 const closeMenu = () => {
   isMenuOpen.value = false
@@ -48,14 +37,7 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div ref="layoutEl" class="min-h-screen flex flex-col relative overflow-hidden bg-surface font-body text-on_surface">
-    <!-- Debug info -->
-    <div v-if="isAuthenticated" class="fixed top-4 right-4 bg-red-500 text-white p-2 rounded text-xs z-50">
-      Debug: Role: {{ user?.role }}, IsAdmin: {{ authStore.isAdmin }}
-    </div>
-    <div class="pointer-events-none fixed inset-0 z-0" style="background: radial-gradient(600px circle at var(--x, 50%) var(--y, 50%), rgba(62, 81, 251, 0.06), transparent 40%);"></div>
-    <AnimatedGrid variant="minimal" />
-    
+  <div class="min-h-screen flex flex-col relative overflow-hidden bg-surface font-body text-on_surface">
     <header class="sticky top-0 z-40 glass backdrop-blur-xl bg-surface/70 border-b border-white/10">
       <nav class="max-w-7xl mx-auto px-6 lg:px-8">
         <div class="flex justify-between items-center h-20">
@@ -83,6 +65,8 @@ const handleLogout = async () => {
           </div>
 
           <div class="flex items-center gap-5">
+            <ThemeToggle />
+
             <button 
               @click="cartStore.toggleCart"
               class="relative p-2.5 rounded-full transition-colors duration-300 hover:bg-surface-container text-on_surface_variant"

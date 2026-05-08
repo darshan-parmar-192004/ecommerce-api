@@ -1,32 +1,26 @@
+import { toast } from 'vue-sonner'
+
 export const useToast = () => {
-  const toasts = useState('toasts', () => [])
-
-  const addToast = (message, type = 'info', duration = 3000) => {
-    const id = Date.now()
-    toasts.value.push({ id, message, type })
-    
-    setTimeout(() => {
-      removeToast(id)
-    }, duration)
+  const success = (message) => {
+    toast.success(message)
   }
 
-  const removeToast = (id) => {
-    const index = toasts.value.findIndex(t => t.id === id)
-    if (index > -1) {
-      toasts.value.splice(index, 1)
-    }
+  const error = (message) => {
+    toast.error(message)
   }
 
-  const success = (message) => addToast(message, 'success')
-  const error = (message) => addToast(message, 'error')
-  const info = (message) => addToast(message, 'info')
+  const info = (message) => {
+    toast.info(message)
+  }
+
+  const warning = (message) => {
+    toast.warning(message)
+  }
 
   return {
-    toasts,
-    addToast,
-    removeToast,
     success,
     error,
-    info
+    info,
+    warning
   }
 }

@@ -1,12 +1,12 @@
 <script setup>
 import { RouterLink, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuth } from '@/composables/useAuth'
 
-const authStore = useAuthStore()
+const { logout: authLogout } = useAuth()
 const router = useRouter()
 
 const logout = async () => {
-  await authStore.logout()
+  await authLogout()
   router.push({ name: 'Login' })
 }
 </script>

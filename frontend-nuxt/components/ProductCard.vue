@@ -1,5 +1,6 @@
 <script setup>
 import { useCartStore } from '~/stores/cart'
+import { ShoppingBag, Plus, Loader2 } from 'lucide-vue-next'
 
 const props = defineProps({
   product: {
@@ -62,9 +63,7 @@ const resetTilt = () => {
       class="block aspect-[4/3] bg-surface-container relative overflow-hidden"
     >
       <div class="absolute inset-0 flex items-center justify-center transition-transform duration-700 ease-out group-hover:scale-110">
-        <svg class="w-20 h-20 text-outline/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
+        <ShoppingBag class="w-20 h-20 text-outline/30" />
       </div>
       
       <!-- Quick Add Button Overlay -->
@@ -75,13 +74,8 @@ const resetTilt = () => {
             :disabled="isAdding || product.stock === 0"
             class="transform scale-90 group-hover:scale-100 transition-transform duration-300 bg-white text-on_surface px-6 py-3 rounded-lg font-semibold flex items-center gap-2 shadow-lg hover:bg-primary hover:text-white"
           >
-            <svg v-if="isAdding" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
+            <Loader2 v-if="isAdding" class="w-4 h-4 animate-spin" />
+            <Plus v-else class="w-5 h-5" />
             {{ isAdding ? 'Adding...' : 'Quick Add' }}
           </button>
         </div>
@@ -126,13 +120,8 @@ const resetTilt = () => {
           :disabled="isAdding || product.stock === 0"
           class="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-4 py-2.5 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-lg hover:scale-[1.03] active:scale-[0.97] shadow-lg shadow-primary/25"
         >
-          <svg v-if="isAdding" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
+          <Loader2 v-if="isAdding" class="w-4 h-4 animate-spin" />
+          <Plus v-else class="w-5 h-5" />
           <span class="font-medium text-xs uppercase tracking-wider">Add</span>
         </button>
       </div>

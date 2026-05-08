@@ -53,14 +53,16 @@ onMounted(() => {
   loadRecentSearches()
 })
 
+const { products: productsApi, categories: categoriesApi } = useApi()
+
 const fetchSuggestions = async (query) => {
   if (!query || query.length < 2) {
     searchSuggestions.value = []
     return
   }
   try {
-    const data = await $fetch(`/api/products?search=${encodeURIComponent(query)}&limit=5`)
-    searchSuggestions.value = data.data || data || []
+    const data = await productsApi.list({ search: query, limit: 5 })
+    searchSuggestions.value = data.data || []
   } catch (e) {
     searchSuggestions.value = []
   }
@@ -104,20 +106,24 @@ const loadProducts = async () => {
   productsLoading.value = true
   productsError.value = null
   try {
-    const q = new URLSearchParams()
-    if (currentPage.value > 1) q.set('page', String(currentPage.value))
-    q.set('limit', String(limit))
-    if (selectedCategory.value) q.set('category', selectedCategory.value)
-    if (debouncedSearch.value) q.set('search', debouncedSearch.value)
-    if (minPrice.value) q.set('min_price', minPrice.value)
-    if (maxPrice.value) q.set('max_price', maxPrice.value)
-    
-    productsData.value = await $fetch(`/api/products?${q.toString()}`)
+    const response = await productsApi.list({
+      page: currentPage.value > 1 ? currentPage.value : undefined,
+      limit,
+      category: selectedCategory.value,
+      search: debouncedSearch.value,
+      min_price: minPrice.value,
+      max_price: maxPrice.value
+    })
+    productsData.value = response
   } catch (e) {
     productsError.value = e
   } finally {
     productsLoading.value = false
   }
+}
+
+const refreshProducts = () => {
+  loadProducts()
 }
 
 onMounted(() => {
@@ -128,7 +134,7 @@ watch([selectedCategory, minPrice, maxPrice, debouncedSearch, currentPage], () =
   loadProducts()
 })
 
-const { data: categoriesData } = await useFetch('/api/categories')
+const { data: categoriesData } = await useAsyncData('categories', () => categoriesApi.list())
 
 const products = computed(() => productsData.value?.data || productsData.value || [])
 const pagination = computed(() => productsData.value?.pagination || { page: 1, total_pages: 1, total_items: 0 })
@@ -222,13 +228,6 @@ useSeoMeta({
                     @focus="showSuggestions = true"
                     @blur="setTimeout(() => showSuggestions = false, 200)"
                     @keyup.enter="applyFilters"
-                    @keydown.down.prevent="focusedSuggestion = Math.min(focusedSuggestion + 1, searchSuggestions.length + recentSearches.length)"
-                    @keydown.up.prevent="focusedSuggestion = Math.max(focusedSuggestion - 1, 0)"
-                    @keydown.enter.prevent="focusedSuggestion > 0 && (
-                      focusedSuggestion <= searchSuggestions.length 
-                        ? selectSuggestion(searchSuggestions[focusedSuggestion - 1])
-                        : selectRecentSearch(recentSearches[focusedSuggestion - searchSuggestions.length - 1])
-                    )"
                   />
                   <svg class="absolute left-3 top-3 w-5 h-5 text-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -338,7 +337,6 @@ useSeoMeta({
           </div>
 
           <template v-else>
-            <!-- Category Filter Chips -->
             <div v-if="categories.length > 0" class="mb-8">
               <div class="flex flex-wrap gap-3">
                 <button
@@ -388,7 +386,6 @@ useSeoMeta({
                   :product="product"
                   :class="['animate-fade-in-up']"
                   :style="{ animationDelay: `${index * 50}ms` }"
-                  loading="lazy"
                 />
               </div>
 

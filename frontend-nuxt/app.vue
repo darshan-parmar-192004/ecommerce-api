@@ -1,13 +1,10 @@
 <script setup>
 import { useCartStore } from '~/stores/cart'
-import { useAuthStore } from '~/stores/auth'
+import { Toaster } from '~/components/ui/sonner'
 
 const cartStore = useCartStore()
-const authStore = useAuthStore()
 
 onMounted(() => {
-  // Initialize cart from localStorage
-  // auth is handled by the auth.init plugin to avoid duplicate loading
   cartStore.init()
 })
 </script>
@@ -16,7 +13,7 @@ onMounted(() => {
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
-  <Toast />
+  <Toaster />
 </template>
 
 <style>

@@ -3,8 +3,6 @@ definePageMeta({
   layout: 'auth'
 })
 
-const route = useRoute()
-const router = useRouter()
 const { success: showSuccess } = useToast()
 
 const form = reactive({
@@ -60,7 +58,7 @@ const handleSubmit = async () => {
   loading.value = true
 
   try {
-    const result = await auth.register(form)
+    await auth.register(form)
 
     success.value = true
     showSuccess('Account created successfully!')
@@ -70,7 +68,7 @@ const handleSubmit = async () => {
       countdown.value--
       if (countdown.value <= 0) {
         clearInterval(interval)
-        router.push('/auth/login')
+        navigateTo('/auth/login')
       }
     }, 1000)
   } catch (err) {

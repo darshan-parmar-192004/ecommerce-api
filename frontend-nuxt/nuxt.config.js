@@ -17,7 +17,12 @@ export default defineNuxtConfig({
     compressPublicAssets: true,
   },
 
-  modules: ["@pinia/nuxt", "@nuxtjs/tailwindcss"],
+  modules: ["@pinia/nuxt", "@nuxtjs/tailwindcss", "shadcn-nuxt"],
+
+  shadcn: {
+    prefix: "",
+    componentDir: "components/ui",
+  },
 
   pinia: {
     storesDirs: ["./stores/**"],

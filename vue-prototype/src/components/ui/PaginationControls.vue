@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-vue-next'
 
 const props = defineProps({
   currentPage: { type: Number, default: 1 },
@@ -48,9 +49,7 @@ const goToPage = (page) => {
       aria-label="First page"
     >
       <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-      <svg class="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 19l-7-7 7-7M18 19l-7-7 7-7"></path>
-      </svg>
+      <ChevronsLeft class="w-4 h-4 relative z-10" aria-hidden="true" />
     </button>
 
     <!-- Previous -->
@@ -64,9 +63,7 @@ const goToPage = (page) => {
       aria-label="Previous page"
     >
       <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-      <svg class="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
-      </svg>
+      <ChevronLeft class="w-4 h-4 relative z-10" aria-hidden="true" />
       <span class="hidden sm:inline relative z-10">Prev</span>
     </button>
 
@@ -103,9 +100,7 @@ const goToPage = (page) => {
     >
       <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
       <span class="hidden sm:inline relative z-10">Next</span>
-      <svg class="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
-      </svg>
+      <ChevronRight class="w-4 h-4 relative z-10" aria-hidden="true" />
     </button>
 
     <!-- Last Page -->
@@ -119,9 +114,7 @@ const goToPage = (page) => {
       aria-label="Last page"
     >
       <span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-      <svg class="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
-      </svg>
+      <ChevronsRight class="w-4 h-4 relative z-10" aria-hidden="true" />
     </button>
   </nav>
 </template>

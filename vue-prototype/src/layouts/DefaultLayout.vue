@@ -1,27 +1,24 @@
+<template>
+<div class="default-layout dark:bg-brand-900 min-h-screen">
+  <Navbar />
+  <main class="main-content dark:bg-brand-900">
+    <router-view v-slot="{ Component }">
+  <Transition name="page" mode="out-in">
+    <component :is="Component" />
+  </Transition>
+    </router-view>
+  </main>
+  <Footer />
+  <CartDrawer />
+</div>
+</template>
+
 <script setup>
 import Navbar from '@/components/layout/Navbar.vue'
 import Footer from '@/components/layout/Footer.vue'
-import ToastContainer from '@/components/common/ToastContainer.vue'
 import CartDrawer from '@/components/layout/CartDrawer.vue'
 </script>
 
-<template>
-  <div class="default-layout dark:bg-brand-900">
-    <Navbar />
-
-    <main class="main-content dark:bg-brand-900">
-      <router-view v-slot="{ Component }">
-        <Transition name="page" mode="out-in">
-          <component :is="Component" class="page-content" />
-        </Transition>
-      </router-view>
-    </main>
-
-    <Footer />
-    <ToastContainer />
-    <CartDrawer />
-  </div>
-</template>
 <style scoped>
 .default-layout {
   min-height: 100vh;
@@ -38,7 +35,6 @@ import CartDrawer from '@/components/layout/CartDrawer.vue'
 .page-content {
   width: 100%;
 }
-/* Page transition animations */
 .page-enter-active,
 .page-leave-active {
   transition: opacity 0.25s ease;
@@ -47,4 +43,4 @@ import CartDrawer from '@/components/layout/CartDrawer.vue'
 .page-leave-to {
   opacity: 0;
 }
-</style>
+  </style>

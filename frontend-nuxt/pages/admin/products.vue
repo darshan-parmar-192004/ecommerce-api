@@ -20,11 +20,13 @@ const form = ref({
   stock: 0
 })
 
+const { admin: adminApi } = useApi()
+
 const fetchProducts = async () => {
   loading.value = true
   try {
-    const { data } = await useApi('/products')
-    products.value = data || []
+    const response = await adminApi.products.list()
+    products.value = response.data || response || []
   } catch (err) {
     console.error('Failed to fetch products', err)
   } finally {
@@ -41,20 +43,25 @@ const editProduct = (product) => {
 const saveProduct = async () => {
   try {
     if (editingProduct.value) {
-      await useApi(`/products/${editingProduct.value.product_id}`, {
-        method: 'PUT',
-        body: form.value
-      })
+      await adminApi.products.update(editingProduct.value.product_id, form.value)
     } else {
-      await useApi('/products', {
-        method: 'POST',
-        body: form.value
-      })
+      await adminApi.products.create(form.value)
     }
     showModal.value = false
     await fetchProducts()
   } catch (err) {
     console.error('Failed to save product', err)
+  }
+}
+
+const resetForm = () => {
+  editingProduct.value = null
+  form.value = {
+    name: '',
+    price: 0,
+    category_id: '',
+    description: '',
+    stock: 0
   }
 }
 
@@ -65,7 +72,10 @@ onMounted(fetchProducts)
   <div class="p-6">
     <div class="flex items-center justify-between mb-8">
       <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Manage Products</h1>
-      <button @click="showModal = true; editingProduct.value = null; form = { name: '', price: 0, category_id: '', description: '', stock: 0 }" class="btn-primary">
+      <button 
+        @click="showModal = true; resetForm()" 
+        class="btn-primary"
+      >
         Add Product
       </button>
     </div>
@@ -97,22 +107,40 @@ onMounted(fetchProducts)
       </table>
     </div>
 
-    <!-- Modal placeholder -->
-    <BaseModal v-if="showModal" :show="showModal" :title="editingProduct ? 'Edit Product' : 'Add Product'" @close="showModal = false">
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Product Name</label>
-          <input v-model="form.name" placeholder="Product Name" class="input" required />
+    <!-- Modal -->
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center">
+      <div class="absolute inset-0 bg-black/50" @click="showModal = false"></div>
+      <div class="relative bg-white dark:bg-brand-800 rounded-xl p-6 w-full max-w-md mx-4">
+        <h2 class="text-xl font-bold mb-4">{{ editingProduct ? 'Edit Product' : 'Add Product' }}</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Name</label>
+            <input v-model="form.name" class="w-full input" placeholder="Product Name" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Price</label>
+            <input v-model.number="form.price" type="number" step="0.01" class="w-full input" placeholder="Price" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">Stock</label>
+            <input v-model.number="form.stock" type="number" class="w-full input" placeholder="Stock" />
+          </div>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Price</label>
-          <input v-model.number="form.price" type="number" step="0.01" placeholder="Price" class="input" required />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stock</label>
-          <input v-model.number="form.stock" type="number" placeholder="Stock" class="input" required />
+        <div class="flex gap-2 mt-6">
+          <button @click="showModal = false" class="btn-secondary flex-1">Cancel</button>
+          <button @click="saveProduct" class="btn-primary flex-1">Save</button>
         </div>
       </div>
-    </BaseModal>
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* Keep existing styles */
+:global(.btn-primary) {
+  @apply px-8 py-3 bg-gradient-to-r from-primary to-primary-container text-white rounded-md font-medium transition-all duration-300;
+}
+:global(.btn-secondary) {
+  @apply px-8 py-3 bg-surface-container text-on_surface rounded-md font-medium transition-all duration-300;
+}
+</style>

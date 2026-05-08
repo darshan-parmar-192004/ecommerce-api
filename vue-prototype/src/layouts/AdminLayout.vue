@@ -1,25 +1,19 @@
-<script setup>
-import { RouterView } from 'vue-router'
-import AdminSidebar from '@/components/layout/AdminSidebar.vue'
-import { useRoute } from 'vue-router'
-import ToastContainer from '@/components/common/ToastContainer.vue'
-
-const route = useRoute()
-</script>
-
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-brand-900 flex">
-    <AdminSidebar />
-    <main class="flex-1 p-8 overflow-auto dark:bg-brand-900">
-      <RouterView v-slot="{ Component }">
-        <Transition name="page" mode="out-in">
-          <component v-if="Component" :is="Component" :key="route.path" />
-        </Transition>
-      </RouterView>
-    </main>
-    <ToastContainer />
-  </div>
+<div class="min-h-screen bg-gray-50 dark:bg-brand-900 flex">
+  <AdminSidebar />
+  <main class="flex-1 p-8 overflow-auto dark:bg-brand-900">
+    <router-view v-slot="{ Component }">
+      <Transition name="page" mode="out-in">
+        <component :is="Component" />
+      </Transition>
+    </router-view>
+  </main>
+</div>
 </template>
+
+<script setup>
+import AdminSidebar from '@/components/layout/AdminSidebar.vue'
+</script>
 
 <style scoped>
 .page-enter-active,

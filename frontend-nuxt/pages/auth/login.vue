@@ -4,7 +4,6 @@ definePageMeta({
 })
 
 const route = useRoute()
-const router = useRouter()
 const { success: showSuccess } = useToast()
 
 const form = reactive({
@@ -15,7 +14,6 @@ const form = reactive({
 const showPassword = ref(false)
 const error = ref('')
 const loading = ref(false)
-const success = ref(false)
 
 const { auth } = useApi()
 
@@ -32,13 +30,11 @@ const handleSubmit = async () => {
     const result = await auth.login(form)
     console.log('Login result:', result)
 
-    success.value = true
     showSuccess(`Welcome back, ${result.customer?.name || 'User'}!`)
 
-    setTimeout(() => {
-      const redirect = route.query.redirect
-      router.push(redirect || '/')
-    }, 800)
+    // Use navigateTo for reliable redirect after auth state is set
+    const redirect = route.query.redirect || '/'
+    await navigateTo(redirect)
   } catch (err) {
     error.value = err.message || 'Login failed'
   } finally {
@@ -60,31 +56,19 @@ useSeoMeta({
         </span>
       </NuxtLink>
       <h2 class="mt-8 text-xl font-semibold text-on_surface font-display">
-        {{ success ? 'Welcome back!' : 'Welcome back to your collection.' }}
+        Welcome back to your collection.
       </h2>
     </div>
 
     <div class="rounded-2xl p-8 relative overflow-hidden bg-surface-container-lowest shadow-ambient">
-      <!-- Success State -->
-      <Transition name="fade" mode="out-in">
-        <div v-if="success" class="text-center py-10">
-          <div class="w-20 h-20 mx-auto mb-5 flex items-center justify-center bg-primary-fixed rounded-full">
-            <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <p class="text-lg font-semibold text-on_surface font-display mb-2">Login Successful!</p>
-          <p class="text-sm text-outline">Redirecting you shortly...</p>
+      <form @submit.prevent="handleSubmit" class="space-y-5">
+        <!-- Error Alert -->
+        <div v-if="error" class="p-4 rounded-xl text-sm flex items-center gap-3 animate-shake bg-error-container text-error">
+          <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+          {{ error }}
         </div>
-
-        <form v-else @submit.prevent="handleSubmit" class="space-y-5">
-          <!-- Error Alert -->
-          <div v-if="error" class="p-4 rounded-xl text-sm flex items-center gap-3 animate-shake bg-error-container text-error">
-            <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-            </svg>
-            {{ error }}
-          </div>
 
           <!-- Email Field -->
           <div>
@@ -169,7 +153,6 @@ useSeoMeta({
             </NuxtLink>
           </p>
         </form>
-      </Transition>
     </div>
 
     <!-- Footer -->
@@ -180,15 +163,3 @@ useSeoMeta({
     </div>
   </div>
 </template>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
