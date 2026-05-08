@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProducts } from '@/composables/useProducts'
 import ProductCard from '@/components/product/ProductCard.vue'
@@ -8,13 +8,18 @@ import { ArrowRight, Check, Package, CreditCard } from 'lucide-vue-next'
 
 const router = useRouter()
 const productsStore = useProducts()
-const featuredProducts = ref([])
+  const featuredProducts = computed(() => Array.isArray(productsStore.products) ? productsStore.products.slice(0, 8) : [])
 const loading = ref(true)
 
-onMounted(async () => {
+  onMounted(async () => {
   try {
     await productsStore.fetchProducts()
-    featuredProducts.value = productsStore.products.slice(0, 8)
+    // Poll for products to ensure they are loaded
+    let attempts = 0
+    while (productsStore.products.length === 0 && attempts < 10) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      attempts++
+    }
   } finally {
     loading.value = false
   }

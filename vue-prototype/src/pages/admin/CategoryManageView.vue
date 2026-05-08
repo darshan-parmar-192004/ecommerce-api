@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import categoryService from '@/lib/categoryService'
+import { snakeToCamelCase } from '@/lib/mapper'
 import { Folder, ChevronRight } from 'lucide-vue-next'
 
 const categories = ref([])
@@ -11,7 +12,7 @@ const fetchCategories = async () => {
   try {
     const response = await categoryService.getCategories()
     const responseData = response.data || response
-    categories.value = responseData.data || []
+    categories.value = snakeToCamelCase(responseData.data || [])
   } catch (err) {
     console.error('Failed to fetch categories', err)
   } finally {

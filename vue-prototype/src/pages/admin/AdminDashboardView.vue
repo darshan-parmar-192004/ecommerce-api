@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import productService from '@/lib/productService'
 import { useErrorHandler } from '@/composables/useErrorHandler'
+import { snakeToCamelCase } from '@/lib/mapper'
 
 const { showError } = useErrorHandler()
 
@@ -36,7 +37,7 @@ const fetchTopSellers = async () => {
   try {
     const response = await productService.getTopSellers()
     const responseData = response.data || response
-    topSellers.value = responseData.data || responseData || []
+    topSellers.value = snakeToCamelCase(responseData.data || responseData || [])
   } catch (err) {
     showError(err, 'Failed to fetch top sellers')
   }
@@ -46,7 +47,7 @@ const fetchLifetimeValues = async () => {
   try {
     const response = await productService.getCustomerLifetimeValue()
     const responseData = response.data || response
-    lifetimeValues.value = responseData.data || responseData || []
+    lifetimeValues.value = snakeToCamelCase(responseData.data || responseData || [])
   } catch (err) {
     showError(err, 'Failed to fetch lifetime values')
   }
@@ -104,7 +105,7 @@ onMounted(async () => {
               </span>
               <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ item.product || 'Product' }}</span>
             </div>
-            <span class="text-sm font-bold text-gray-900 dark:text-gray-100">{{ item.units_sold || 0 }} units</span>
+            <span class="text-sm font-bold text-gray-900 dark:text-gray-100">{{ item.unitsSold || 0 }} units</span>
           </div>
         </div>
       </div>
@@ -116,13 +117,13 @@ onMounted(async () => {
           No customer data available
         </div>
         <div v-else class="space-y-3">
-          <div v-for="(item, index) in lifetimeValues" :key="item.customerId" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-brand-700/50 rounded-lg">
+          <div v-for="(item, index) in lifetimeValues" :key="item.customerId || index" class="flex items-center justify-between p-3 bg-gray-50 dark:bg-brand-700/50 rounded-lg">
             <div class="flex items-center gap-3">
               <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ item.customerId }}</span>
             </div>
             <div class="text-right">
               <p class="text-sm font-bold text-gray-900 dark:text-gray-100">₹{{ item.lifetimeValue?.toFixed(2) }}</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">{{ item.totalOrders || 0 }} orders</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ item.orderCount || 0 }} orders</p>
             </div>
           </div>
         </div>

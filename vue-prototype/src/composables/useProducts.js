@@ -1,8 +1,26 @@
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import productService from '@/lib/productService'
 import categoryService from '@/lib/categoryService'
 
-// Module-level singleton state (shared across all calls to useProducts)
+const mapProduct = (product) => ({
+  productId: product.product_id,
+  categoryId: product.category_id,
+  name: product.name,
+  description: product.description,
+  price: product.price,
+  stockQuantity: product.stock_quantity,
+  images: product.images,
+  rating: product.rating,
+  categoryName: product.category_name || 'Uncategorized'
+})
+
+const mapCategory = (category) => ({
+  categoryId: category.category_id,
+  name: category.name,
+  description: category.description,
+  productCount: category.product_count
+})
+
 const products = ref([])
 const currentProduct = ref(null)
 const categories = ref([])
@@ -22,21 +40,23 @@ const fetchProducts = async () => {
   error.value = null
   try {
     const params = { ...filters.value, page: pagination.value.page, limit: pagination.value.limit }
-    const response = await productService.getProducts(params)
+    console.log('Fetching products with', params);
+    const response = await productService.getProducts(params);
+    console.log('Response', response);
     const responseData = response.data || response
-    const rawProducts = responseData.data || []
+    const rawProducts = (responseData.data || []).map(mapProduct)
 
-    // Enrich products with category names
+    // Enrich products with category names from local categories
     products.value = rawProducts.map(product => {
-      const category = categories.value.find(c => c.categoryId === product.categoryId)
+      const category = categories.value ? categories.value.find(c => c.categoryId === product.categoryId) : null
       return {
         ...product,
-        categoryName: category?.name || 'Uncategorized'
+        categoryName: category?.name || product.categoryName || 'Uncategorized'
       }
     })
 
     pagination.value.total = responseData.pagination?.total_items || 0
-    pagination.value.totalPages = responseData.pagination?.totalPages || 1
+    pagination.value.totalPages = responseData.pagination?.total_pages || 1
   } catch (err) {
     error.value = err.response?.data?.message || err.message || 'Failed to fetch products'
   } finally {
@@ -48,7 +68,7 @@ const fetchCategories = async () => {
   try {
     const response = await categoryService.getCategories()
     const responseData = response.data || response
-    categories.value = responseData.data || []
+    categories.value = (responseData.data || []).map(mapCategory)
   } catch (err) {
     console.error('Failed to fetch categories', err)
   }
@@ -60,7 +80,8 @@ const fetchProductById = async (id) => {
   try {
     const response = await productService.getProductById(id)
     const responseData = response.data || response
-    currentProduct.value = responseData.data || responseData
+    const rawProduct = responseData.data || responseData
+    currentProduct.value = mapProduct(rawProduct)
   } catch (err) {
     error.value = err.response?.data?.message || err.message || 'Failed to fetch product'
   } finally {
@@ -101,12 +122,8 @@ const setPage = (page) => {
   }
 }
 
-/**
- * Products composable - provides product state and methods.
- * Uses module-level singleton state so all callers share the same reactive state.
- */
 export function useProducts() {
-  return {
+  return reactive({
     products,
     currentProduct,
     categories,
@@ -122,5 +139,5 @@ export function useProducts() {
     prevPage,
     setPage,
     fetchCategories
-  }
+  })
 }

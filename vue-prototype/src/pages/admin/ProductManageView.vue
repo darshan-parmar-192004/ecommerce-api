@@ -5,6 +5,7 @@ import categoryService from '@/lib/categoryService'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import { PAGINATION } from '@/constants'
+import { snakeToCamelCase, camelToSnakeCase } from '@/lib/mapper'
 
 const { showError, showSuccess } = useErrorHandler()
 
@@ -21,8 +22,7 @@ const form = ref({
   name: '',
   price: 0,
   categoryId: '',
-  description: '',
-  stock: 0
+  description: ''
 })
 
 const fetchProducts = async () => {
@@ -30,7 +30,7 @@ const fetchProducts = async () => {
   try {
     const response = await productService.getProducts({ limit: PAGINATION.PRODUCT_MANAGE_LIMIT })
     const responseData = response.data || response
-    products.value = responseData.data || []
+    products.value = snakeToCamelCase(responseData.data || [])
   } catch (err) {
     showError(err, 'Failed to fetch products')
   } finally {
@@ -42,7 +42,7 @@ const fetchCategories = async () => {
   try {
     const response = await categoryService.getCategories()
     const responseData = response.data || response
-    categories.value = responseData.data || []
+    categories.value = snakeToCamelCase(responseData.data || [])
   } catch (err) {
     showError(err, 'Failed to fetch categories')
   }
@@ -55,8 +55,7 @@ const editProduct = (product) => {
     name: product.name,
     price: product.price,
     categoryId: product.categoryId,
-    description: product.description || '',
-    stock: product.stock || 0
+    description: product.description || ''
   }
   showModal.value = true
 }
@@ -90,27 +89,23 @@ const saveProduct = async () => {
     return
   }
   try {
-    const payload = {
+    const payload = camelToSnakeCase({
       name: form.value.name,
       price: form.value.price,
       categoryId: form.value.categoryId,
-      description: form.value.description || null,
-      stock: form.value.stock || 0
-    }
+      description: form.value.description || null
+    })
 
     if (editingProduct.value) {
       await productService.updateProduct(editingProduct.value.productId, payload)
       showSuccess('Product updated successfully')
     } else {
-      await productService.createProduct({
-        ...payload,
-        productId: `PRD-${Date.now()}`
-      })
+      await productService.createProduct(payload)
       showSuccess('Product created successfully')
     }
     showModal.value = false
     editingProduct.value = null
-    form.value = { productId: '', name: '', price: 0, categoryId: '', description: '', stock: 0 }
+    form.value = { productId: '', name: '', price: 0, categoryId: '', description: '' }
     await fetchProducts()
     } catch (err) {
     const backendErrors = err.response?.data?.errors
@@ -138,7 +133,7 @@ onMounted(() => {
   <div>
     <div class="flex items-center justify-between mb-8">
       <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Manage Products</h1>
-      <button @click="showModal = true; editingProduct.value = null; form.value = { productId: '', name: '', price: 0, categoryId: '', description: '', stock: 0 }" class="btn-primary">
+      <button @click="showModal = true; editingProduct.value = null; form.value = { productId: '', name: '', price: 0, categoryId: '', description: '' }" class="btn-primary">
         Add Product
       </button>
     </div>
@@ -163,7 +158,7 @@ onMounted(() => {
             <td class="p-4 text-sm text-gray-900 dark:text-gray-100">{{ product.name }}</td>
             <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{ getCategoryName(product.categoryId) }}</td>
             <td class="p-4 text-sm text-gray-900 dark:text-gray-100">₹{{ product.price?.toFixed(2) }}</td>
-            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{ product.stock ?? 0 }}</td>
+            <td class="p-4 text-sm text-gray-600 dark:text-gray-400">{{ product.stockQuantity ?? 0 }}</td>
             <td class="p-4 text-right space-x-2">
               <button @click="editProduct(product)" class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">Edit</button>
               <button @click="confirmDelete(product.productId)" class="text-sm text-red-600 hover:text-red-700" :aria-label="`Delete ${product.name}`">
@@ -204,10 +199,7 @@ onMounted(() => {
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
           <textarea v-model="form.description" placeholder="Description" rows="3" class="input" />
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stock</label>
-          <input v-model.number="form.stock" type="number" placeholder="Stock" class="input" required />
-        </div>
+
       </div>
 
       <template #footer>

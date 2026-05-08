@@ -151,27 +151,27 @@ const router = createRouter({
   },
 });
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, from) => {
   try {
     const requiresAuth = to.meta.requiresAuth;
     const requiresAdmin = to.meta.requiresAdmin;
     const isGuestRoute = to.meta.guest;
 
     if (isGuestRoute && isAuthenticated()) {
-      next({ name: "Home" });
+      return { name: "Home" };
     } else if (requiresAuth && !isAuthenticated()) {
-      next({ name: "Login", query: { redirect: to.fullPath } });
+      return { name: "Login", query: { redirect: to.fullPath } };
     } else if (requiresAdmin && !isAdmin()) {
-      next({ name: "Unauthorized" });
+      return { name: "Unauthorized" };
     } else {
       document.title = to.meta.title
         ? `${to.meta.title} | E-Commerce`
         : "E-Commerce";
-      next();
+      return true;
     }
   } catch (error) {
     console.error("Navigation guard error:", error);
-    next(false);
+    return false;
   }
 });
 

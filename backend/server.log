@@ -1,0 +1,26 @@
+redis: 2026/04/10 14:08:12 pool.go:617: redis: connection pool: failed to dial after 5 attempts: dial tcp [::1]:6379: connect: connection refused
+redis: 2026/04/10 14:08:13 pool.go:617: redis: connection pool: failed to dial after 5 attempts: dial tcp [::1]:6379: connect: connection refused
+redis: 2026/04/10 14:08:13 pool.go:617: redis: connection pool: failed to dial after 5 attempts: dial tcp [::1]:6379: connect: connection refused
+redis: 2026/04/10 14:08:14 pool.go:617: redis: connection pool: failed to dial after 5 attempts: dial tcp [::1]:6379: connect: connection refused
+Redis connection failed: dial tcp [::1]:6379: connect: connection refusedConnected to Redis: localhost:6379
+
+    _______ __
+   / ____(_) /_  ___  _____
+  / /_  / / __ \/ _ \/ ___/
+ / __/ / / /_/ /  __/ /
+/_/   /_/_.___/\___/_/          v3.1.0
+--------------------------------------------------
+INFO Server started on: 	http://127.0.0.1:8080 (bound on host 0.0.0.0 and port 8080)
+INFO Application name: 		backend
+INFO Total handlers: 		94
+INFO Prefork: 			Disabled
+INFO PID: 			145498
+INFO Total process count: 	1
+
+2026/04/10 14:08:19 [SECURITY] Auth failure: email=test@example.com reason=database_error ip=127.0.0.1 timestamp=2026-04-10T08:38:19Z
+2026/04/10 14:08:19 {"duration_ms":1,"ip":"127.0.0.1","method":"POST","path":"/auth/login","request_id":"55d149fd-df68-4ced-aeec-04ce02b4401c","status":500,"timestamp":"2026-04-10T08:38:19.587668725Z"}
+2026/04/10 14:09:02 [SECURITY] Auth failure: email=test@example.com reason=database_error ip=127.0.0.1 timestamp=2026-04-10T08:39:02Z
+2026/04/10 14:09:02 {"duration_ms":0,"ip":"127.0.0.1","method":"POST","path":"/auth/login","request_id":"01cf5e06-d33d-4b4e-8cbc-96bdf935d754","status":500,"timestamp":"2026-04-10T08:39:02.36847713Z"}
+2026/04/10 14:09:09 shutting down gracefully, press Ctrl+C again to force
+2026/04/10 14:09:09 Server exiting
+2026/04/10 14:09:09 Graceful shutdown complete.

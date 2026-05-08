@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import productService from '@/lib/productService'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import { PAGINATION } from '@/constants'
+import { snakeToCamelCase } from '@/lib/mapper'
 
 const { showError, showSuccess } = useErrorHandler()
 
@@ -13,16 +14,17 @@ const fetchInventory = async () => {
   loading.value = true
   try {
     const productsRes = await productService.getProducts({ limit: PAGINATION.INVENTORY_LIMIT })
-    const productsData = productsRes.data?.data || productsRes.data || []
+    const productsData = snakeToCamelCase(productsRes.data?.data || productsRes.data || [])
     
     let inventoryData = []
     try {
       const inventoryRes = await productService.getInventory({ limit: PAGINATION.INVENTORY_LIMIT })
-      inventoryData = Array.isArray(inventoryRes.data)
+      const rawData = Array.isArray(inventoryRes.data)
         ? inventoryRes.data
         : (inventoryRes.data?.data || [])
-    } catch {
-      // Inventory endpoint may have issues; continue with just products
+      inventoryData = snakeToCamelCase(rawData)
+    } catch (err) {
+      showError(err, 'Failed to fetch inventory data')
     }
     
     const inventoryByProduct = {}

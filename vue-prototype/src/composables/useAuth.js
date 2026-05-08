@@ -61,10 +61,10 @@ const register = async (userData) => {
   loading.value = true
   error.value = null
   try {
-    const { data } = await authService.register(userData)
-    setToken(data.token)
-    setUser(data.customer)
-    return data
+    const { data: registerData } = await authService.register(userData)
+    setToken(registerData.token)
+    setUser(registerData.data)
+    return registerData
   } catch (err) {
     error.value = err.response?.data?.message || 'Registration failed'
     throw err

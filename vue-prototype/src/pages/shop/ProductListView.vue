@@ -76,12 +76,11 @@ const handlePageChange = (page) => {
         <!-- Filter Card - Sticky on desktop -->
         <div class="lg:w-80 flex-shrink-0">
           <div class="sticky top-8">
-            <FilterCard
+              <FilterCard
+              :categories="categories.value"
               :search-value="filters.search"
-              :category-value="filters.category"
               :min-price-value="filters.minPrice"
               :max-price-value="filters.maxPrice"
-              :categories="categories"
               @update:search="filters.search = $event"
               @update:category="filters.category = $event"
               @update:min-price="filters.minPrice = $event"
@@ -110,7 +109,7 @@ const handlePageChange = (page) => {
           </div>
 
           <!-- Loading State -->
-          <div v-if="productsStore.loading" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div v-if="productsStore.loading && productsStore.products.length === 0" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
             <SkeletonCard v-for="n in 9" :key="n" />
           </div>
 
@@ -130,7 +129,7 @@ const handlePageChange = (page) => {
           </div>
 
           <!-- Empty State -->
-          <div v-else-if="productsStore.products.length === 0" class="text-center py-20">
+          <div v-else-if="!productsStore.products || productsStore.products.length === 0" class="text-center py-20">
             <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 dark:from-brand-700 dark:to-brand-800 mb-6">
               <Inbox class="w-12 h-12 text-gray-400 dark:text-gray-500" />
             </div>
