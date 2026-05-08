@@ -8,8 +8,7 @@ const { orders, loading, fetchOrders, fetchProfile } = useUser()
 const router = useRouter()
 
 onMounted(() => {
-  fetchOrders({ limit: 5 })
-  fetchProfile()
+  Promise.all([fetchOrders({ limit: 5 }), fetchProfile()])
 })
 </script>
 

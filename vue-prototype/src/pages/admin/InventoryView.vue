@@ -13,20 +13,25 @@ const loading = ref(true)
 const fetchInventory = async () => {
   loading.value = true
   try {
-    const productsRes = await productService.getProducts({ limit: PAGINATION.INVENTORY_LIMIT })
+    const [productsRes, inventoryRes] = await Promise.all([
+      productService.getProducts({ limit: PAGINATION.INVENTORY_LIMIT }),
+      productService.getInventory({ limit: PAGINATION.INVENTORY_LIMIT }).catch(err => {
+        showError(err, 'Failed to fetch inventory data')
+        return { data: [] }
+      })
+    ])
+
     const productsData = snakeToCamelCase(productsRes.data?.data || productsRes.data || [])
-    
     let inventoryData = []
     try {
-      const inventoryRes = await productService.getInventory({ limit: PAGINATION.INVENTORY_LIMIT })
       const rawData = Array.isArray(inventoryRes.data)
         ? inventoryRes.data
         : (inventoryRes.data?.data || [])
       inventoryData = snakeToCamelCase(rawData)
     } catch (err) {
-      showError(err, 'Failed to fetch inventory data')
+      showError(err, 'Failed to parse inventory data')
     }
-    
+
     const inventoryByProduct = {}
     inventoryData.forEach(item => {
       if (!inventoryByProduct[item.productId]) {

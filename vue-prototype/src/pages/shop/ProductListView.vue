@@ -1,62 +1,78 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useProducts } from '@/composables/useProducts'
-import { useRouter } from 'vue-router'
 import ProductCard from '@/components/product/ProductCard.vue'
 import FilterCard from '@/components/ui/FilterCard.vue'
 import PaginationControls from '@/components/ui/PaginationControls.vue'
 import SkeletonCard from '@/components/ui/SkeletonCard.vue'
 import { AlertCircle, Inbox } from 'lucide-vue-next'
 
-const productsStore = useProducts()
+const route = useRoute()
 const router = useRouter()
+const productsStore = useProducts()
 
-// Filter state
 const filters = ref({
-  category: '',
-  minPrice: '',
-  maxPrice: '',
-  search: ''
+  category: route.query.category || '',
+  minPrice: route.query.minPrice || '',
+  maxPrice: route.query.maxPrice || '',
+  search: route.query.search || ''
 })
 
 const appliedFilterCount = computed(() => {
   return Object.values(filters.value).filter(v => v && v.toString().trim()).length
 })
 
-// Get categories from store
 const categories = computed(() => productsStore.categories)
 
-const applyFilters = async () => {
-  await productsStore.setFilters({
-    ...filters.value,
-    minPrice: filters.value.minPrice || null,
-    maxPrice: filters.value.maxPrice || null,
-    search: filters.value.search || null
-  })
+const syncToRoute = (page = null) => {
+  const query = {}
+  if (filters.value.search) query.search = filters.value.search
+  if (filters.value.category) query.category = filters.value.category
+  if (filters.value.minPrice) query.minPrice = filters.value.minPrice
+  if (filters.value.maxPrice) query.maxPrice = filters.value.maxPrice
+  if (page && page > 1) query.page = page
+  router.replace({ query })
+}
+
+const applyFilters = () => {
+  syncToRoute(1)
 }
 
 const clearFilters = () => {
-  filters.value = {
-    category: '',
-    minPrice: '',
-    maxPrice: '',
-    search: ''
-  }
-  productsStore.resetFilters()
+  filters.value = { category: '', minPrice: '', maxPrice: '', search: '' }
+  syncToRoute()
 }
 
-onMounted(async () => {
-  await productsStore.fetchCategories()
-  await productsStore.fetchProducts()
-})
+const handlePageChange = (page) => {
+  syncToRoute(page)
+}
 
 const handleProductClick = (productId) => {
   router.push({ name: 'ProductDetail', params: { id: productId } })
 }
 
-const handlePageChange = (page) => {
-  productsStore.setPage(page)
-}
+watch(() => route.query, (query) => {
+  filters.value = {
+    search: query.search || '',
+    category: query.category || '',
+    minPrice: query.minPrice || '',
+    maxPrice: query.maxPrice || ''
+  }
+  productsStore.setFilters({
+    search: query.search || null,
+    category: query.category || null,
+    minPrice: query.minPrice || null,
+    maxPrice: query.maxPrice || null
+  }, true)
+  const page = query.page ? Number(query.page) : 1
+  productsStore.pagination.page = page
+  productsStore.fetchProducts()
+}, { immediate: true })
+
+onMounted(async () => {
+  await productsStore.fetchCategories()
+})
 </script>
 
 <template>
@@ -81,10 +97,10 @@ const handlePageChange = (page) => {
               :search-value="filters.search"
               :min-price-value="filters.minPrice"
               :max-price-value="filters.maxPrice"
-              @update:search="filters.search = $event"
-              @update:category="filters.category = $event"
-              @update:min-price="filters.minPrice = $event"
-              @update:max-price="filters.maxPrice = $event"
+              @update-search="filters.search = $event"
+              @update-category="filters.category = $event"
+              @update-min-price="filters.minPrice = $event"
+              @update-max-price="filters.maxPrice = $event"
               @apply="applyFilters"
               @clear="clearFilters"
             />

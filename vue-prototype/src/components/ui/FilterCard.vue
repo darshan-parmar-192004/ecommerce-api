@@ -10,7 +10,7 @@ const props = defineProps({
   categories: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['update:search', 'update:category', 'update:minPrice', 'update:maxPrice', 'apply', 'clear'])
+const emit = defineEmits(['update-search', 'update-category', 'update-min-price', 'update-max-price', 'apply', 'clear'])
 
 const categoryOptions = computed(() => [
   { value: '', label: 'All Categories' },
@@ -35,7 +35,7 @@ const categoryOptions = computed(() => [
             id="search-input"
             type="text"
             :value="searchValue"
-            @input="$emit('update:search', $event.target.value)"
+            @input="$emit('update-search', $event.target.value)"
             placeholder="Search products..."
             class="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-white/30 dark:border-brand-600/30 bg-white/15 dark:bg-brand-800/15 backdrop-blur-xl text-gray-900 dark:text-gray-100 placeholder:text-gray-500/70 dark:placeholder:text-gray-400/70 transition-all duration-300 hover:bg-white/20 dark:hover:bg-brand-800/20 hover:border-white/40 dark:hover:border-brand-600/40 focus:bg-white/25 dark:focus:bg-brand-800/25 focus:border-gray-400/60 dark:focus:border-brand-500/60 focus:ring-4 focus:ring-gray-900/20 dark:focus:ring-brand-700/20 focus:outline-none"
           />
@@ -49,7 +49,7 @@ const categoryOptions = computed(() => [
           <select
             id="category-select"
             :value="categoryValue"
-            @change="$emit('update:category', $event.target.value)"
+            @change="$emit('update-category', $event.target.value)"
             class="w-full px-4 py-3.5 rounded-xl border-2 border-white/30 dark:border-brand-600/30 bg-white/15 dark:bg-brand-800/15 backdrop-blur-xl text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-white/20 dark:hover:bg-brand-800/20 hover:border-white/40 dark:hover:border-brand-600/40 focus:bg-white/25 dark:focus:bg-brand-800/25 focus:border-gray-400/60 dark:focus:border-brand-500/60 focus:ring-4 focus:ring-gray-900/20 dark:focus:ring-brand-700/20 focus:outline-none appearance-none cursor-pointer pr-10"
           >
             <option v-for="option in categoryOptions" :key="option.value" :value="option.value" class="bg-white/95 dark:bg-brand-800 backdrop-blur-xl">
@@ -72,7 +72,7 @@ const categoryOptions = computed(() => [
               id="min-price"
               type="number"
               :value="minPriceValue"
-              @input="$emit('update:minPrice', $event.target.value)"
+              @input="$emit('update-min-price', $event.target.value)"
               placeholder="0"
               min="0"
               step="0.01"
@@ -88,7 +88,7 @@ const categoryOptions = computed(() => [
               id="max-price"
               type="number"
               :value="maxPriceValue"
-              @input="$emit('update:maxPrice', $event.target.value)"
+              @input="$emit('update-max-price', $event.target.value)"
               placeholder="9999"
               min="0"
               step="0.01"

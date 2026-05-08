@@ -124,8 +124,7 @@ const getCategoryName = (categoryId) => {
 }
 
 onMounted(() => {
-  fetchCategories()
-  fetchProducts()
+  Promise.all([fetchCategories(), fetchProducts()])
 })
 </script>
 

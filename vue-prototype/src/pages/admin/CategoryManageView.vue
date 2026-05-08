@@ -3,6 +3,9 @@ import { ref, onMounted, computed } from 'vue'
 import categoryService from '@/lib/categoryService'
 import { snakeToCamelCase } from '@/lib/mapper'
 import { Folder, ChevronRight } from 'lucide-vue-next'
+import { useErrorHandler } from '@/composables/useErrorHandler'
+
+const { showError } = useErrorHandler()
 
 const categories = ref([])
 const loading = ref(true)
@@ -14,7 +17,7 @@ const fetchCategories = async () => {
     const responseData = response.data || response
     categories.value = snakeToCamelCase(responseData.data || [])
   } catch (err) {
-    console.error('Failed to fetch categories', err)
+    showError(err, 'Failed to fetch categories')
   } finally {
     loading.value = false
   }

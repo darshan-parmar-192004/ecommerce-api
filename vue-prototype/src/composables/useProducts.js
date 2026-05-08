@@ -35,18 +35,17 @@ const pagination = ref({ page: 1, limit: 12, total: 0, totalPages: 1 })
 const loading = ref(false)
 const error = ref(null)
 
-const fetchProducts = async () => {
+const fetchProducts = async (overrideParams = null) => {
   loading.value = true
   error.value = null
   try {
-    const params = { ...filters.value, page: pagination.value.page, limit: pagination.value.limit }
+    const params = overrideParams || { ...filters.value, page: pagination.value.page, limit: pagination.value.limit }
     console.log('Fetching products with', params);
     const response = await productService.getProducts(params);
     console.log('Response', response);
     const responseData = response.data || response
     const rawProducts = (responseData.data || []).map(mapProduct)
 
-    // Enrich products with category names from local categories
     products.value = rawProducts.map(product => {
       const category = categories.value ? categories.value.find(c => c.categoryId === product.categoryId) : null
       return {
@@ -89,10 +88,12 @@ const fetchProductById = async (id) => {
   }
 }
 
-const setFilters = (newFilters) => {
+const setFilters = (newFilters, skipFetch = false) => {
   filters.value = { ...filters.value, ...newFilters }
   pagination.value.page = 1
-  fetchProducts()
+  if (!skipFetch) {
+    fetchProducts()
+  }
 }
 
 const resetFilters = () => {
