@@ -46,12 +46,8 @@ const (
 	HealthDBIdleClosing   = "Many idle connections are being closed, consider revising the connection pool settings."
 	HealthDBLifetimeClose = "Many connections are being closed due to max lifetime, consider increasing max lifetime or revising the connection usage pattern."
 
-	ProductIDPrefix = "PROD-"
-	ProductIDFormat = "%08d"
-
 	MaxProductNameLength = 200
 	MaxProductDescLength = 500
-	OrderIDTimeFormat     = "20060102150405"
 	ErrCodeDuplicateKey  = "23505"
 
 	ErrInternalServer = "internal_server_error"

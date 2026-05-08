@@ -3,14 +3,13 @@ package services
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"time"
 
 	"backend/internal/constants"
 	"backend/internal/models"
-)
 
-var categoryPattern = regexp.MustCompile(`^CAT-[a-f0-9]{8}$`)
+	"github.com/google/uuid"
+)
 
 type ProductService struct {
 	repo *models.ProductRepository
@@ -50,8 +49,8 @@ func (s *ProductService) ValidateProductInput(input ProductInput) ValidationResu
 
 	if input.CategoryID == "" {
 		errors["category_id"] = "Category id is required"
-	} else if !categoryPattern.MatchString(input.CategoryID) {
-		errors["category_id"] = "Category id must match CAT-xxxxxxxx format"
+	} else if _, err := uuid.Parse(input.CategoryID); err != nil {
+		errors["category_id"] = "Category id must be a valid UUID"
 	}
 
 	if len(input.Description) > constants.MaxProductDescLength {
@@ -93,6 +92,3 @@ func (s *ProductService) Exists(ctx context.Context, id string) (bool, error) {
 	return s.repo.Exists(ctx, id)
 }
 
-func (s *ProductService) GenerateProductID() string {
-	return fmt.Sprintf("PROD-%x", time.Now().UnixNano())[:16]
-}

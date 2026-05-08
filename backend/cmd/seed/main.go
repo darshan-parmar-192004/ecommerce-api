@@ -38,12 +38,12 @@ func main() {
 	start := time.Now()
 
 	// Use CSV paths from config
-	mustImport(ctx, pool, "categories", cfg.GetCSVPath("categories"), seedCategories)
-	mustImport(ctx, pool, "customers", cfg.GetCSVPath("customers"), seedCustomers)
-	mustImport(ctx, pool, "products", cfg.GetCSVPath("products"), seedProducts)
-	mustImport(ctx, pool, "orders", cfg.GetCSVPath("orders"), seedOrders)
-	mustImport(ctx, pool, "inventory", cfg.GetCSVPath("inventory"), seedInventory)
-	mustImport(ctx, pool, "order_items", cfg.GetCSVPath("order_items"), seedOrderItems)
+	mustImport(ctx, pool, "categories", cfg.CategoriesCSV, seedCategories)
+	mustImport(ctx, pool, "customers", cfg.CustomersCSV, seedCustomers)
+	mustImport(ctx, pool, "products", cfg.ProductsCSV, seedProducts)
+	mustImport(ctx, pool, "orders", cfg.OrdersCSV, seedOrders)
+	mustImport(ctx, pool, "inventory", cfg.InventoryCSV, seedInventory)
+	mustImport(ctx, pool, "order_items", cfg.OrderItemsCSV, seedOrderItems)
 
 	log.Printf("Migration complete! Total time: %v", time.Since(start))
 }

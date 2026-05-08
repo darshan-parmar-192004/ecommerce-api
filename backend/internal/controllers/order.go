@@ -5,6 +5,7 @@ import (
 	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 type OrderController struct {
@@ -43,6 +44,10 @@ func (h *OrderController) CreateOrder(c fiber.Ctx) error {
 			"Invalid request body",
 			nil,
 		)
+	}
+
+	if req.OrderID == "" {
+		req.OrderID = uuid.New().String()
 	}
 
 	err := h.Service.CreateOrder(c.Context(), req)
