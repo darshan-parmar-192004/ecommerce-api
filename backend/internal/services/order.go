@@ -2,9 +2,7 @@ package services
 
 import (
 	"context"
-	"time"
 
-	"backend/internal/constants"
 	"backend/internal/models"
 )
 
@@ -40,6 +38,4 @@ func (s *OrderService) GetByID(ctx context.Context, orderID string) (*models.Ord
 	return s.repo.GetByID(ctx, orderID)
 }
 
-func (s *OrderService) GenerateOrderID() string {
-	return time.Now().Format(constants.OrderIDTimeFormat)
-}
+

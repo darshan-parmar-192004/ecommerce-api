@@ -12,6 +12,7 @@ import (
 	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 type ProductController struct {
@@ -79,7 +80,7 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusUnprocessableEntity, validation.Code, "Validation failed", validation.Errors)
 	}
 
-	productID := h.Service.GenerateProductID()
+	productID := uuid.New().String()
 
 	newProduct, err := h.Service.Create(c.Context(), productID, input)
 	if err != nil {

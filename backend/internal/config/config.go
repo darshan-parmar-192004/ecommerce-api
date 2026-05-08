@@ -18,13 +18,12 @@ type AppConfig struct {
 	DBSchema      string `envconfig:"BLUEPRINT_DB_SCHEMA" default:"public"`
 	DBDialect     string `envconfig:"BLUEPRINT_DB_DIALECT" default:"pgx"`
 	MigrationPath string `envconfig:"BLUEPRINT_MIGRATION_PATH" default:"internal/migrations"`
-	DatasetPath   string `envconfig:"BLUEPRINT_DATASET_PATH" default:"internal/datasets/ecommerce"`
-	CategoriesCSV string `envconfig:"BLUEPRINT_CSV_CATEGORIES" `
-	CustomersCSV  string `envconfig:"BLUEPRINT_CSV_CUSTOMERS" `
-	ProductsCSV   string `envconfig:"BLUEPRINT_CSV_PRODUCTS" `
-	OrdersCSV     string `envconfig:"BLUEPRINT_CSV_ORDERS" `
-	InventoryCSV  string `envconfig:"BLUEPRINT_CSV_INVENTORY" `
-	OrderItemsCSV string `envconfig:"BLUEPRINT_CSV_ORDER_ITEMS" `
+	CategoriesCSV string `envconfig:"BLUEPRINT_CSV_CATEGORIES" default:"internal/datasets/ecommerce/categories.csv"`
+	CustomersCSV  string `envconfig:"BLUEPRINT_CSV_CUSTOMERS" default:"internal/datasets/ecommerce/customers.csv"`
+	ProductsCSV   string `envconfig:"BLUEPRINT_CSV_PRODUCTS" default:"internal/datasets/ecommerce/products.csv"`
+	OrdersCSV     string `envconfig:"BLUEPRINT_CSV_ORDERS" default:"internal/datasets/ecommerce/orders.csv"`
+	InventoryCSV  string `envconfig:"BLUEPRINT_CSV_INVENTORY" default:"internal/datasets/ecommerce/inventory.csv"`
+	OrderItemsCSV string `envconfig:"BLUEPRINT_CSV_ORDER_ITEMS" default:"internal/datasets/ecommerce/order_items.csv"`
 }
 
 var cfg *AppConfig
@@ -90,41 +89,4 @@ func GetDBDialect() string {
 		return cfg.DBDialect
 	}
 	return "pgx"
-}
-
-func (c *AppConfig) GetCSVPath(csvType string) string {
-	switch csvType {
-	case "categories":
-		if c.CategoriesCSV != "" {
-			return c.CategoriesCSV
-		}
-		return c.DatasetPath + "/categories.csv"
-	case "customers":
-		if c.CustomersCSV != "" {
-			return c.CustomersCSV
-		}
-		return c.DatasetPath + "/customers.csv"
-	case "products":
-		if c.ProductsCSV != "" {
-			return c.ProductsCSV
-		}
-		return c.DatasetPath + "/products.csv"
-	case "orders":
-		if c.OrdersCSV != "" {
-			return c.OrdersCSV
-		}
-		return c.DatasetPath + "/orders.csv"
-	case "inventory":
-		if c.InventoryCSV != "" {
-			return c.InventoryCSV
-		}
-		return c.DatasetPath + "/inventory.csv"
-	case "order_items":
-		if c.OrderItemsCSV != "" {
-			return c.OrderItemsCSV
-		}
-		return c.DatasetPath + "/order_items.csv"
-	default:
-		return c.DatasetPath + "/" + csvType + ".csv"
-	}
 }

@@ -4,9 +4,9 @@
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS categories (
-    category_id TEXT PRIMARY KEY,
+    category_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
-    parent_category_id TEXT REFERENCES categories(category_id)
+    parent_category_id UUID REFERENCES categories(category_id)
         ON DELETE SET NULL
         ON UPDATE CASCADE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS categories (
 );
 
 CREATE TABLE IF NOT EXISTS customers (
-    customer_id TEXT PRIMARY KEY,
+    customer_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
     country TEXT,
@@ -26,9 +26,9 @@ CREATE TABLE IF NOT EXISTS customers (
 );
 
 CREATE TABLE IF NOT EXISTS products (
-    product_id TEXT PRIMARY KEY,
+    product_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
-    category_id TEXT NOT NULL REFERENCES categories(category_id)
+    category_id UUID NOT NULL REFERENCES categories(category_id)
         ON DELETE RESTRICT
         ON UPDATE CASCADE,
     price NUMERIC NOT NULL CHECK (price > 0),
@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 CREATE TABLE IF NOT EXISTS orders (
-    order_id TEXT PRIMARY KEY,
-    customer_id TEXT NOT NULL REFERENCES customers(customer_id)
+    order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id UUID NOT NULL REFERENCES customers(customer_id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
     order_date TIMESTAMP NOT NULL,
@@ -51,11 +51,11 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
-    order_item_id TEXT PRIMARY KEY,
-    order_id TEXT NOT NULL REFERENCES orders(order_id)
+    order_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID NOT NULL REFERENCES orders(order_id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
-    product_id TEXT NOT NULL REFERENCES products(product_id)
+    product_id UUID NOT NULL REFERENCES products(product_id)
         ON DELETE RESTRICT
         ON UPDATE CASCADE,
     quantity INT NOT NULL CHECK (quantity >= 0),
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 );
 
 CREATE TABLE IF NOT EXISTS inventory (
-    product_id TEXT NOT NULL REFERENCES products(product_id)
+    product_id UUID NOT NULL REFERENCES products(product_id)
         ON DELETE CASCADE
         ON UPDATE CASCADE,
     warehouse_id VARCHAR(50) NOT NULL,
