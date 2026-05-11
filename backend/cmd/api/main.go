@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/internal/config"
+	"backend/internal/constants"
 	"backend/internal/logger"
 	"backend/internal/server"
 	"context"
@@ -22,7 +23,7 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 	logger.Log.Info("shutting down gracefully, press Ctrl+C again to force")
 	stop()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(constants.ShutdownTimeoutSec)*time.Second)
 	defer cancel()
 	if err := fiberServer.ShutdownWithContext(ctx); err != nil {
 		logger.Log.Errorf("Server forced to shutdown with error: %v", err)

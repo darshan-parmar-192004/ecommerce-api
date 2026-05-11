@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"backend/internal/constants"
 	"backend/internal/logger"
 	"encoding/json"
 	"time"
@@ -17,12 +18,12 @@ func Logging() fiber.Handler {
 		duration := time.Since(start)
 
 		logData := map[string]interface{}{
-			"timestamp":   time.Now().UTC(),
-			"method":      c.Method(),
-			"path":        c.Path(),
-			"status":      c.Response().StatusCode(),
-			"duration_ms": duration.Milliseconds(),
-			"request_id":  c.Locals("request_id"),
+			constants.LogDataTimestamp:  time.Now().UTC(),
+			constants.LogDataMethod:     c.Method(),
+			constants.LogDataPath:       c.Path(),
+			constants.JSONFieldStatus:   c.Response().StatusCode(),
+			constants.LogDataDurationMs: duration.Milliseconds(),
+			constants.LocalsRequestID:   c.Locals(constants.LocalsRequestID),
 		}
 
 		jsonLog, _ := json.Marshal(logData)
