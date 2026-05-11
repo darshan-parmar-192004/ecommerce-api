@@ -210,28 +210,25 @@ useSeoMeta({
           <div class="bg-surface-container-lowest/80 backdrop-blur-sm rounded-xl p-6 sticky top-24 shadow-ambient transition-all duration-300 hover:shadow-lg border border-white/5">
             <div class="flex items-center justify-between mb-6">
               <h3 class="font-semibold text-on_surface">Filters</h3>
-              <button @click="clearFilters" class="text-sm text-primary hover:text-primary/80">
-                Clear all
-              </button>
+              <Button @click="clearFilters" label="Clear all" text size="small" class="!text-sm" />
             </div>
             
             <div class="space-y-6">
               <div>
                 <label class="block text-sm font-medium text-on_surface_variant mb-2">Search</label>
                 <div class="relative">
-                  <input 
-                    type="text"
-                    v-model="search"
-                    placeholder="Search products..."
-                    class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-transparent rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary text-on_surface placeholder:text-outline"
-                    @input="handleSearchInput"
-                    @focus="showSuggestions = true"
-                    @blur="setTimeout(() => showSuggestions = false, 200)"
-                    @keyup.enter="applyFilters"
-                  />
-                  <svg class="absolute left-3 top-3 w-5 h-5 text-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+                  <IconField>
+                    <InputIcon class="pi pi-search" />
+                    <InputText
+                      v-model="search"
+                      placeholder="Search products..."
+                      class="w-full"
+                      @input="handleSearchInput"
+                      @focus="showSuggestions = true"
+                      @blur="setTimeout(() => showSuggestions = false, 200)"
+                      @keyup.enter="applyFilters"
+                    />
+                  </IconField>
                   
                   <Transition name="fade">
                     <div 
@@ -240,37 +237,34 @@ useSeoMeta({
                     >
                       <div v-if="searchSuggestions.length > 0" class="py-2">
                         <p class="px-3 py-1 text-xs font-semibold text-on_surface_variant uppercase">Products</p>
-                        <button
-                          v-for="(product, idx) in searchSuggestions"
+                        <div
+                          v-for="product in searchSuggestions"
                           :key="product.product_id"
                           @mousedown="selectSuggestion(product)"
-                          class="w-full px-3 py-2 text-left hover:bg-surface-container flex items-center gap-3 transition-colors"
+                          class="w-full px-3 py-2 text-left hover:bg-surface-container flex items-center gap-3 transition-colors cursor-pointer"
                         >
-                          <svg class="w-5 h-5 text-outline flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                          </svg>
+                          <i class="pi pi-box text-outline flex-shrink-0" />
                           <div class="flex-1 min-w-0">
                             <p class="text-on_surface truncate">{{ product.name }}</p>
                             <p class="text-xs text-primary font-medium">₹{{ Number(product.price).toFixed(2) }}</p>
                           </div>
-                        </button>
+                        </div>
                       </div>
                       
                       <div v-if="recentSearches.length > 0" class="border-t border-outline-variant/20 py-2">
                         <div class="flex items-center justify-between px-3 py-1">
                           <p class="text-xs font-semibold text-on_surface_variant uppercase">Recent Searches</p>
-                          <button @mousedown="clearRecentSearches" class="text-xs text-primary hover:text-primary/80">Clear</button>
+                          <Button @mousedown="clearRecentSearches" label="Clear" text size="small" class="!text-xs" />
                         </div>
-                        <button
-                          v-for="(term, idx) in recentSearches"
+                        <div
+                          v-for="term in recentSearches"
+                          :key="term"
                           @mousedown="selectRecentSearch(term)"
-                          class="w-full px-3 py-2 text-left hover:bg-surface-container flex items-center gap-3 transition-colors"
+                          class="w-full px-3 py-2 text-left hover:bg-surface-container flex items-center gap-3 transition-colors cursor-pointer"
                         >
-                          <svg class="w-4 h-4 text-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                          <i class="pi pi-clock text-outline text-xs" />
                           <span class="text-on_surface">{{ term }}</span>
-                        </button>
+                        </div>
                       </div>
                     </div>
                   </Transition>
@@ -279,39 +273,27 @@ useSeoMeta({
               
               <div>
                 <label class="block text-sm font-medium text-on_surface_variant mb-2">Category</label>
-                <select 
+                <Select
                   v-model="selectedCategory"
-                  class="w-full px-4 py-2.5 bg-surface-container-low border border-transparent rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary text-on_surface"
-                >
-                  <option value="">All Categories</option>
-                  <option v-for="cat in categories" :key="cat.category_id" :value="cat.category_id">
-                    {{ cat.name }}
-                  </option>
-                </select>
+                  :options="categories"
+                  optionLabel="name"
+                  optionValue="category_id"
+                  placeholder="All Categories"
+                  class="w-full"
+                  @change="applyFilters"
+                />
               </div>
               
               <div>
                 <label class="block text-sm font-medium text-on_surface_variant mb-2">Price Range</label>
                 <div class="flex items-center gap-2">
-                  <input 
-                    type="number"
-                    v-model="minPrice"
-                    placeholder="Min"
-                    class="w-full px-3 py-2.5 bg-surface-container-low border border-transparent rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary text-center text-on_surface placeholder:text-outline"
-                  />
+                  <InputNumber v-model="minPrice" placeholder="Min" class="w-full" :min="0" />
                   <span class="text-outline">-</span>
-                  <input 
-                    type="number"
-                    v-model="maxPrice"
-                    placeholder="Max"
-                    class="w-full px-3 py-2.5 bg-surface-container-low border border-transparent rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20 focus:border-primary text-center text-on_surface placeholder:text-outline"
-                  />
+                  <InputNumber v-model="maxPrice" placeholder="Max" class="w-full" :min="0" />
                 </div>
               </div>
 
-              <button @click="applyFilters" class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-white rounded-lg hover:opacity-90 hover:shadow-lg hover:shadow-primary/20 transition-all font-medium">
-                Apply Filters
-              </button>
+              <Button @click="applyFilters" label="Apply Filters" class="w-full" />
             </div>
           </div>
         </aside>
@@ -319,62 +301,48 @@ useSeoMeta({
         <main class="flex-1">
           <div v-if="productsLoading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div v-for="i in 6" :key="i" class="bg-surface-container-lowest rounded-xl p-4 animate-pulse">
-              <div class="bg-surface-container aspect-square rounded-lg mb-4" />
+              <div class="aspect-[4/3] bg-surface-container rounded-lg mb-4" />
               <div class="h-4 bg-surface-container rounded w-3/4 mb-2" />
               <div class="h-4 bg-surface-container rounded w-1/2" />
             </div>
           </div>
 
           <div v-else-if="productsError" class="bg-surface-container-lowest rounded-xl shadow-ambient p-8 text-center">
-            <svg class="mx-auto h-16 w-16 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <i class="pi pi-exclamation-triangle text-5xl text-error mb-4" />
             <h3 class="mt-4 text-lg font-medium text-on_surface">Failed to load products</h3>
             <p class="mt-2 text-on_surface_variant">Something went wrong. Please try again.</p>
-            <button @click="refreshProducts" class="mt-4 px-4 py-2 bg-gradient-to-r from-primary to-primary-container text-white rounded-lg hover:opacity-90">
-              Try Again
-            </button>
+            <Button @click="refreshProducts" label="Try Again" class="mt-4" />
           </div>
 
           <template v-else>
             <div v-if="categories.length > 0" class="mb-8">
               <div class="flex flex-wrap gap-3">
-                <button
+                <Button
                   @click="selectedCategory = ''; applyFilters()"
+                  :label="'All'"
                   :class="[
-                    'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300',
-                    selectedCategory === '' 
-                      ? 'bg-gradient-to-r from-primary to-primary-container text-white shadow-lg shadow-primary/25' 
-                      : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high hover:scale-105'
+                    selectedCategory === '' ? 'bg-gradient-to-r from-primary to-primary-container text-white shadow-lg shadow-primary/25' : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high'
                   ]"
-                >
-                  All
-                </button>
-                <button
+                  size="small"
+                />
+                <Button
                   v-for="cat in categories"
                   :key="cat.category_id"
                   @click="selectedCategory = cat.category_id; applyFilters()"
+                  :label="cat.name"
                   :class="[
-                    'px-4 py-2 rounded-full text-sm font-medium transition-all duration-300',
-                    selectedCategory === cat.category_id 
-                      ? 'bg-gradient-to-r from-primary to-primary-container text-white shadow-lg shadow-primary/25' 
-                      : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high hover:scale-105'
+                    selectedCategory === cat.category_id ? 'bg-gradient-to-r from-primary to-primary-container text-white shadow-lg shadow-primary/25' : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high'
                   ]"
-                >
-                  {{ cat.name }}
-                </button>
+                  size="small"
+                />
               </div>
             </div>
 
             <div v-if="products.length === 0" class="bg-surface-container-lowest rounded-xl shadow-ambient p-12 text-center">
-              <svg class="mx-auto h-24 w-24 text-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
+              <i class="pi pi-box text-6xl text-outline mb-4" />
               <h2 class="mt-4 text-xl font-medium text-on_surface">No products found</h2>
               <p class="mt-2 text-on_surface_variant">Try adjusting your filters or search terms.</p>
-              <button @click="clearFilters" class="mt-6 px-6 py-2 bg-gradient-to-r from-primary to-primary-container text-white rounded-lg hover:opacity-90">
-                Clear Filters
-              </button>
+              <Button @click="clearFilters" label="Clear Filters" class="mt-6" />
             </div>
 
             <div v-else>
@@ -384,45 +352,19 @@ useSeoMeta({
                   v-for="(product, index) in products" 
                   :key="product.product_id" 
                   :product="product"
-                  :class="['animate-fade-in-up']"
+                  class="animate-fade-in-up"
                   :style="{ animationDelay: `${index * 50}ms` }"
                 />
               </div>
 
               <div v-if="pagination.total_pages > 1" class="mt-12 flex justify-center gap-2">
-                <button 
-                  :disabled="currentPage <= 1"
-                  @click="goToPage(currentPage - 1)"
-                  class="px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-on_surface"
-                >
-                  Previous
-                </button>
-                
-                <div class="flex items-center gap-2">
-                  <template v-for="p in pagination.total_pages" :key="p">
-                    <button 
-                      v-if="p === 1 || p === pagination.total_pages || (p >= currentPage - 1 && p <= currentPage + 1)"
-                      @click="goToPage(p)"
-                      :class="[
-                        'w-10 h-10 rounded-lg transition-colors',
-                        p === currentPage 
-                          ? 'bg-gradient-to-r from-primary to-primary-container text-white' 
-                          : 'bg-surface-container-lowest border border-outline-variant hover:bg-surface-container text-on_surface'
-                      ]"
-                    >
-                      {{ p }}
-                    </button>
-                    <span v-else-if="p === currentPage - 2 || p === currentPage + 2" class="text-outline">...</span>
-                  </template>
-                </div>
-                
-                <button 
-                  :disabled="currentPage >= pagination.total_pages"
-                  @click="goToPage(currentPage + 1)"
-                  class="px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg hover:bg-surface-container disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-on_surface"
-                >
-                  Next
-                </button>
+                <Paginator
+                  :first="(currentPage - 1) * limit"
+                  :rows="limit"
+                  :totalRecords="pagination.total_items"
+                  @page="goToPage($event.page + 1)"
+                  class="mt-6"
+                />
               </div>
             </div>
           </template>
@@ -431,3 +373,31 @@ useSeoMeta({
     </div>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

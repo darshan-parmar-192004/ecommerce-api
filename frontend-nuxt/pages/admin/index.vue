@@ -1,34 +1,22 @@
 <script setup>
-import { useUserStore } from '~/stores/user'
-
 definePageMeta({
   layout: 'admin',
   middleware: 'admin',
   keepalive: true
 })
 
-const stats = ref({
-  totalOrders: 0,
-  totalProducts: 0,
-  totalCustomers: 0,
-  revenue: 0
-})
+const stats = ref({ totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenue: 0 })
 const loading = ref(false)
 
 const fetchStats = async () => {
   loading.value = true
   try {
-    // Fetch products count
     const productsRes = await fetch('/api/admin/products')
     const productsData = await productsRes.json()
-    
-    // Fetch orders count
     const ordersRes = await fetch('/api/admin/orders')
     const ordersData = await ordersRes.json()
-    
     const orders = ordersData.data || ordersData || []
     const products = productsData.data || productsData || []
-    
     stats.value = {
       totalOrders: orders.length,
       totalProducts: products.length,
@@ -42,9 +30,7 @@ const fetchStats = async () => {
   }
 }
 
-onMounted(() => {
-  fetchStats()
-})
+onMounted(() => { fetchStats() })
 </script>
 
 <template>
@@ -56,17 +42,14 @@ onMounted(() => {
         <p class="text-sm text-on_surface_variant mb-1">Total Orders</p>
         <p class="text-3xl font-bold text-on_surface">{{ loading ? '—' : stats.totalOrders }}</p>
       </div>
-      
       <div class="bg-surface-container-lowest rounded-lg p-6">
         <p class="text-sm text-on_surface_variant mb-1">Total Products</p>
         <p class="text-3xl font-bold text-on_surface">{{ loading ? '—' : stats.totalProducts }}</p>
       </div>
-      
       <div class="bg-surface-container-lowest rounded-lg p-6">
         <p class="text-sm text-on_surface_variant mb-1">Total Customers</p>
         <p class="text-3xl font-bold text-on_surface">{{ loading ? '—' : stats.totalCustomers }}</p>
       </div>
-      
       <div class="bg-surface-container-lowest rounded-lg p-6">
         <p class="text-sm text-on_surface_variant mb-1">Revenue</p>
         <p class="text-3xl font-bold text-on_surface">${{ loading ? '—' : stats.revenue }}</p>

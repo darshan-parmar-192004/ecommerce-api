@@ -1,16 +1,10 @@
 <script setup>
 import { useUserStore } from '~/stores/user'
 import { useAuthStore } from '~/stores/auth'
-
 const userStore = useUserStore()
 const authStore = useAuthStore()
 
-const form = reactive({
-  name: '',
-  email: '',
-  phone: ''
-})
-
+const form = reactive({ name: '', email: '', phone: '' })
 const loading = ref(false)
 const success = ref(false)
 
@@ -29,6 +23,7 @@ const updateProfile = async () => {
   try {
     await userStore.updateProfile(form)
     success.value = true
+    useAppToast().success('Profile updated successfully!')
     setTimeout(() => success.value = false, 3000)
   } catch (error) {
     console.error('Failed to update profile:', error)
@@ -39,50 +34,27 @@ const updateProfile = async () => {
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <h1 class="text-3xl font-bold text-on_surface mb-8">Profile Settings</h1>
     
-    <div class="bg-surface-container-lowest rounded-lg p-6">
+    <div class="bg-surface-container-lowest rounded-lg p-6 shadow-ambient">
+      <Message v-if="success" severity="success" :closable="false" class="mb-4">
+        Profile updated successfully!
+      </Message>
       <form @submit.prevent="updateProfile" class="space-y-6">
         <div>
           <label class="block text-sm font-medium text-on_surface mb-2">Name</label>
-          <input
-            v-model="form.name"
-            type="text"
-            class="w-full px-4 py-2 rounded-md border border-outline-variant focus:border-primary focus:outline-none bg-surface-container-lowest text-on_surface"
-          />
+          <InputText v-model="form.name" type="text" class="w-full" />
         </div>
-        
         <div>
           <label class="block text-sm font-medium text-on_surface mb-2">Email</label>
-          <input
-            v-model="form.email"
-            type="email"
-            disabled
-            class="w-full px-4 py-2 rounded-md border border-outline-variant bg-surface-container text-on_surface_variant cursor-not-allowed"
-          />
+          <InputText v-model="form.email" type="email" disabled class="w-full !bg-surface-container !cursor-not-allowed" />
         </div>
-        
         <div>
           <label class="block text-sm font-medium text-on_surface mb-2">Phone</label>
-          <input
-            v-model="form.phone"
-            type="tel"
-            class="w-full px-4 py-2 rounded-md border border-outline-variant focus:border-primary focus:outline-none bg-surface-container-lowest text-on_surface"
-          />
+          <InputText v-model="form.phone" type="tel" class="w-full" />
         </div>
-        
-        <div v-if="success" class="p-4 rounded-md bg-success-container text-success">
-          Profile updated successfully!
-        </div>
-        
-        <button
-          type="submit"
-          :disabled="loading"
-          class="px-6 py-2 rounded-md font-medium text-white bg-gradient-to-r from-primary to-primary-container shadow-glow hover:shadow-xl transition-all disabled:opacity-50"
-        >
-          {{ loading ? 'Saving...' : 'Save Changes' }}
-        </button>
+        <Button type="submit" :loading="loading" :label="loading ? 'Saving...' : 'Save Changes'" />
       </form>
     </div>
   </div>

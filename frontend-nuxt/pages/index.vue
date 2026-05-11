@@ -1,4 +1,8 @@
 <script setup>
+definePageMeta({
+  keepalive: true
+})
+
 const { products: productsApi } = useApi()
 
 const { data, pending, error, refresh } = await useAsyncData(
@@ -34,9 +38,7 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
 
 <template>
   <div>
-    <!-- Hero Section -->
     <section class="relative overflow-hidden bg-surface-container-low min-h-[85vh] flex items-center">
-      <!-- Parallax Background Orbs -->
       <div 
         class="absolute inset-0 overflow-hidden pointer-events-none"
         :style="{ transform: `translateY(${parallaxOffset}px)` }"
@@ -55,7 +57,6 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
         ></div>
       </div>
 
-      <!-- Floating Product Cards -->
       <div class="absolute inset-0 overflow-hidden pointer-events-none">
         <div 
           v-for="(product, index) in floatingProducts" 
@@ -69,9 +70,7 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
           }"
         >
           <div class="aspect-[4/3] bg-surface-container flex items-center justify-center">
-            <svg class="w-12 h-12 text-outline/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
+            <i class="pi pi-box text-4xl text-outline/30" />
           </div>
           <div class="p-2 text-center">
             <p class="text-xs font-medium text-on_surface truncate">{{ product.name }}</p>
@@ -98,9 +97,7 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
               class="group relative inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-8 py-4 rounded-md font-semibold transition-all duration-400 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-[0.98]"
             >
               <span class="relative z-10">Shop Now</span>
-              <svg class="w-5 h-5 relative z-10 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-              </svg>
+              <i class="pi pi-arrow-right relative z-10 transition-transform group-hover:translate-x-1" />
               <span class="absolute inset-0 rounded-md bg-white/20 scale-0 group-hover:scale-100 transition-transform duration-300"></span>
             </NuxtLink>
             <NuxtLink 
@@ -114,7 +111,6 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
       </div>
     </section>
 
-    <!-- Featured Products -->
     <section class="max-w-7xl mx-auto px-6 lg:px-8 py-20">
       <div class="flex items-end justify-between mb-12">
         <div>
@@ -123,13 +119,10 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
         </div>
         <NuxtLink to="/products" class="text-primary hover:text-primary-container font-semibold flex items-center gap-1 transition-colors duration-300 text-sm uppercase tracking-wider">
           View All
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-          </svg>
+          <i class="pi pi-arrow-right text-xs" />
         </NuxtLink>
       </div>
 
-      <!-- Skeleton Shimmer Loading -->
       <div v-if="pending" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         <div v-for="i in 4" :key="i" class="rounded-md overflow-hidden" style="border: 1px solid rgba(197, 197, 217, 0.2);">
           <div class="aspect-[4/3] bg-surface-container-low relative overflow-hidden">
@@ -146,28 +139,19 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
         </div>
       </div>
 
-      <!-- Error State -->
       <div v-else-if="error" class="bg-surface-container-lowest rounded-md p-12 text-center shadow-ambient" style="border: 1px solid rgba(197, 197, 217, 0.2);">
-        <svg class="mx-auto h-16 w-16 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-        </svg>
+        <i class="pi pi-exclamation-triangle text-5xl text-error mb-4" />
         <h3 class="mt-4 text-lg font-semibold text-on_surface font-display">Failed to load products</h3>
         <p class="mt-2 text-on_surface_variant font-body">Something went wrong. Please try again.</p>
-        <button @click="refresh" class="mt-6 px-6 py-3 bg-gradient-to-r from-primary to-primary-container text-white rounded-md font-medium transition-all duration-300 hover:shadow-lg shadow-lg shadow-primary/25">
-          Try Again
-        </button>
+        <Button @click="refresh" label="Try Again" class="mt-6" />
       </div>
 
-      <!-- Empty State -->
       <div v-else-if="products.length === 0" class="bg-surface-container-lowest rounded-md p-16 text-center shadow-ambient" style="border: 1px solid rgba(197, 197, 217, 0.2);">
-        <svg class="mx-auto h-24 w-24 text-outline/30" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
+        <i class="pi pi-box text-5xl text-outline/30 mb-4" />
         <h2 class="mt-4 text-xl font-semibold text-on_surface font-display">No products available</h2>
         <p class="mt-2 text-on_surface_variant font-body">Check back soon for new products.</p>
       </div>
 
-      <!-- Product Grid -->
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         <ProductCard 
           v-for="(product, index) in products" 
@@ -179,33 +163,26 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
       </div>
     </section>
 
-    <!-- Features Section -->
     <section class="bg-surface-container-low py-20">
       <div class="max-w-7xl mx-auto px-6 lg:px-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div class="text-center group">
             <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 transition-transform duration-400 group-hover:scale-110 bg-gradient-to-r from-primary to-primary-container">
-              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
-              </svg>
+              <i class="pi pi-truck text-white text-2xl" />
             </div>
             <h3 class="text-lg font-semibold text-on_surface mb-2 font-display">Free Shipping</h3>
             <p class="text-on_surface_variant font-body">On orders over ₹500</p>
           </div>
           <div class="text-center group">
             <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 transition-transform duration-400 group-hover:scale-110 bg-gradient-to-r from-primary to-primary-container">
-              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-1.564A11.959 11.959 0 0112 2.714z" />
-              </svg>
+              <i class="pi pi-shield text-white text-2xl" />
             </div>
             <h3 class="text-lg font-semibold text-on_surface mb-2 font-display">Secure Payment</h3>
             <p class="text-on_surface_variant font-body">100% secure checkout</p>
           </div>
           <div class="text-center group">
             <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 transition-transform duration-400 group-hover:scale-110 bg-gradient-to-r from-primary to-primary-container">
-              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-              </svg>
+              <i class="pi pi-refresh text-white text-2xl" />
             </div>
             <h3 class="text-lg font-semibold text-on_surface mb-2 font-display">Easy Returns</h3>
             <p class="text-on_surface_variant font-body">30-day return policy</p>
@@ -214,7 +191,6 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
       </div>
     </section>
 
-    <!-- Newsletter Section -->
     <section class="py-20 bg-surface">
       <div class="max-w-7xl mx-auto px-6 lg:px-8">
         <div class="bg-gradient-to-r from-primary to-primary-container rounded-2xl p-12 text-center relative overflow-hidden">
@@ -222,19 +198,18 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
           <div class="relative z-10">
             <h2 class="text-3xl font-bold text-white font-display mb-4">Stay Updated</h2>
             <p class="text-white/80 mb-8 max-w-xl mx-auto font-body">Subscribe to our newsletter for exclusive deals, new arrivals, and insider-only discounts.</p>
-            <form class="flex flex-col sm:flex-row gap-4 max-w-md mx-auto" @submit.prevent>
-              <input 
+            <div class="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+              <InputText 
                 type="email" 
                 placeholder="Enter your email"
                 class="flex-1 px-6 py-4 rounded-lg bg-white/20 backdrop-blur-sm text-white placeholder:text-white/60 border border-white/30 focus:outline-none focus:bg-white/30 focus:border-white"
               />
-              <button 
+              <Button 
                 type="submit"
-                class="px-8 py-4 bg-white text-primary font-semibold rounded-lg transition-all duration-300 hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Subscribe
-              </button>
-            </form>
+                label="Subscribe"
+                class="px-8 py-4 !bg-white !text-primary font-semibold rounded-lg transition-all duration-300 hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98] white"
+              />
+            </div>
           </div>
         </div>
       </div>

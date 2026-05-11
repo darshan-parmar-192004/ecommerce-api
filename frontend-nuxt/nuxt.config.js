@@ -1,3 +1,5 @@
+import tailwindcss from "@tailwindcss/vite";
+
 export default defineNuxtConfig({
   ssr: true,
 
@@ -17,11 +19,18 @@ export default defineNuxtConfig({
     compressPublicAssets: true,
   },
 
-  modules: ["@pinia/nuxt", "@nuxtjs/tailwindcss", "shadcn-nuxt"],
+  modules: ["@pinia/nuxt", "@primevue/nuxt-module"],
 
-  shadcn: {
-    prefix: "",
-    componentDir: "components/ui",
+  primevue: {
+    options: {
+      theme: {
+        preset: "Aura",
+        options: {
+          darkModeSelector: ".dark",
+        },
+      },
+    },
+    autoImport: true,
   },
 
   pinia: {
@@ -34,9 +43,8 @@ export default defineNuxtConfig({
 
   css: ["~/assets/css/main.css"],
 
-  tailwindcss: {
-    cssPath: "~/assets/css/tailwind.css",
-    configPath: "tailwind.config.js",
+  vite: {
+    plugins: [tailwindcss()],
   },
 
   app: {
@@ -47,15 +55,12 @@ export default defineNuxtConfig({
         { name: "viewport", content: "width=device-width, initial-scale=1" },
         { name: "description", content: "Modern e-commerce store" },
       ],
-      link: [{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" }],
+      link: [
+        { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+        { rel: "shortcut icon", type: "image/svg+xml", href: "/favicon.svg" },
+      ],
     },
     pageTransition: { name: "page", mode: "out-in" },
-  },
-
-  nitro: {
-    serveStatic: {
-      strict: false,
-    },
   },
 
   runtimeConfig: {
