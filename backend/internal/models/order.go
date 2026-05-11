@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"time"
 
+	"backend/internal/constants"
+
 	"github.com/doug-martin/goqu"
 )
 
@@ -12,12 +14,12 @@ type OrderRepository struct {
 	db *goqu.Database
 }
 
-func NewOrderRepository(db *sql.DB) *OrderRepository {
-	return &OrderRepository{db: goqu.New("postgres", db)}
+func NewOrderRepository(db *goqu.Database) *OrderRepository {
+	return &OrderRepository{db: db}
 }
 
 func (r *OrderRepository) GetAll(ctx context.Context) ([]Order, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	var orders []Order
@@ -28,7 +30,7 @@ func (r *OrderRepository) GetAll(ctx context.Context) ([]Order, error) {
 		"status",
 		"total_amount",
 		"shipping_address",
-	).Order(goqu.I("order_date").Desc()).ScanStructsContext(ctx, &orders)
+	).Order(goqu.I("order_date").Desc()).ScanStructsContext(ctxTimeout, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +39,7 @@ func (r *OrderRepository) GetAll(ctx context.Context) ([]Order, error) {
 }
 
 func (r *OrderRepository) CreateOrder(ctx context.Context, orderID, customerID string, totalAmount float64, status string, items []map[string]interface{}) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	tx, err := r.db.Begin()
@@ -57,7 +59,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, orderID, customerID s
 		"order_date":   time.Now(),
 	}
 
-	_, err = tx.From("orders").Insert(orderRec).ExecContext(ctx)
+	_, err = tx.From("orders").Insert(orderRec).ExecContext(ctxTimeout)
 	if err != nil {
 		return err
 	}
@@ -70,7 +72,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, orderID, customerID s
 			"unit_price": item["unit_price"],
 		}
 
-		_, err = tx.From("order_items").Insert(itemRec).ExecContext(ctx)
+		_, err = tx.From("order_items").Insert(itemRec).ExecContext(ctxTimeout)
 		if err != nil {
 			return err
 		}
@@ -80,7 +82,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, orderID, customerID s
 }
 
 func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]OrderItem, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	var items []OrderItem
@@ -89,7 +91,7 @@ func (r *OrderRepository) GetOrderItems(ctx context.Context, orderID string) ([]
 		"product_id",
 		"quantity",
 		"unit_price",
-	).Where(goqu.Ex{"order_id": orderID}).ScanStructsContext(ctx, &items)
+	).Where(goqu.Ex{"order_id": orderID}).ScanStructsContext(ctxTimeout, &items)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"backend/internal/constants"
 	"backend/internal/logger"
 	apperrors "backend/internal/utils"
 	"runtime/debug"
@@ -12,7 +13,7 @@ func Recovery() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		defer func() {
 			if err := recover(); err != nil {
-				requestID := c.Locals("request_id")
+				requestID := c.Locals(constants.LocalsRequestID)
 
 				logger.Log.Errorf("PANIC: %v\nSTACK TRACE:\n%s\nREQUEST_ID: %v",
 					err,
@@ -20,8 +21,8 @@ func Recovery() fiber.Handler {
 					requestID,
 				)
 
-				_ = apperrors.SendError(c, fiber.StatusInternalServerError, "PANIC", "Internal server error", map[string]interface{}{
-					"request_id": requestID,
+				_ = apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrPanic, constants.MsgInternalError, map[string]interface{}{
+					constants.LocalsRequestID: requestID,
 				})
 			}
 		}()

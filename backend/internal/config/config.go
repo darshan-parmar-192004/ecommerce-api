@@ -47,10 +47,10 @@ func Load() (*AppConfig, error) {
 	}
 
 	if cfg.DBSchema == "" {
-		cfg.DBSchema = "public"
+		cfg.DBSchema = constants.DBSchemaDefault
 	}
 	if cfg.DBDialect == "" {
-		cfg.DBDialect = "pgx"
+		cfg.DBDialect = constants.DBDialectPgx
 	}
 
 	return cfg, nil
@@ -62,10 +62,9 @@ func LoadTest(dbHost, dbPort, dbName, dbUser, dbPwd string) (*AppConfig, error) 
 		DBHost:    dbHost,
 		DBPort:    dbPort,
 		DBName:    dbName,
-		DBUser:    dbUser,
-		DBPass:    dbPwd,
-		DBSchema:  "public",
-		DBDialect: "postgres",
+		DBUser:    dbPwd,
+		DBSchema:  constants.DBSchemaDefault,
+		DBDialect: constants.DBDriverPostgres,
 	}, nil
 }
 
@@ -88,5 +87,5 @@ func GetDBDialect() string {
 	if cfg != nil && cfg.DBDialect != "" {
 		return cfg.DBDialect
 	}
-	return "pgx"
+	return constants.DBDialectPgx
 }

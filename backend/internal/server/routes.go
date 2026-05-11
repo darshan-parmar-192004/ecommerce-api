@@ -7,8 +7,8 @@ import (
 	"backend/internal/logger"
 	"backend/internal/middleware"
 	"backend/internal/models"
-	"backend/internal/services"
 
+	"github.com/doug-martin/goqu"
 	"github.com/gofiber/fiber/v3"
 
 	"github.com/gofiber/fiber/v3/middleware/cors"
@@ -27,27 +27,23 @@ func RegisterRoutes(app *fiber.App) {
 		MaxAge:           constants.CORSMaxAge,
 	}))
 
-	db := database.New().DB()
+	rawDB := database.New().DB()
+	goquDB := goqu.New(constants.DBDriverPostgres, rawDB)
 
-	productRepo := models.NewProductRepository(db)
-	productService := services.NewProductService(productRepo)
-	productController := controllers.NewProductController(productService)
+	productRepo := models.NewProductRepository(goquDB)
+	productController := controllers.NewProductController(productRepo)
 
-	categoryRepo := models.NewCategoryRepository(db)
-	categoryService := services.NewCategoryService(categoryRepo)
-	categoryController := controllers.NewCategoryController(categoryService)
+	categoryRepo := models.NewCategoryRepository(goquDB)
+	categoryController := controllers.NewCategoryController(categoryRepo)
 
-	customerRepo := models.NewCustomerRepository(db)
-	customerService := services.NewCustomerService(customerRepo)
-	customerController := controllers.NewCustomerController(customerService)
+	customerRepo := models.NewCustomerRepository(goquDB)
+	customerController := controllers.NewCustomerController(customerRepo)
 
-	orderRepo := models.NewOrderRepository(db)
-	orderService := services.NewOrderService(orderRepo)
-	orderController := controllers.NewOrderController(orderService)
+	orderRepo := models.NewOrderRepository(goquDB)
+	orderController := controllers.NewOrderController(orderRepo)
 
-	inventoryRepo := models.NewInventoryRepository(db)
-	inventoryService := services.NewInventoryService(inventoryRepo)
-	inventoryController := controllers.NewInventoryController(inventoryService)
+	inventoryRepo := models.NewInventoryRepository(goquDB)
+	inventoryController := controllers.NewInventoryController(inventoryRepo)
 
 	app.Get(constants.RouteProducts, productController.GetAll)
 	app.Get(constants.RouteProductsID, productController.GetById)

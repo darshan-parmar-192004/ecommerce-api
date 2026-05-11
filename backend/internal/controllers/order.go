@@ -1,47 +1,56 @@
 package controllers
 
 import (
-	"backend/internal/services"
+	"backend/internal/constants"
+	"backend/internal/models"
 	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 
-type OrderController struct {
-	Service *services.OrderService
+type CreateOrderInput struct {
+	OrderID     string                   `json:"order_id"`
+	CustomerID  string                   `json:"customer_id"`
+	TotalAmount float64                  `json:"total_amount"`
+	Status      string                   `json:"status"`
+	Items       []map[string]interface{} `json:"items"`
 }
 
-func NewOrderController(service *services.OrderService) *OrderController {
-	return &OrderController{Service: service}
+type OrderController struct {
+	Repo *models.OrderRepository
+}
+
+func NewOrderController(repo *models.OrderRepository) *OrderController {
+	return &OrderController{Repo: repo}
 }
 
 func (h *OrderController) GetAll(c fiber.Ctx) error {
-	orders, err := h.Service.GetAll(c.Context())
+	orders, err := h.Repo.GetAll(c.Context())
 	if err != nil {
 		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			"DATABASE_ERROR",
-			"Failed to fetch orders",
+			constants.ErrDBQueryGeneric,
+			constants.MsgFailedToFetch,
 			nil,
 		)
 	}
 
-	return apperrors.SendSuccess(c, 200, fiber.Map{
-		"data": orders,
+	return apperrors.SendSuccess(c, fiber.StatusOK, fiber.Map{
+		constants.JSONFieldData: orders,
 	})
 }
 
 func (h *OrderController) CreateOrder(c fiber.Ctx) error {
-	var req services.CreateOrderInput
+	var req CreateOrderInput
 
 	if err := c.Bind().Body(&req); err != nil {
 		return apperrors.SendError(
 			c,
 			fiber.StatusBadRequest,
-			"INVALID_INPUT",
-			"Invalid request body",
+			constants.ErrInvalidInput,
+			constants.MsgInvalidJSON,
 			nil,
 		)
 	}
@@ -50,38 +59,38 @@ func (h *OrderController) CreateOrder(c fiber.Ctx) error {
 		req.OrderID = uuid.New().String()
 	}
 
-	err := h.Service.CreateOrder(c.Context(), req)
+	err := h.Repo.CreateOrder(c.Context(), req.OrderID, req.CustomerID, req.TotalAmount, req.Status, req.Items)
 	if err != nil {
 		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			"DATABASE_ERROR",
+			constants.ErrDBQueryGeneric,
 			err.Error(),
 			nil,
 		)
 	}
 
 	return apperrors.SendSuccess(c, fiber.StatusCreated, fiber.Map{
-		"order_id":     req.OrderID,
-		"customer_id":  req.CustomerID,
-		"total_amount": req.TotalAmount,
-		"status":       req.Status,
+		constants.JSONFieldOrderID:     req.OrderID,
+		constants.JSONFieldCustomerID:  req.CustomerID,
+		constants.JSONFieldTotalAmount: req.TotalAmount,
+		constants.JSONFieldStatus:      req.Status,
 	})
 }
 
 func (h *OrderController) GetOrder(c fiber.Ctx) error {
-	id := c.Params("id")
+	id := c.Params(constants.ParamID)
 
-	items, err := h.Service.GetOrderItems(c.Context(), id)
+	items, err := h.Repo.GetOrderItems(c.Context(), id)
 	if err != nil {
 		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			"DATABASE_ERROR",
-			"Failed to fetch order items",
+			constants.ErrDBQueryGeneric,
+			constants.MsgFailedToFetch,
 			nil,
 		)
 	}
 
-	return apperrors.SendSuccess(c, 200, items)
+	return apperrors.SendSuccess(c, fiber.StatusOK, items)
 }

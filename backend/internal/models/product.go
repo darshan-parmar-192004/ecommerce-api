@@ -20,8 +20,8 @@ type ProductRepository struct {
 	db *goqu.Database
 }
 
-func NewProductRepository(db *sql.DB) *ProductRepository {
-	return &ProductRepository{db: goqu.New("postgres", db)}
+func NewProductRepository(db *goqu.Database) *ProductRepository {
+	return &ProductRepository{db: db}
 }
 
 func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, maxPriceStr, search string, page, limit int) ([]Product, map[string]interface{}, error) {
@@ -68,10 +68,10 @@ func (r *ProductRepository) GetAll(ctx context.Context, category, minPriceStr, m
 	}
 
 	pagination := map[string]interface{}{
-		"page":        page,
-		"limit":       limit,
-		"total_items": totalItems,
-		"total_pages": totalPages,
+		constants.JSONFieldPage:       page,
+		constants.JSONFieldLimit:      limit,
+		constants.JSONFieldTotalItems: totalItems,
+		constants.JSONFieldTotalPages: totalPages,
 	}
 
 	return products, pagination, nil

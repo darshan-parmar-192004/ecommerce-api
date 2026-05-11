@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"time"
 
+	"backend/internal/constants"
+
 	"github.com/doug-martin/goqu"
 )
 
@@ -12,12 +14,12 @@ type CategoryRepository struct {
 	db *goqu.Database
 }
 
-func NewCategoryRepository(db *sql.DB) *CategoryRepository {
-	return &CategoryRepository{db: goqu.New("postgres", db)}
+func NewCategoryRepository(db *goqu.Database) *CategoryRepository {
+	return &CategoryRepository{db: db}
 }
 
 func (r *CategoryRepository) GetAll(ctx context.Context) ([]Category, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	var categories []Category
@@ -25,7 +27,7 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]Category, error) {
 		"category_id",
 		"name",
 		goqu.COALESCE(goqu.I("parent_category_id"), "").As("parent_category_id"),
-	).Order(goqu.I("name").Asc()).ScanStructsContext(ctx, &categories)
+	).Order(goqu.I("name").Asc()).ScanStructsContext(ctxTimeout, &categories)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +52,7 @@ func (r *CategoryRepository) GetByID(ctx context.Context, categoryID string) (*C
 }
 
 func (r *CategoryRepository) GetCategoryProducts(ctx context.Context, categoryID string) ([]Product, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	var products []Product
@@ -61,7 +63,7 @@ func (r *CategoryRepository) GetCategoryProducts(ctx context.Context, categoryID
 		"price",
 		"description",
 		"created_at",
-	).Where(goqu.Ex{"category_id": categoryID}).Order(goqu.I("created_at").Desc()).ScanStructsContext(ctx, &products)
+	).Where(goqu.Ex{"category_id": categoryID}).Order(goqu.I("created_at").Desc()).ScanStructsContext(ctxTimeout, &products)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +72,7 @@ func (r *CategoryRepository) GetCategoryProducts(ctx context.Context, categoryID
 }
 
 func (r *CategoryRepository) GetHierarchy(ctx context.Context) ([]Category, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	var categories []Category
@@ -78,7 +80,7 @@ func (r *CategoryRepository) GetHierarchy(ctx context.Context) ([]Category, erro
 		"category_id",
 		"name",
 		goqu.COALESCE(goqu.I("parent_category_id"), "").As("parent_category_id"),
-	).Order(goqu.I("category_id").Asc()).ScanStructsContext(ctx, &categories)
+	).Order(goqu.I("category_id").Asc()).ScanStructsContext(ctxTimeout, &categories)
 	if err != nil {
 		return nil, err
 	}

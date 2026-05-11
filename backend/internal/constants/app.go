@@ -22,8 +22,22 @@ const (
 	JSONFieldStatus     = "status"
 	JSONFieldError      = "error"
 	JSONFieldSuccess    = "success"
-	JSONFieldDetails    = "details"
-	JSONFieldCode       = "code"
+	JSONFieldDetails     = "details"
+	JSONFieldCode        = "code"
+	JSONFieldCustomerID  = "customer_id"
+	JSONFieldTotalOrders = "total_orders"
+	JSONFieldLifetimeValue = "lifetime_value"
+	JSONFieldOrderID     = "order_id"
+	JSONFieldTotalAmount = "total_amount"
+	JSONFieldDebug       = "debug"
+	JSONFieldProductName = "product_name"
+	JSONFieldWarehouseID = "warehouse_id"
+	JSONFieldQuantity    = "quantity"
+	JSONFieldUpdatedAt   = "updated_at"
+	JSONFieldProductID   = "product_id"
+	JSONFieldProduct     = "product"
+	JSONFieldOrderCount  = "order_count"
+	JSONFieldUnitsSold   = "units_sold"
 
 	MsgPagePositive     = "page must be positive integer"
 	MsgLimitPositive    = "limit must be positive integer"
@@ -39,6 +53,14 @@ const (
 	MsgValidationUpdate = "all fields must be filled in order to update the product"
 	MsgPersistFailed    = "Failed to persist product"
 	MsgStorageFailed    = "Failed to update storage"
+	MsgValidationFailed = "Validation failed"
+	MsgProductIDExists  = "Product ID already exists"
+	MsgFailedToFetch    = "Failed to fetch"
+	MsgFailedToCreate   = "Failed to create"
+	MsgFailedToUpdate   = "Failed to update"
+	MsgFailedToDelete   = "Failed to delete"
+	MsgCheckProduct     = "Failed to check product"
+	MsgInternalError    = "Internal server error"
 
 	HealthDBUp            = "It's healthy"
 	HealthDBHeavyLoad     = "The database is experiencing heavy load."
@@ -61,6 +83,11 @@ const (
 	DBMaxIdleConns    = 5
 	DBConnMaxLifetime = 30
 
+	DBDialectPgx      = "pgx"
+	DBSchemaDefault   = "public"
+	DBTimeoutSec      = 5
+	ShutdownTimeoutSec = 5
+
 	RouteProducts       = "/products"
 	RouteProductsID     = "/products/:id"
 	RouteHealth         = "/health"
@@ -79,6 +106,35 @@ const (
 	RouteInvCLV         = "/inventory/customer-lifetime-value"
 	RouteInvHier        = "/inventory/hierarchy"
 	RouteInvTopSell     = "/inventory/top-sellers"
+
+	ServerHeader = "backend"
+	AppName      = "backend"
+
+	HeaderXRequestID = "X-Request-Id"
+	LocalsRequestID  = "request_id"
+
+	LoggerEncoding       = "json"
+	LoggerOutputStdout   = "stdout"
+	LoggerOutputStderr   = "stderr"
+	LoggerKeyTime        = "time"
+	LoggerKeyLevel       = "level"
+	LoggerKeyLogger      = "logger"
+	LoggerKeyCaller      = "caller"
+	LoggerKeyMsg         = "msg"
+	LoggerKeyStacktrace  = "stacktrace"
+
+	LogDataTimestamp  = "timestamp"
+	LogDataMethod     = "method"
+	LogDataPath       = "path"
+	LogDataDurationMs = "duration_ms"
+
+	ParamID       = "id"
+	QueryCategory = "category"
+	QueryMinPrice = "min_price"
+	QueryMaxPrice = "max_price"
+	QuerySearch   = "search"
+	QueryPage     = "page"
+	QueryLimit    = "limit"
 )
 
 var (

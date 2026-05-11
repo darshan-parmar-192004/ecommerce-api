@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"strconv"
 	"time"
 
 	"backend/internal/config"
@@ -291,42 +290,3 @@ func seedOrderItems(ctx context.Context, tx pgx.Tx, r *csv.Reader) error {
 	return err
 }
 
-// validateCSVHeader checks that the CSV header has the expected number of columns
-func validateCSVHeader(reader io.Reader, expectedCols int, tableName string) error {
-	csvReader := csv.NewReader(reader)
-	header, err := csvReader.Read()
-	if err != nil {
-		return fmt.Errorf("%s: failed to read CSV header: %w", tableName, err)
-	}
-	if len(header) != expectedCols {
-		return fmt.Errorf("%s: expected %d columns, got %d columns in header",
-			tableName, expectedCols, len(header))
-	}
-	return nil
-}
-
-// parseTimestamp converts a timestamp string to time.Time
-func parseTimestamp(s string) (time.Time, error) {
-	formats := []string{
-		time.RFC3339,
-		"2006-01-02T15:04:05",
-		"2006-01-02 15:04:05",
-		"2006-01-02",
-	}
-	for _, f := range formats {
-		if t, err := time.Parse(f, s); err == nil {
-			return t, nil
-		}
-	}
-	return time.Time{}, fmt.Errorf("unable to parse timestamp: %s", s)
-}
-
-// parseFloat safely parses a float string
-func parseFloat(s string) (float64, error) {
-	return strconv.ParseFloat(s, 64)
-}
-
-// parseInt safely parses an int string
-func parseInt(s string) (int, error) {
-	return strconv.Atoi(s)
-}

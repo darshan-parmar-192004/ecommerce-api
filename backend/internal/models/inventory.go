@@ -2,8 +2,9 @@ package models
 
 import (
 	"context"
-	"database/sql"
 	"time"
+
+	"backend/internal/constants"
 
 	"github.com/doug-martin/goqu"
 )
@@ -12,12 +13,12 @@ type InventoryRepository struct {
 	db *goqu.Database
 }
 
-func NewInventoryRepository(db *sql.DB) *InventoryRepository {
-	return &InventoryRepository{db: goqu.New("postgres", db)}
+func NewInventoryRepository(db *goqu.Database) *InventoryRepository {
+	return &InventoryRepository{db: db}
 }
 
 func (r *InventoryRepository) GetAll(ctx context.Context) ([]Inventory, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	var inventory []Inventory
@@ -26,7 +27,7 @@ func (r *InventoryRepository) GetAll(ctx context.Context) ([]Inventory, error) {
 		"warehouse_id",
 		"quantity",
 		"updated_at",
-	).ScanStructsContext(ctx, &inventory)
+	).ScanStructsContext(ctxTimeout, &inventory)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +36,7 @@ func (r *InventoryRepository) GetAll(ctx context.Context) ([]Inventory, error) {
 }
 
 func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	type StockLevel struct {
@@ -56,7 +57,7 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 	).Join(
 		goqu.I("products").As("p"),
 		goqu.On(goqu.I("i.product_id").Eq(goqu.I("p.product_id"))),
-	).Order(goqu.I("i.quantity").Asc()).ScanStructsContext(ctx, &results)
+	).Order(goqu.I("i.quantity").Asc()).ScanStructsContext(ctxTimeout, &results)
 	if err != nil {
 		return nil, err
 	}
@@ -64,11 +65,11 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 	stockLevels := make([]map[string]interface{}, 0, len(results))
 	for _, r := range results {
 		stockLevels = append(stockLevels, map[string]interface{}{
-			"product_name":  r.ProductName,
-			"product_id":    r.ProductID,
-			"warehouse_id":  r.WarehouseID,
-			"quantity":       r.Quantity,
-			"updated_at":  r.UpdatedAt,
+			constants.JSONFieldProductName: r.ProductName,
+			constants.JSONFieldProductID:   r.ProductID,
+			constants.JSONFieldWarehouseID: r.WarehouseID,
+			constants.JSONFieldQuantity:    r.Quantity,
+			constants.JSONFieldUpdatedAt:   r.UpdatedAt,
 		})
 	}
 
@@ -76,7 +77,7 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 }
 
 func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	type clvRow struct {
@@ -90,7 +91,7 @@ func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]
 		goqu.I("customer_id"),
 		goqu.COUNT("order_id").As("order_count"),
 		goqu.COALESCE(goqu.SUM("total_amount"), 0).As("total_spent"),
-	).GroupBy(goqu.I("customer_id")).Order(goqu.I("total_spent").Desc()).ScanStructsContext(ctx, &statsRows)
+	).GroupBy(goqu.I("customer_id")).Order(goqu.I("total_spent").Desc()).ScanStructsContext(ctxTimeout, &statsRows)
 	if err != nil {
 		return nil, err
 	}
@@ -98,9 +99,9 @@ func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]
 	stats := make([]map[string]interface{}, 0, len(statsRows))
 	for _, row := range statsRows {
 		stats = append(stats, map[string]interface{}{
-			"customer_id":    row.CustomerID,
-			"order_count":    row.OrderCount,
-			"lifetime_value": row.TotalSpent,
+			constants.JSONFieldCustomerID:    row.CustomerID,
+			constants.JSONFieldOrderCount:    row.OrderCount,
+			constants.JSONFieldLifetimeValue: row.TotalSpent,
 		})
 	}
 
@@ -108,7 +109,7 @@ func (r *InventoryRepository) GetCustomerCLV(ctx context.Context) ([]map[string]
 }
 
 func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]Category, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	var categories []Category
@@ -116,7 +117,7 @@ func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]Category, 
 		"category_id",
 		"name",
 		"parent_category_id",
-	).Order(goqu.I("category_id").Asc()).ScanStructsContext(ctx, &categories)
+	).Order(goqu.I("category_id").Asc()).ScanStructsContext(ctxTimeout, &categories)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +126,7 @@ func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]Category, 
 }
 
 func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]map[string]interface{}, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	type topRow struct {
@@ -145,7 +146,7 @@ func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]map[string]i
 		goqu.I("p.name"),
 	).Order(
 		goqu.I("total_sold").Desc(),
-	).Limit(10).ScanStructsContext(ctx, &topRows)
+	).Limit(10).ScanStructsContext(ctxTimeout, &topRows)
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +154,8 @@ func (r *InventoryRepository) GetTopSellers(ctx context.Context) ([]map[string]i
 	topProducts := make([]map[string]interface{}, 0, len(topRows))
 	for _, row := range topRows {
 		topProducts = append(topProducts, map[string]interface{}{
-			"product":    row.ProductName,
-			"units_sold": row.TotalSold,
+			constants.JSONFieldProduct:  row.ProductName,
+			constants.JSONFieldUnitsSold: row.TotalSold,
 		})
 	}
 

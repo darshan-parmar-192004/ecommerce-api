@@ -1,69 +1,70 @@
 package controllers
 
 import (
-	"backend/internal/services"
+	"backend/internal/constants"
+	"backend/internal/models"
 	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 type CategoryController struct {
-	Service *services.CategoryService
+	Repo *models.CategoryRepository
 }
 
-func NewCategoryController(service *services.CategoryService) *CategoryController {
-	return &CategoryController{Service: service}
+func NewCategoryController(repo *models.CategoryRepository) *CategoryController {
+	return &CategoryController{Repo: repo}
 }
 
 func (h *CategoryController) GetAll(c fiber.Ctx) error {
-	categories, err := h.Service.GetAll(c.Context())
+	categories, err := h.Repo.GetAll(c.Context())
 	if err != nil {
 		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			"DATABASE_ERROR",
-			"Failed to fetch categories",
+			constants.ErrDBQueryGeneric,
+			constants.MsgFailedToFetch,
 			nil,
 		)
 	}
 
-	return apperrors.SendSuccess(c, 200, fiber.Map{
-		"data": categories,
+	return apperrors.SendSuccess(c, fiber.StatusOK, fiber.Map{
+		constants.JSONFieldData: categories,
 	})
 }
 
 func (h *CategoryController) GetCategoryProducts(c fiber.Ctx) error {
-	categoryID := c.Params("id")
+	categoryID := c.Params(constants.ParamID)
 
-	products, err := h.Service.GetCategoryProducts(c.Context(), categoryID)
+	products, err := h.Repo.GetCategoryProducts(c.Context(), categoryID)
 	if err != nil {
 		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			"DATABASE_ERROR",
-			"Failed to fetch category products",
+			constants.ErrDBQueryGeneric,
+			constants.MsgFailedToFetch,
 			nil,
 		)
 	}
 
-	return apperrors.SendSuccess(c, 200, fiber.Map{
-		"data": products,
+	return apperrors.SendSuccess(c, fiber.StatusOK, fiber.Map{
+		constants.JSONFieldData: products,
 	})
 }
 
 func (h *CategoryController) GetHierarchy(c fiber.Ctx) error {
-	categories, err := h.Service.GetHierarchy(c.Context())
+	categories, err := h.Repo.GetHierarchy(c.Context())
 	if err != nil {
 		return apperrors.SendError(
 			c,
 			fiber.StatusInternalServerError,
-			"DATABASE_ERROR",
-			"Failed to fetch category hierarchy",
+			constants.ErrDBQueryGeneric,
+			constants.MsgFailedToFetch,
 			nil,
 		)
 	}
 
-	return apperrors.SendSuccess(c, 200, fiber.Map{
-		"data": categories,
+	return apperrors.SendSuccess(c, fiber.StatusOK, fiber.Map{
+		constants.JSONFieldData: categories,
 	})
 }

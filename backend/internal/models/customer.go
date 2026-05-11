@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"time"
 
+	"backend/internal/constants"
+
 	"github.com/doug-martin/goqu"
 )
 
@@ -12,12 +14,12 @@ type CustomerRepository struct {
 	db *goqu.Database
 }
 
-func NewCustomerRepository(db *sql.DB) *CustomerRepository {
-	return &CustomerRepository{db: goqu.New("postgres", db)}
-}
+func NewCustomerRepository(db *goqu.Database) *CustomerRepository {
+	return &CustomerRepository{db: db}
+}	
 
 func (r *CustomerRepository) GetAll(ctx context.Context) ([]Customer, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	var customers []Customer
@@ -29,7 +31,7 @@ func (r *CustomerRepository) GetAll(ctx context.Context) ([]Customer, error) {
 		"phone",
 		"created_at",
 		"status",
-	).Order(goqu.I("name").Asc()).ScanStructsContext(ctx, &customers)
+	).Order(goqu.I("name").Asc()).ScanStructsContext(ctxTimeout, &customers)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +40,7 @@ func (r *CustomerRepository) GetAll(ctx context.Context) ([]Customer, error) {
 }
 
 func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID string) ([]Order, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	var orders []Order
@@ -49,7 +51,7 @@ func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID s
 		"status",
 		"total_amount",
 		"shipping_address",
-	).Where(goqu.Ex{"customer_id": customerID}).Order(goqu.I("order_date").Desc()).ScanStructsContext(ctx, &orders)
+	).Where(goqu.Ex{"customer_id": customerID}).Order(goqu.I("order_date").Desc()).ScanStructsContext(ctxTimeout, &orders)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +60,7 @@ func (r *CustomerRepository) GetCustomerOrders(ctx context.Context, customerID s
 }
 
 func (r *CustomerRepository) GetCustomerLifetimeValue(ctx context.Context, customerID string) (int, float64, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	type clvResult struct {
@@ -70,7 +72,7 @@ func (r *CustomerRepository) GetCustomerLifetimeValue(ctx context.Context, custo
 	_, err := r.db.From("orders").Select(
 		goqu.COUNT("order_id").As("count"),
 		goqu.COALESCE(goqu.SUM("total_amount"), 0).As("coalesce"),
-	).Where(goqu.Ex{"customer_id": customerID}).ScanStructContext(ctx, &result)
+	).Where(goqu.Ex{"customer_id": customerID}).ScanStructContext(ctxTimeout, &result)
 	if err != nil {
 		return 0, 0, err
 	}

@@ -58,20 +58,20 @@ func (s *service) DB() *sql.DB {
 }
 
 func (s *service) Health() map[string]string {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	stats := make(map[string]string)
 
 	err := s.db.PingContext(ctx)
 	if err != nil {
-		stats["status"] = "down"
-		stats["error"] = err.Error()
+		stats[constants.JSONFieldStatus] = constants.ResponseStatusDown
+		stats[constants.JSONFieldError] = err.Error()
 		return stats
 	}
 
-	stats["status"] = "up"
-	stats["message"] = "Database is healthy"
+	stats[constants.JSONFieldStatus] = constants.ResponseStatusUp
+	stats[constants.JSONFieldMessage] = constants.HealthDBUp
 
 	dbStats := s.db.Stats()
 

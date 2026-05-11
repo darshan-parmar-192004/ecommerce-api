@@ -1,6 +1,7 @@
 package server
 
 import (
+	"backend/internal/constants"
 	"backend/internal/database"
 
 	"github.com/gofiber/fiber/v3"
@@ -15,8 +16,8 @@ type FiberServer struct {
 func New() *FiberServer {
 	server := &FiberServer{
 		App: fiber.New(fiber.Config{
-			ServerHeader: "backend",
-			AppName:      "backend",
+			ServerHeader: constants.ServerHeader,
+			AppName:      constants.AppName,
 		}),
 
 		db: database.New(),
