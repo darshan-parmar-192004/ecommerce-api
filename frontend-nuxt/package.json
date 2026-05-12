@@ -11,11 +11,11 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
     "@pinia/nuxt": "^0.5.1",
     "@primeuix/themes": "^2.0.3",
     "@primevue/nuxt-module": "^4.5.5",
     "@tailwindcss/vite": "^4.1.4",
+    "@vuehookform/core": "^0.7.0",
     "@vueuse/core": "^14.3.0",
     "@vueuse/motion": "^3.0.3",
     "nuxt": "3.12.0",
@@ -24,7 +24,6 @@
     "primevue": "^4.5.5",
     "tailwindcss": "^4.1.4",
     "vue": "^3.4.21",
-    "vue-hook-form": "^0.0.4",
     "vue-router": "^4.3.0",
     "zod": "^4.4.3"
   }

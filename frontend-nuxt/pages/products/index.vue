@@ -1,4 +1,6 @@
 <script setup>
+import ProductCard from '~/components/products/ProductCard.vue'
+
 const route = useRoute()
 const router = useRouter()
 
@@ -134,7 +136,7 @@ watch([selectedCategory, minPrice, maxPrice, debouncedSearch, currentPage], () =
   loadProducts()
 })
 
-const { data: categoriesData } = await useAsyncData('categories', () => categoriesApi.list())
+const { data: categoriesData } = useAsyncData('categories-all', () => categoriesApi.list())
 
 const products = computed(() => productsData.value?.data || productsData.value || [])
 const pagination = computed(() => productsData.value?.pagination || { page: 1, total_pages: 1, total_items: 0 })

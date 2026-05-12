@@ -1,7 +1,8 @@
 <script setup>
 definePageMeta({
-  keepalive: true
 })
+
+import ProductCard from '~/components/products/ProductCard.vue'
 
 const { products: productsApi } = useApi()
 

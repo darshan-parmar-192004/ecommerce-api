@@ -1,6 +1,9 @@
 <script setup>
-import { useForm } from 'vue-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+definePageMeta({
+  layout: 'auth'
+})
+
+import { useForm, useController } from '@vuehookform/core'
 import * as z from 'zod'
 
 const route = useRoute()
@@ -11,15 +14,16 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required')
 })
 
-const form = useForm({
-  resolver: zodResolver(loginSchema),
+const { control, handleSubmit, reset, setError } = useForm({
+  schema: loginSchema,
   defaultValues: {
     email: '',
     password: ''
   }
 })
 
-const { handleSubmit, reset, setError, setErrors } = form
+const emailControl = useController({ name: 'email', control })
+const passwordControl = useController({ name: 'password', control })
 
 const { auth } = useApi()
 
@@ -65,7 +69,9 @@ useSeoMeta({
             <InputIcon class="pi pi-envelope" />
             <InputText
               id="email"
-              v-model="form.email"
+              :value="emailControl.field.value"
+              @update:model-value="emailControl.field.onChange"
+              @blur="emailControl.field.onBlur"
               type="email"
               required
               class="w-full !pl-10"
@@ -87,7 +93,9 @@ useSeoMeta({
             <InputIcon class="pi pi-lock" />
             <InputText
               id="password"
-              v-model="form.watch('password')"
+              :value="passwordControl.field.value"
+              @update:model-value="passwordControl.field.onChange"
+              @blur="passwordControl.field.onBlur"
               type="password"
               required
               class="w-full !pl-10"

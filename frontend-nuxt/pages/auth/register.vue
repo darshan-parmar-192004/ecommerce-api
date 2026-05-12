@@ -1,6 +1,5 @@
 <script setup>
-import { useForm } from 'vue-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm, useController } from '@vuehookform/core'
 import * as z from 'zod'
 
 definePageMeta({
@@ -16,7 +15,7 @@ const registerSchema = z.object({
 })
 
 const form = useForm({
-  resolver: zodResolver(registerSchema),
+  schema: registerSchema,
   defaultValues: {
     name: '',
     email: '',
@@ -24,7 +23,11 @@ const form = useForm({
   }
 })
 
-const { handleSubmit, reset, setError, setErrors, watch } = form
+const nameControl = useController({ name: 'name', control: form.control })
+const emailControl = useController({ name: 'email', control: form.control })
+const passwordControl = useController({ name: 'password', control: form.control })
+
+const { handleSubmit, reset, setError, watch } = form
 
 const showPassword = ref(false)
 const error = ref('')
@@ -125,7 +128,9 @@ useSeoMeta({
             <InputIcon class="pi pi-user" />
             <InputText
               id="name"
-              v-model="form.watch('name')"
+              :value="nameControl.field.value"
+              @update:model-value="nameControl.field.onChange"
+              @blur="nameControl.field.onBlur"
               type="text"
               required
               class="w-full !pl-10"
@@ -142,7 +147,9 @@ useSeoMeta({
             <InputIcon class="pi pi-envelope" />
             <InputText
               id="email"
-              v-model="form.watch('email')"
+              :value="emailControl.field.value"
+              @update:model-value="emailControl.field.onChange"
+              @blur="emailControl.field.onBlur"
               type="email"
               required
               :class="isValidEmail === false ? '!border-error !bg-error-container' : ''"
@@ -162,7 +169,9 @@ useSeoMeta({
             <InputIcon class="pi pi-lock" />
             <InputText
               id="password"
-              v-model="form.watch('password')"
+              :value="passwordControl.field.value"
+              @update:model-value="passwordControl.field.onChange"
+              @blur="passwordControl.field.onBlur"
               :type="showPassword ? 'text' : 'password'"
               required
               minlength="6"

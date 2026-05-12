@@ -1,4 +1,5 @@
 <script setup>
+import ToggleSwitch from 'primevue/toggleswitch'
 import { useCartStore } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
 import { useThemeStore } from '~/stores/theme'
@@ -10,14 +11,12 @@ const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const route = useRoute()
 const isMenuOpen = ref(false)
-const isUserMenuOpen = ref(false)
-const isDark = ref(false)
+const userMenu = ref(null)
 
 const { isAuthenticated, user } = storeToRefs(authStore)
 
 const closeMenu = () => {
   isMenuOpen.value = false
-  isUserMenuOpen.value = false
 }
 
 const getUserInitial = (name) => {
@@ -40,14 +39,7 @@ const handleLogout = async () => {
   }
 }
 
-const toggleTheme = () => {
-  themeStore.toggleTheme()
-  isDark.value = themeStore.isDark
-}
-
-onMounted(() => {
-  isDark.value = themeStore.isDark
-})
+const { isDark } = storeToRefs(themeStore)
 </script>
 
 <template>
@@ -95,17 +87,20 @@ onMounted(() => {
             </button>
 
             <!-- Theme Toggle Switch -->
-            <div class="flex items-center">
-              <i class="pi pi-sun text-sm text-on_surface_variant mr-2" />
-              <Toggle v-model="isDark" @change="toggleTheme" />
-              <i class="pi pi-moon text-sm text-on_surface_variant ml-2" />
-            </div>
+            <ToggleSwitch
+              :modelValue="isDark"
+              @update:modelValue="themeStore.toggleTheme()"
+            >
+              <template #handle="{ checked }">
+                <i :class="['!text-xs pi', checked ? 'pi-moon' : 'pi-sun']" />
+              </template>
+            </ToggleSwitch>
 
             <!-- Auth Links -->
             <template v-if="isAuthenticated">
               <div class="relative">
                 <button
-                  @click="isUserMenuOpen = !isUserMenuOpen"
+                  @click="userMenu.toggle($event)"
                   class="flex items-center gap-2 p-1 rounded-full transition-colors duration-300 hover:bg-surface-container"
                 >
                   <Avatar
@@ -113,13 +108,9 @@ onMounted(() => {
                     shape="circle"
                     class="bg-gradient-to-r from-primary to-primary-container text-white font-semibold"
                   />
-                  <i
-                    class="pi pi-chevron-down transition-transform duration-300 text-outline text-xs"
-                    :class="{ 'rotate-180': isUserMenuOpen }"
-                  />
                 </button>
 
-                <OverlayPanel ref="userMenu" :style="{ width: '16rem' }">
+                <OverlayPanel ref="userMenu" :style="{ width: '16rem' }" class="!bg-surface-container-lowest">
                   <div class="p-4 border-b border-outline-variant/20">
                     <p class="text-sm font-semibold text-on_surface">{{ user?.name || 'User' }}</p>
                     <p class="text-xs text-outline">{{ user?.email || '' }}</p>
@@ -146,6 +137,14 @@ onMounted(() => {
                     >
                       <i class="pi pi-shield" />
                       <span class="text-sm font-medium">Admin Panel</span>
+                    </NuxtLink>
+                    <hr class="mx-3 my-1 border-outline-variant/20" />
+                    <NuxtLink
+                      to="/"
+                      class="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-low transition-colors"
+                    >
+                      <i class="pi pi-home text-on_surface_variant" />
+                      <span class="text-sm font-medium text-on_surface_variant">Back to Website</span>
                     </NuxtLink>
                     <button
                       @click="handleLogout"

@@ -36,7 +36,14 @@ const logout = () => {
         {{ item.name }}
       </NuxtLink>
     </div>
-    <div class="mt-4">
+    <div class="mt-4 space-y-1">
+      <NuxtLink
+        to="/"
+        class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-on_surface_variant hover:bg-surface-container hover:text-on_surface transition-colors"
+      >
+        <i class="pi pi-home" />
+        Back to Website
+      </NuxtLink>
       <Button
         @click="logout"
         severity="danger"

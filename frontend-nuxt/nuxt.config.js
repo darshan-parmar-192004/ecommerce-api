@@ -1,4 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
+import Aura from "@primeuix/themes/aura";
 
 export default defineNuxtConfig({
   ssr: true,
@@ -7,9 +8,9 @@ export default defineNuxtConfig({
 
   experimental: {
     ownMiddlewareResolution: true,
-    payloadExtraction: true,
-    inlineSSRStyles: false,
-    appManifest: false,
+    payloadExtraction: false,
+    inlineSSRStyles: true,
+    appManifest: true,
   },
 
   nitro: {
@@ -24,7 +25,7 @@ export default defineNuxtConfig({
   primevue: {
     options: {
       theme: {
-        preset: "Aura",
+        preset: Aura,
         options: {
           darkModeSelector: ".dark",
         },
@@ -41,7 +42,7 @@ export default defineNuxtConfig({
     dirs: ["./composables"],
   },
 
-  css: ["~/assets/css/main.css"],
+  css: ["primeicons/primeicons.css", "~/assets/css/main.css"],
 
   vite: {
     plugins: [tailwindcss()],
@@ -58,9 +59,11 @@ export default defineNuxtConfig({
       link: [
         { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
         { rel: "shortcut icon", type: "image/svg+xml", href: "/favicon.svg" },
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+        { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" },
       ],
     },
-    pageTransition: { name: "page", mode: "out-in" },
   },
 
   runtimeConfig: {
