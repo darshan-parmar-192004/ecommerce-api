@@ -65,7 +65,7 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
           class="absolute hidden lg:block w-40 h-48 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/20 overflow-hidden animate-float-delayed"
           :style="{
             top: `${15 + index * 25}%`,
-            right: `${8 + index * 5}%`,
+            right: `${12 + index * 6}%`,
             animationDelay: `${index * 2}s`,
             transform: `translateY(${parallaxOffset * 0.5}px)`,
           }"
@@ -80,34 +80,37 @@ const floatingProducts = computed(() => products.value.slice(0, 3))
         </div>
       </div>
 
-      <div class="relative max-w-7xl mx-auto px-6 lg:px-8 py-28 md:py-40">
-        <div class="max-w-3xl">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-outline mb-6 animate-fade-in-up">
-            Curated Collection
-          </p>
-          <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight text-on_surface mb-8 animate-fade-in-up font-display" style="animation-delay: 100ms; letter-spacing: -0.02em;">
-            Discover Products<br />
-            <span class="text-primary">That Matter</span>
-          </h1>
-          <p class="text-lg md:text-xl text-on_surface_variant mb-10 max-w-xl animate-fade-in-up font-body leading-relaxed" style="animation-delay: 200ms;">
-            Shop the latest trends with unbeatable prices and fast delivery
-          </p>
-          <div class="flex flex-wrap gap-4 animate-fade-in-up" style="animation-delay: 300ms;">
-            <NuxtLink 
-              to="/products" 
-              class="group relative inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-8 py-4 rounded-md font-semibold transition-all duration-400 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-[0.98]"
-            >
-              <span class="relative z-10">Shop Now</span>
-              <i class="pi pi-arrow-right relative z-10 transition-transform group-hover:translate-x-1" />
-              <span class="absolute inset-0 rounded-md bg-white/20 scale-0 group-hover:scale-100 transition-transform duration-300"></span>
-            </NuxtLink>
-            <NuxtLink 
-              to="/cart" 
-              class="inline-flex items-center gap-2 px-8 py-4 rounded-md font-semibold transition-all duration-300 hover:bg-surface-container-high bg-surface-container-highest text-on_surface hover:scale-105 active:scale-[0.98]"
-            >
-              View Cart
-            </NuxtLink>
+      <div class="relative w-full max-w-7xl mx-auto px-6 lg:px-8 py-28 md:py-40">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div class="max-w-xl">
+            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-outline mb-6 animate-fade-in-up">
+              Curated Collection
+            </p>
+            <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight text-on_surface mb-8 animate-fade-in-up font-display" style="animation-delay: 100ms; letter-spacing: -0.02em;">
+              Discover Products<br />
+              <span class="text-primary">That Matter</span>
+            </h1>
+            <p class="text-lg md:text-xl text-on_surface_variant mb-10 max-w-xl animate-fade-in-up font-body leading-relaxed" style="animation-delay: 200ms;">
+              Shop the latest trends with unbeatable prices and fast delivery
+            </p>
+            <div class="flex flex-wrap gap-4 animate-fade-in-up" style="animation-delay: 300ms;">
+              <NuxtLink 
+                to="/products" 
+                class="group relative inline-flex items-center gap-2 bg-gradient-to-r from-primary to-primary-container text-white px-8 py-4 rounded-md font-semibold transition-all duration-400 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-[0.98]"
+              >
+                <span class="relative z-10">Shop Now</span>
+                <i class="pi pi-arrow-right relative z-10 transition-transform group-hover:translate-x-1" />
+                <span class="absolute inset-0 rounded-md bg-white/20 scale-0 group-hover:scale-100 transition-transform duration-300"></span>
+              </NuxtLink>
+              <NuxtLink 
+                to="/cart" 
+                class="inline-flex items-center gap-2 px-8 py-4 rounded-md font-semibold transition-all duration-300 hover:bg-surface-container-high bg-surface-container-highest text-on_surface hover:scale-105 active:scale-[0.98]"
+              >
+                View Cart
+              </NuxtLink>
+            </div>
           </div>
+          <div class="hidden lg:block"></div>
         </div>
       </div>
     </section>

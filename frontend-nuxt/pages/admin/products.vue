@@ -1,6 +1,4 @@
 <script setup>
-import { useApi } from '~/composables/useApi'
-
 definePageMeta({
   layout: 'admin',
   middleware: 'admin'

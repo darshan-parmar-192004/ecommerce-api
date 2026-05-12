@@ -1,6 +1,6 @@
-import { toast } from 'vue-sonner'
-
 export const useErrorHandler = () => {
+  const toast = useAppToast()
+
   const parseApiError = (error) => {
     if (!error) return 'An unknown error occurred'
 

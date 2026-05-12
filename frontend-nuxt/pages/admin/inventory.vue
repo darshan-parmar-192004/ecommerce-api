@@ -1,19 +1,19 @@
 <script setup>
-import { useApi } from '~/composables/useApi'
-
 definePageMeta({
   layout: 'admin',
   middleware: 'admin'
 })
 
+const { admin: adminApi } = useApi()
 const inventory = ref([])
 const loading = ref(true)
 
 const fetchInventory = async () => {
   loading.value = true
   try {
-    const { data: products } = await useApi('/products')
-    inventory.value = (products || []).map(product => ({
+    const response = await adminApi.products.list()
+    const products = response.data || response || []
+    inventory.value = products.map(product => ({
       product_name: product.name,
       product_id: product.product_id,
       warehouse_id: product.warehouse_id || 'N/A',

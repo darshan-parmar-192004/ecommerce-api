@@ -215,7 +215,7 @@ useSeoMeta({
               <Button @click="clearFilters" label="Clear all" text size="small" class="!text-sm" />
             </div>
             
-            <div class="space-y-6">
+            <div class="flex flex-col gap-4">
               <div>
                 <label class="block text-sm font-medium text-on_surface_variant mb-2">Search</label>
                 <div class="relative">
@@ -288,10 +288,9 @@ useSeoMeta({
               
               <div>
                 <label class="block text-sm font-medium text-on_surface_variant mb-2">Price Range</label>
-                <div class="flex items-center gap-2">
-                  <InputNumber v-model="minPrice" placeholder="Min" class="w-full" :min="0" />
-                  <span class="text-outline">-</span>
-                  <InputNumber v-model="maxPrice" placeholder="Max" class="w-full" :min="0" />
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                  <InputNumber v-model="minPrice" placeholder="Min" style="width: 100%; min-width: 0;" input-style="width: 100%; box-sizing: border-box;" :min="0" />
+                  <InputNumber v-model="maxPrice" placeholder="Max" style="width: 100%; min-width: 0;" input-style="width: 100%; box-sizing: border-box;" :min="0" />
                 </div>
               </div>
 
@@ -317,29 +316,6 @@ useSeoMeta({
           </div>
 
           <template v-else>
-            <div v-if="categories.length > 0" class="mb-8">
-              <div class="flex flex-wrap gap-3">
-                <Button
-                  @click="selectedCategory = ''; applyFilters()"
-                  :label="'All'"
-                  :class="[
-                    selectedCategory === '' ? 'bg-gradient-to-r from-primary to-primary-container text-white shadow-lg shadow-primary/25' : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high'
-                  ]"
-                  size="small"
-                />
-                <Button
-                  v-for="cat in categories"
-                  :key="cat.category_id"
-                  @click="selectedCategory = cat.category_id; applyFilters()"
-                  :label="cat.name"
-                  :class="[
-                    selectedCategory === cat.category_id ? 'bg-gradient-to-r from-primary to-primary-container text-white shadow-lg shadow-primary/25' : 'bg-surface-container text-on_surface_variant hover:bg-surface-container-high'
-                  ]"
-                  size="small"
-                />
-              </div>
-            </div>
-
             <div v-if="products.length === 0" class="bg-surface-container-lowest rounded-xl shadow-ambient p-12 text-center">
               <i class="pi pi-box text-6xl text-outline mb-4" />
               <h2 class="mt-4 text-xl font-medium text-on_surface">No products found</h2>

@@ -1,43 +1,36 @@
 <script setup>
+const email = ref('')
+const password = ref('')
+
 definePageMeta({
   layout: 'auth'
 })
 
-import { useForm, useController } from '@vuehookform/core'
-import * as z from 'zod'
-
 const route = useRoute()
-const { success: showSuccess } = useAppToast()
+const { success: showSuccess, error: showError } = useAppToast()
 
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required')
-})
-
-const { control, handleSubmit, reset, setError } = useForm({
-  schema: loginSchema,
-  defaultValues: {
-    email: '',
-    password: ''
-  }
-})
-
-const emailControl = useController({ name: 'email', control })
-const passwordControl = useController({ name: 'password', control })
+const loading = ref(false)
+const formError = ref('')
+const redirectUrl = ref(route.query.redirect || '/')
 
 const { auth } = useApi()
 
-const onSubmit = async (data) => {
+const onSubmit = async () => {
+  if (!email.value || !password.value) {
+    formError.value = 'All fields are required'
+    return
+  }
+  loading.value = true
+  formError.value = ''
   try {
-    const result = await auth.login(data)
-    console.log('Login result:', result)
-
+    const result = await auth.login({ email: email.value, password: password.value })
     showSuccess(`Welcome back, ${result.customer?.name || 'User'}!`)
-
-    const redirect = route.query.redirect || '/'
-    await navigateTo(redirect)
+    await navigateTo(redirectUrl.value)
   } catch (err) {
-    setError('root', { message: err.message || 'Login failed' })
+    const message = err.message || 'Login failed'
+    formError.value = message
+    showError(message)
+    loading.value = false
   }
 }
 
@@ -60,7 +53,12 @@ useSeoMeta({
     </div>
 
     <div class="rounded-2xl p-8 relative overflow-hidden bg-surface-container-lowest shadow-ambient">
-      <form @submit="handleSubmit(onSubmit)" class="space-y-5">
+      <form @submit.prevent="onSubmit" class="space-y-5">
+        <Message v-if="formError" severity="error" :closable="false" class="!mb-0">
+          <i class="pi pi-exclamation-triangle mr-2" />
+          {{ formError }}
+        </Message>
+
         <div>
           <label for="email" class="block text-xs font-semibold uppercase tracking-wider mb-3 text-on_surface_variant">
             Email Address
@@ -69,9 +67,8 @@ useSeoMeta({
             <InputIcon class="pi pi-envelope" />
             <InputText
               id="email"
-              :value="emailControl.field.value"
-              @update:model-value="emailControl.field.onChange"
-              @blur="emailControl.field.onBlur"
+              :model-value="email"
+              @update:model-value="email = $event"
               type="email"
               required
               class="w-full !pl-10"
@@ -93,9 +90,8 @@ useSeoMeta({
             <InputIcon class="pi pi-lock" />
             <InputText
               id="password"
-              :value="passwordControl.field.value"
-              @update:model-value="passwordControl.field.onChange"
-              @blur="passwordControl.field.onBlur"
+              :model-value="password"
+              @update:model-value="password = $event"
               type="password"
               required
               class="w-full !pl-10"
@@ -106,13 +102,14 @@ useSeoMeta({
 
         <Button
           type="submit"
-          label="Sign In"
+          :loading="loading"
+          :label="loading ? 'Signing in...' : 'Sign In'"
           class="w-full !py-3"
         />
 
         <p class="text-center pt-2 text-outline">
           <span class="text-sm">Don't have an account?</span>
-          <NuxtLink to="/auth/register" class="text-sm font-semibold ml-1 transition-colors hover:text-primary text-primary">
+          <NuxtLink to="/auth/register" @click.stop class="text-sm font-semibold ml-1 transition-colors hover:text-primary text-primary">
             Create Account
           </NuxtLink>
         </p>

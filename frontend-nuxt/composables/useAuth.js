@@ -27,8 +27,9 @@ export const useAuth = () => {
     authStore.loadAuth()
   }
 
-  const getTokenFromCookie = (event) => {
-    return getCookie(event, 'auth_token')
+  const getTokenFromCookie = () => {
+    const tokenCookie = useCookie('auth_token')
+    return tokenCookie.value
   }
 
   return {

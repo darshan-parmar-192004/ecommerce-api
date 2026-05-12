@@ -89,9 +89,10 @@ const averageRating = computed(() => {
     </div>
 
     <div v-else-if="product" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div class="relative group">
+      <div style="position: relative; overflow: hidden;">
         <div 
           class="bg-surface-container aspect-square rounded-lg flex items-center justify-center overflow-hidden cursor-zoom-in"
+          style="position: relative;"
           @mouseenter="isZoomed = true"
           @mouseleave="isZoomed = false"
           @mousemove="handleMouseMove"
@@ -106,7 +107,7 @@ const averageRating = computed(() => {
             <i class="pi pi-box text-8xl text-outline" />
           </div>
           
-          <div v-if="isZoomed" class="absolute inset-0 pointer-events-none border-2 border-primary/50 rounded-lg"></div>
+          <div v-if="isZoomed" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; border: 2px solid rgba(28, 49, 227, 0.5); border-radius: 0.5rem;"></div>
         </div>
         
         <Button

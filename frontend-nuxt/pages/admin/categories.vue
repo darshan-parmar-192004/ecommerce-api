@@ -1,11 +1,10 @@
 <script setup>
-import { useApi } from '~/composables/useApi'
-
 definePageMeta({
   layout: 'admin',
   middleware: 'admin'
 })
 
+const { admin: adminApi } = useApi()
 const categories = ref([])
 const loading = ref(true)
 
@@ -28,8 +27,8 @@ const categoryTree = computed(() => {
 const fetchCategories = async () => {
   loading.value = true
   try {
-    const { data } = await useApi('/categories')
-    categories.value = data || []
+    const response = await adminApi.categories.list()
+    categories.value = response.data || response || []
   } catch (err) {
     console.error('Failed to fetch categories', err)
   } finally {

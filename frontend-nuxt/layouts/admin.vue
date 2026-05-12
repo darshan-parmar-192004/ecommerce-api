@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-brand-900 flex">
+  <div class="min-h-screen bg-surface flex">
     <AdminSidebar />
-    <main class="flex-1 p-8 overflow-auto dark:bg-brand-900">
+    <main class="flex-1 p-8 overflow-auto">
       <NuxtPage />
     </main>
     <Toast position="bottom-right" />

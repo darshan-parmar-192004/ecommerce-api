@@ -70,7 +70,7 @@ const { isDark } = storeToRefs(themeStore)
             </div>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div style="display: flex; align-items: center; gap: 1.5rem;">
             <!-- Cart Button -->
             <button
               @click="cartStore.toggleCart"
@@ -139,13 +139,6 @@ const { isDark } = storeToRefs(themeStore)
                       <span class="text-sm font-medium">Admin Panel</span>
                     </NuxtLink>
                     <hr class="mx-3 my-1 border-outline-variant/20" />
-                    <NuxtLink
-                      to="/"
-                      class="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-low transition-colors"
-                    >
-                      <i class="pi pi-home text-on_surface_variant" />
-                      <span class="text-sm font-medium text-on_surface_variant">Back to Website</span>
-                    </NuxtLink>
                     <button
                       @click="handleLogout"
                       class="w-full flex items-center gap-3 px-4 py-3 hover:bg-error-container/30 transition-colors text-error"

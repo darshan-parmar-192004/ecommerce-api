@@ -90,7 +90,7 @@ export const useApi = () => {
         tokenCookie.value = result.token
         await authStore.setAuth({
           token: result.token,
-          customer: result.data?.customer || result.customer
+          data: result.data       // backend returns {data: customer, token}
         })
       }
       return result
@@ -114,6 +114,8 @@ export const useApi = () => {
           token: result.token,
           customer: result.customer
         })
+        const userCookie = useCookie('auth_user', { maxAge: 60 * 60 * 24 })
+        userCookie.value = JSON.stringify(authStore.user)
       }
       return result
     },
