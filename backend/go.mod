@@ -9,7 +9,6 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/jszwec/csvutil v1.10.0
 	github.com/redis/go-redis/v9 v9.18.0
 	go.uber.org/zap v1.27.1
 	gopkg.in/doug-martin/goqu.v5 v5.0.0
