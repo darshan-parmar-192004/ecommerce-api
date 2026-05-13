@@ -1,1 +1,0 @@
-import{X as i,H as r,p as a,S as o}from"./-e0yDQ9r.js";const n=i(t=>{const e=r();if(!e.isAuthenticated||!e.token)return a(`/auth/login?redirect=${encodeURIComponent(t.fullPath)}`);if(!e.isAdmin)throw o({statusCode:403,message:"Access denied. Admin privileges required."})});export{n as default};

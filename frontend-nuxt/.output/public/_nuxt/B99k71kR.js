@@ -1,1 +1,0 @@
-import{X as u,H as s,Y as r,Z as i,B as c,p as l}from"./-e0yDQ9r.js";const f=u(async n=>{let e,t;const a=s(),o=r("auth_token");if(!o.value&&!a.token)return[e,t]=i(()=>c()),await e,t(),o.value||a.token?void 0:l(`/auth/login?redirect=${encodeURIComponent(n.fullPath)}`)});export{f as default};

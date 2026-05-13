@@ -1,1 +1,0 @@
-import{bq as e}from"./-e0yDQ9r.js";const c=()=>{const r=e();return{success:s=>{r.add({severity:"success",summary:"Success",detail:s,life:3e3})},error:s=>{r.add({severity:"error",summary:"Error",detail:s,life:5e3})},info:s=>{r.add({severity:"info",summary:"Info",detail:s,life:3e3})},warning:s=>{r.add({severity:"warn",summary:"Warning",detail:s,life:4e3})}}};export{c as u};
