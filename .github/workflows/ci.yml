@@ -30,3 +30,79 @@ jobs:
           cd backend
           golangci-lint run ./...
 
+  test:
+    name: Run Go Tests
+    runs-on: vm-hosted
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.25.x"
+
+      - name: Download dependencies
+        run: |
+          cd backend
+          go mod download
+
+      - name: Run tests
+        run: |
+          cd backend
+          if ls **/*_test.go 1> /dev/null 2>&1; then
+            go test ./... -v
+          else
+            echo "No test files found. Skipping tests."
+          fi
+
+  container-test:
+    name: Container Integration Test
+    runs-on: vm-hosted
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Create .env file for CI
+        run: |
+          cat <<EOF > .env
+          APP_ENV=ci
+          PORT=8080
+          BLUEPRINT_DB_DATABASE=blueprint
+          BLUEPRINT_DB_USERNAME=blueprint
+          BLUEPRINT_DB_PASSWORD=blueprint
+          BLUEPRINT_DB_SCHEMA=public
+          BLUEPRINT_DB_PORT=5432
+          EOF
+
+      - name: Install docker-compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+          
+      - name: Cleanup existing CI containers
+        run: |
+          docker-compose down -v --remove-orphans || true
+          docker rm -f $(docker ps -aq --filter name=backend) 2>/dev/null || true
+
+      - name: Build and start containers
+        run: |
+          docker-compose up -d --build
+
+      - name: Wait for services
+        run: |
+          sleep 15
+
+      - name: Show logs if failure
+        if: failure()
+        run: |
+          docker-compose logs
+
+      - name: Stop containers
+        if: always()
+        run: |
+          docker-compose down
