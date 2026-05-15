@@ -6,7 +6,6 @@ import (
 	"backend/internal/logger"
 	"context"
 	"database/sql"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -17,13 +16,14 @@ import (
 type Service interface {
 	Health() map[string]string
 	Close() error
+	DB() *sql.DB
 }
 
 type service struct {
 	db *sql.DB
 }
 
-var dbInstance *service
+var dbInstance Service
 
 func New() Service {
 	if dbInstance != nil {
@@ -35,24 +35,30 @@ func New() Service {
 		logger.Log.Fatalf("failed to load config: %v", err)
 	}
 
-	return newWithConfig(cfg)
-}
-
-func newWithConfig(cfg *config.AppConfig) *service {
-	db, err := sql.Open("pgx", cfg.GetDSN())
+	connStr := cfg.GetDSN()
+	db, err := sql.Open(cfg.DBDialect, connStr)
 	if err != nil {
 		logger.Log.Fatalf("failed to open database: %v", err)
 	}
 
-	svc := &service{
+	db.SetMaxOpenConns(constants.DBMaxOpenConns)
+	db.SetMaxIdleConns(constants.DBMaxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(constants.DBConnMaxLifetime) * time.Minute)
+
+	dbInstance = &service{
 		db: db,
 	}
-	dbInstance = svc
-	return svc
+
+	logger.Log.Infof("Database connection established: %s/%s", cfg.DBHost, cfg.DBName)
+	return dbInstance
+}
+
+func (s *service) DB() *sql.DB {
+	return s.db
 }
 
 func (s *service) Health() map[string]string {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(constants.DBTimeoutSec)*time.Second)
 	defer cancel()
 
 	stats := make(map[string]string)
@@ -60,8 +66,7 @@ func (s *service) Health() map[string]string {
 	err := s.db.PingContext(ctx)
 	if err != nil {
 		stats[constants.JSONFieldStatus] = constants.ResponseStatusDown
-		stats[constants.JSONFieldError] = fmt.Sprintf("db down: %v", err)
-		logger.Log.Errorf("db down: %v", err)
+		stats[constants.JSONFieldError] = err.Error()
 		return stats
 	}
 
@@ -69,34 +74,24 @@ func (s *service) Health() map[string]string {
 	stats[constants.JSONFieldMessage] = constants.HealthDBUp
 
 	dbStats := s.db.Stats()
+
 	stats["open_connections"] = strconv.Itoa(dbStats.OpenConnections)
 	stats["in_use"] = strconv.Itoa(dbStats.InUse)
 	stats["idle"] = strconv.Itoa(dbStats.Idle)
 	stats["wait_count"] = strconv.FormatInt(dbStats.WaitCount, 10)
 	stats["wait_duration"] = dbStats.WaitDuration.String()
-	stats["max_idle_closed"] = strconv.FormatInt(dbStats.MaxIdleClosed, 10)
-	stats["max_lifetime_closed"] = strconv.FormatInt(dbStats.MaxLifetimeClosed, 10)
-
-	if dbStats.OpenConnections > 40 {
-		stats[constants.JSONFieldMessage] = constants.HealthDBHeavyLoad
-	}
-
-	if dbStats.WaitCount > 1000 {
-		stats[constants.JSONFieldMessage] = constants.HealthDBHighWaits
-	}
-
-	if dbStats.MaxIdleClosed > int64(dbStats.OpenConnections)/2 {
-		stats[constants.JSONFieldMessage] = constants.HealthDBIdleClosing
-	}
-
-	if dbStats.MaxLifetimeClosed > int64(dbStats.OpenConnections)/2 {
-		stats[constants.JSONFieldMessage] = constants.HealthDBLifetimeClose
-	}
 
 	return stats
 }
 
 func (s *service) Close() error {
-	logger.Log.Info("Disconnected from database")
+	if logger.Log != nil {
+		logger.Log.Info("Closing database connection")
+	}
 	return s.db.Close()
+}
+
+// NewWithDB creates a new database service with an existing DB connection (for testing)
+func NewWithDB(db *sql.DB) Service {
+	return &service{db: db}
 }

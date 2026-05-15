@@ -1,318 +1,190 @@
 package controllers
 
 import (
-	"backend/internal/constants"
-	"backend/internal/models"
-	"backend/internal/services"
-	"backend/internal/utils"
+	"errors"
 	"fmt"
-	"math/rand/v2"
 	"strconv"
 	"strings"
 	"time"
 
-	"backend/internal/logger"
+	"backend/internal/constants"
+	"backend/internal/models"
+	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
-type ProductController struct {
-	Service *services.ProductService
+type ProductInput struct {
+	Name        string  `json:"name"`
+	CategoryID  string  `json:"category_id"`
+	Price       float64 `json:"price"`
+	Description string  `json:"description"`
 }
 
-func NewProductController(service *services.ProductService) *ProductController {
-	return &ProductController{
-		Service: service,
+type ValidationResult struct {
+	Errors map[string]interface{}
+	Status int
+	Code   string
+}
+
+func ValidateProductInput(input ProductInput) ValidationResult {
+	errorsMap := make(map[string]interface{})
+
+	if input.Name == "" {
+		errorsMap["name"] = "Name is required cannot be empty"
+	} else if len(input.Name) > constants.MaxProductNameLength {
+		errorsMap["name"] = fmt.Sprintf("Name must not exceed %d characters", constants.MaxProductNameLength)
 	}
+
+	if input.Price == 0 {
+		errorsMap["price"] = "Price is required"
+	} else if input.Price <= 0 {
+		errorsMap["price"] = "Price must not be negative or greater than 0"
+	}
+
+	if input.CategoryID == "" {
+		errorsMap["category_id"] = "Category id is required"
+	} else if _, err := uuid.Parse(input.CategoryID); err != nil {
+		errorsMap["category_id"] = "Category id must be a valid UUID"
+	}
+
+	if len(input.Description) > constants.MaxProductDescLength {
+		errorsMap["description"] = fmt.Sprintf("Description must not exceed %d characters", constants.MaxProductDescLength)
+	}
+
+	if len(errorsMap) > 0 {
+		return ValidationResult{
+			Errors: errorsMap,
+			Status: 422,
+			Code:   constants.ErrValidationFailed,
+		}
+	}
+
+	return ValidationResult{Errors: nil}
+}
+
+type ProductController struct {
+	Repo *models.ProductRepository
+}
+
+func NewProductController(repo *models.ProductRepository) *ProductController {
+	return &ProductController{Repo: repo}
 }
 
 func (h *ProductController) GetAll(c fiber.Ctx) error {
+	category := c.Query(constants.QueryCategory)
+	minPriceStr := c.Query(constants.QueryMinPrice)
+	maxPriceStr := c.Query(constants.QueryMaxPrice)
+	search := c.Query(constants.QuerySearch)
 
-	category := c.Query("category")
-	MinPriceStr := c.Query("min_price")
-	MaxPriceStr := c.Query("max_price")
-	search := c.Query("search")
+	pageStr := c.Query(constants.QueryPage, strconv.Itoa(constants.DefaultPage))
+	limitStr := c.Query(constants.QueryLimit, strconv.Itoa(constants.DefaultLimit))
 
-	pageStr := c.Query("page", strconv.Itoa(constants.DefaultPage))
-	limitStr := c.Query("limit", strconv.Itoa(constants.DefaultLimit))
-
-	var page, limit int
-	var err error
-
-	if pageStr != "" {
-		page, err = strconv.Atoi(pageStr)
-		if err != nil || page < 1 {
-			return utils.SendError(
-				c,
-				fiber.StatusBadRequest,
-				constants.ErrInvalidInput,
-				constants.MsgPagePositive,
-				nil,
-			)
-		}
-
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = constants.DefaultPage
 	}
 
-	if limitStr != "" {
-		limit, err = strconv.Atoi(limitStr)
-
-		if err != nil || limit < 1 {
-			return utils.SendError(
-				c,
-				fiber.StatusBadRequest,
-				constants.ErrInvalidInput,
-				constants.MsgLimitPositive,
-				nil,
-			)
-		}
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = constants.DefaultLimit
 	}
-
 	if limit > constants.MaxLimit {
 		limit = constants.MaxLimit
 	}
 
-	var minPrice, maxPrice float64
-
-	if MinPriceStr != "" {
-		minPrice, err = strconv.ParseFloat(MinPriceStr, 64)
-		if err != nil {
-			return utils.SendError(
-				c,
-				fiber.StatusBadRequest,
-				constants.ErrInvalidInput,
-				constants.MsgMinPriceValid,
-				nil,
-			)
-		}
+	products, pagination, err := h.Repo.GetAll(c.Context(), category, minPriceStr, maxPriceStr, search, page, limit)
+	if err != nil {
+		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgFailedToFetch, fiber.Map{constants.JSONFieldDebug: err.Error()})
 	}
 
-	if MaxPriceStr != "" {
-		maxPrice, err = strconv.ParseFloat(MaxPriceStr, 64)
-		if err != nil {
-			return utils.SendError(
-				c,
-				fiber.StatusBadRequest,
-				constants.ErrInvalidInput,
-				constants.MsgMaxPriceValid,
-				nil,
-			)
-		}
-	}
-
-	if MinPriceStr != "" && MaxPriceStr != "" && minPrice > maxPrice {
-		return utils.SendError(
-			c,
-			fiber.StatusBadRequest,
-			constants.ErrInvalidInput,
-			constants.MsgMinMaxPrice,
-			nil,
-		)
-	}
-
-	list := h.Service.GetAll()
-	filtered := []models.Product{}
-
-	for _, p := range list {
-
-		if MinPriceStr != "" && p.Price < minPrice {
-			continue
-		}
-
-		if MaxPriceStr != "" && p.Price > maxPrice {
-			continue
-		}
-
-		if category != "" && p.CategoryID != category {
-			continue
-		}
-
-		if search != "" {
-			searchLower := strings.ToLower(search)
-			nameMatch := strings.Contains(strings.ToLower(p.Name), searchLower)
-			descMatch := strings.Contains(strings.ToLower(p.Description), searchLower)
-
-			if !nameMatch && !descMatch {
-				continue
-			}
-		}
-		filtered = append(filtered, p)
-
-	}
-	totalItems := len(filtered)
-	totalPages := (totalItems + limit - 1) / limit
-
-	if page > totalPages && totalItems > 0 {
-		return utils.SendError(
-			c,
-			fiber.StatusBadRequest,
-			constants.ErrInvalidInput,
-			"page exceeds total page",
-			nil,
-		)
-	}
-
-	start := (page - 1) * limit
-	end := start + limit
-
-	if start > totalItems {
-		start = totalItems
-	}
-
-	if end > totalItems {
-		end = totalItems
-	}
-
-	paginated := filtered[start:end]
-
-	return c.JSON(fiber.Map{
-		constants.JSONFieldData: paginated,
-		constants.JSONFieldPagination: fiber.Map{
-			constants.JSONFieldPage:       page,
-			constants.JSONFieldLimit:      limit,
-			constants.JSONFieldTotalItems: totalItems,
-			constants.JSONFieldTotalPages: totalPages,
-		},
+	return apperrors.SendSuccess(c, fiber.StatusOK, fiber.Map{
+		constants.JSONFieldData:       products,
+		constants.JSONFieldPagination: pagination,
 	})
 }
 
 func (h *ProductController) GetById(c fiber.Ctx) error {
-	id := c.Params("id")
+	id := c.Params(constants.ParamID)
 
-	product, exists := h.Service.GetByID(id)
-	if !exists {
-		return utils.SendError(
-			c,
-			fiber.StatusNotFound,
-			constants.ErrProductNotFound,
-			fmt.Sprintf(constants.MsgProductNotFound, id),
-			nil,
-		)
+	product, err := h.Repo.GetByID(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRows) {
+			return apperrors.SendError(c, fiber.StatusNotFound, constants.ErrProductNotFound, constants.MsgProductNotFound2, nil)
+		}
+		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgFailedToFetch, fiber.Map{constants.JSONFieldError: err.Error()})
 	}
-	return c.JSON(product)
-}
-
-func generateProductID() string {
-	return fmt.Sprintf(constants.ProductIDPrefix+constants.ProductIDFormat, rand.IntN(100000000))
+	return apperrors.SendSuccess(c, fiber.StatusOK, product)
 }
 
 func (h *ProductController) Create(c fiber.Ctx) error {
+	var input ProductInput
 
-	var product models.Product
-
-	if err := c.Bind().Body(&product); err != nil {
-		return utils.SendError(
-			c,
-			fiber.StatusBadRequest,
-			constants.ErrInvalidInput,
-			constants.MsgMalformedJSON,
-			nil,
-		)
+	if err := c.Bind().Body(&input); err != nil {
+		return apperrors.SendError(c, fiber.StatusBadRequest, constants.ErrInvalidInput, constants.MsgMalformedJSON, fiber.Map{constants.JSONFieldDetails: err.Error()})
 	}
 
-	product.ProductID = generateProductID()
-	product.CreatedAt = time.Now()
-
-	if validationErrors, status, code := validateProductInput(product); validationErrors != nil {
-		return utils.SendError(
-			c,
-			status,
-			code,
-			constants.MsgValidationEmpty,
-			nil,
-		)
-
+	if validation := ValidateProductInput(input); validation.Errors != nil {
+		return apperrors.SendError(c, fiber.StatusUnprocessableEntity, validation.Code, constants.MsgValidationFailed, validation.Errors)
 	}
 
-	h.Service.Create(product)
-	if !h.Service.Store.DisablePersistance {
-		err := h.Service.AppendToCSV(constants.CSVProductsPath, product)
-		if err != nil {
-			return utils.SendError(
-				c,
-				fiber.StatusInternalServerError,
-				constants.ErrInternal,
-				constants.MsgPersistFailed,
-				nil,
-			)
+	productID := uuid.New().String()
+
+	newProduct, err := h.Repo.Create(c.Context(), productID, input.Name, input.CategoryID, input.Price, input.Description, time.Now())
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			return apperrors.SendError(c, fiber.StatusConflict, constants.ErrDuplicateKey, constants.MsgProductIDExists, nil)
 		}
+		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgFailedToCreate, fiber.Map{constants.JSONFieldDebug: err.Error()})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(product)
+	return apperrors.SendSuccess(c, fiber.StatusCreated, newProduct)
 }
 
 func (h *ProductController) Update(c fiber.Ctx) error {
-	id := c.Params("id")
+	id := c.Params(constants.ParamID)
 
-	var input models.Product
-
-	if err := c.Bind().Body(&input); err != nil {
-		return utils.SendError(
-			c,
-			fiber.StatusBadRequest,
-			constants.ErrInvalidInput,
-			constants.MsgInvalidJSON,
-			nil,
-		)
+	exists, err := h.Repo.Exists(c.Context(), id)
+	if err != nil {
+		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgCheckProduct, fiber.Map{constants.JSONFieldDebug: err.Error()})
 	}
-
-	existing, exists := h.Service.GetByID(id)
 	if !exists {
-		return utils.SendError(
-			c,
-			fiber.StatusNotFound,
-			constants.ErrProductNotFound,
-			fmt.Sprintf(constants.MsgProductNotFound2, id),
-			nil,
-		)
+		return apperrors.SendError(c, fiber.StatusNotFound, constants.ErrProductNotFound, fmt.Sprintf(constants.MsgProductNotFound2, id), nil)
 	}
 
-	if validationErrors, status, code := validateProductInput(input); validationErrors != nil {
-		return utils.SendError(
-			c,
-			status,
-			code,
-			constants.MsgValidationUpdate,
-			nil,
-		)
-
+	var input ProductInput
+	if err := c.Bind().Body(&input); err != nil {
+		return apperrors.SendError(c, fiber.StatusBadRequest, constants.ErrInvalidInput, constants.MsgInvalidJSON, nil)
 	}
 
-	input.ProductID = existing.ProductID
-	input.CreatedAt = existing.CreatedAt
+	if validation := ValidateProductInput(input); validation.Errors != nil {
+		return apperrors.SendError(c, fiber.StatusUnprocessableEntity, validation.Code, constants.MsgValidationFailed, validation.Errors)
+	}
 
-	h.Service.Update(id, input)
+	updatedProduct, err := h.Repo.Update(c.Context(), id, input.Name, input.CategoryID, input.Price, input.Description)
+	if err != nil {
+		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgFailedToUpdate, fiber.Map{constants.JSONFieldDebug: err.Error()})
+	}
 
-	return c.JSON(input)
+	return apperrors.SendSuccess(c, fiber.StatusOK, updatedProduct)
 }
 
 func (h *ProductController) Delete(c fiber.Ctx) error {
-	id := c.Params("id")
+	id := c.Params(constants.ParamID)
 
-	_, exists := h.Service.GetByID(id)
-	if !exists {
-		return utils.SendError(
-			c,
-			fiber.StatusNotFound,
-			constants.ErrProductNotFound,
-			fmt.Sprintf(constants.MsgProductNotFound2, id),
-			nil,
-		)
-	}
-
-	h.Service.Delete(id)
-
-	logger.Log.Info("Deleting ID:", id)
-	logger.Log.Info("Map size before delete:", len(h.Service.Store.Products))
-	err := h.Service.RewriteCSV(constants.CSVProductsPath)
+	exists, err := h.Repo.Exists(c.Context(), id)
 	if err != nil {
-		return utils.SendError(
-			c,
-			fiber.StatusInternalServerError,
-			constants.ErrInternal,
-			constants.MsgStorageFailed,
-			nil,
-		)
+		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgCheckProduct, fiber.Map{constants.JSONFieldDebug: err.Error()})
+	}
+	if !exists {
+		return apperrors.SendError(c, fiber.StatusNotFound, constants.ErrProductNotFound, fmt.Sprintf(constants.MsgProductNotFound2, id), nil)
 	}
 
-	return c.JSON(fiber.Map{constants.JSONFieldMessage: constants.ResponseMessageDeleted})
+	err = h.Repo.Delete(c.Context(), id)
+	if err != nil {
+		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgFailedToDelete, fiber.Map{constants.JSONFieldDebug: err.Error()})
+	}
+
+	return apperrors.SendSuccess(c, fiber.StatusOK, fiber.Map{constants.JSONFieldMessage: constants.ResponseMessageDeleted})
 }

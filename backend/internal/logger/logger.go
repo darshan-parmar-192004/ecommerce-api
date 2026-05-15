@@ -1,6 +1,8 @@
 package logger
 
 import (
+	"backend/internal/constants"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -10,16 +12,16 @@ var Log *zap.SugaredLogger
 func Init() error {
 	config := zap.Config{
 		Level:            zap.NewAtomicLevelAt(zapcore.InfoLevel),
-		Encoding:         "json",
-		OutputPaths:      []string{"stdout"},
-		ErrorOutputPaths: []string{"stderr"},
+		Encoding:         constants.LoggerEncoding,
+		OutputPaths:      []string{constants.LoggerOutputStdout},
+		ErrorOutputPaths: []string{constants.LoggerOutputStderr},
 		EncoderConfig: zapcore.EncoderConfig{
-			TimeKey:        "time",
-			LevelKey:       "level",
-			NameKey:        "logger",
-			CallerKey:      "caller",
-			MessageKey:     "msg",
-			StacktraceKey:  "stacktrace",
+			TimeKey:        constants.LoggerKeyTime,
+			LevelKey:       constants.LoggerKeyLevel,
+			NameKey:        constants.LoggerKeyLogger,
+			CallerKey:      constants.LoggerKeyCaller,
+			MessageKey:     constants.LoggerKeyMsg,
+			StacktraceKey:  constants.LoggerKeyStacktrace,
 			LineEnding:     zapcore.DefaultLineEnding,
 			EncodeLevel:    zapcore.CapitalLevelEncoder,
 			EncodeTime:     zapcore.ISO8601TimeEncoder,
