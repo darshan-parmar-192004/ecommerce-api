@@ -1,12 +1,12 @@
 export const useApi = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public?.apiBase || 'http://localhost:8080'
-  const token = useCookie('auth_token')
+  const token = import.meta.client ? localStorage.getItem('auth_token') : null
 
   const headers = () => {
     const h = { 'Content-Type': 'application/json' }
-    if (token.value) {
-      h['Authorization'] = `Bearer ${token.value}`
+    if (token) {
+      h['Authorization'] = `Bearer ${token}`
     }
     return h
   }

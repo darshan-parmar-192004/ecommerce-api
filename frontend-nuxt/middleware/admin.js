@@ -1,15 +1,24 @@
-export default defineNuxtRouteMiddleware((to) => {
-  const authStore = useAuthStore()
-  if (import.meta.server) {
-    authStore.loadAuthFromCookie()
+export default defineNuxtRouteMiddleware(async (to) => {
+  let token = null
+  if (import.meta.client) {
+    token = localStorage.getItem('auth_token')
   }
-  if (!authStore.isAuthenticated || !authStore.token) {
+
+  if (!token) {
     return navigateTo(`/auth/login?redirect=${encodeURIComponent(to.fullPath)}`)
   }
-  if (!authStore.isAdmin) {
-    throw createError({
-      statusCode: 403,
-      message: 'Access denied. Admin privileges required.'
-    })
+
+  try {
+    const { auth } = useApi()
+    const data = await auth.me()
+    const role = data?.data?.role || data?.role
+    if (role !== 'admin') {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'Forbidden - Admin access required'
+      })
+    }
+  } catch {
+    return navigateTo(`/auth/login?redirect=${encodeURIComponent(to.fullPath)}`)
   }
 })
