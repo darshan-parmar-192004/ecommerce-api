@@ -83,7 +83,6 @@ const goToPayment = () => { if (validateShipping()) currentStep.value = 2 }
 const mockRazorpayPayment = async () => {
   processingPayment.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 2000))
     await handleSubmit()
   } catch (err) {
     showError('Payment failed. Please try again.')

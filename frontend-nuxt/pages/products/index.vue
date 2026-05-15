@@ -10,7 +10,7 @@ const search = ref(route.query.search || '')
 const minPrice = ref(route.query.min_price || '')
 const maxPrice = ref(route.query.max_price || '')
 const selectedCategory = ref(route.query.category || '')
-const currentPage = ref(Number(route.query.page) || 1)
+const currentPage = ref(parseInt(route.query.page, 10) || 1)
 
 const showSuggestions = ref(false)
 const searchSuggestions = ref([])
@@ -97,7 +97,7 @@ watch(() => route.query, (newQuery) => {
   minPrice.value = newQuery.min_price || ''
   maxPrice.value = newQuery.max_price || ''
   selectedCategory.value = newQuery.category || ''
-  currentPage.value = Number(newQuery.page) || 1
+  currentPage.value = parseInt(newQuery.page, 10) || 1
 }, { immediate: true, deep: true })
 
 const productsData = ref(null)
