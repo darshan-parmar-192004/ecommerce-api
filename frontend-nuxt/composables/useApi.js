@@ -27,7 +27,7 @@ export const useApi = () => {
         headers
       })
 
-      const data = await response.json().catch(() => ({}))
+      const data = await response.json()
 
       if (!response.ok) {
         let message = 'Request failed'
