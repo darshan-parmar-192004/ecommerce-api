@@ -1,4 +1,6 @@
 <script setup>
+import { routes } from '~/utils/constants'
+
 const name = ref('')
 const email = ref('')
 const password = ref('')
@@ -16,21 +18,9 @@ const success = ref(false)
 
 const { auth } = useApi()
 
-const passwordStrength = computed(() => {
-  const pwd = password.value
-  if (!pwd) return { level: 0, text: '', color: '' }
-
-  let score = 0
-  if (pwd.length >= 6) score++
-  if (pwd.length >= 8) score++
-  if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score++
-  if (/\d/.test(pwd)) score++
-  if (/[^a-zA-Z0-9]/.test(pwd)) score++
-
-  if (score <= 2) return { level: 1, text: 'Weak', color: 'bg-red-500' }
-  if (score <= 3) return { level: 2, text: 'Medium', color: 'bg-yellow-500' }
-  return { level: 3, text: 'Strong', color: 'bg-green-500' }
-})
+// Import password strength utility
+import { usePasswordStrength } from '@/utils/password'
+const passwordStrength = usePasswordStrength(password)
 
 const isValidEmail = computed(() => {
   if (!email.value) return null
@@ -180,7 +170,7 @@ useSeoMeta({
 
           <p class="text-center text-on_surface_variant pt-2">
             Already have an account?
-            <NuxtLink to="/auth/login" class="text-primary hover:text-primary/80 font-semibold">
+            <NuxtLink :to="routes.login" class="text-primary hover:text-primary/80 font-semibold">
               Sign in
             </NuxtLink>
           </p>

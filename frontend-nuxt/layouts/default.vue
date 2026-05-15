@@ -1,5 +1,6 @@
 <script setup>
 import ToggleSwitch from 'primevue/toggleswitch'
+import { routes } from '~/utils/constants'
 import { useCartStore } from '~/stores/cart'
 import { useAuthStore } from '~/stores/auth'
 import { useThemeStore } from '~/stores/theme'
@@ -132,7 +133,7 @@ const { isDark } = storeToRefs(themeStore)
                     </NuxtLink>
                     <NuxtLink
                       v-if="authStore.isAdmin"
-                      to="/admin"
+                      :to="routes.adminDashboard"
                       class="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-low transition-colors text-primary"
                     >
                       <i class="pi pi-shield" />
@@ -152,14 +153,14 @@ const { isDark } = storeToRefs(themeStore)
             </template>
             <template v-else>
               <NuxtLink
-                to="/auth/login"
+                :to="routes.login"
                 class="px-5 py-2.5 text-white rounded-md font-medium text-sm transition-all duration-300 bg-gradient-to-r from-primary to-primary-container shadow-glow hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
               >
                 Login
               </NuxtLink>
               <NuxtLink
                 v-if="authStore.isAdmin"
-                to="/admin"
+                :to="routes.adminDashboard"
                 class="text-sm font-medium text-primary"
               >
                 Admin Panel

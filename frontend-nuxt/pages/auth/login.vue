@@ -1,4 +1,6 @@
 <script setup>
+import { routes } from '~/utils/constants'
+
 const email = ref('')
 const password = ref('')
 
@@ -109,7 +111,7 @@ useSeoMeta({
 
         <p class="text-center pt-2 text-outline">
           <span class="text-sm">Don't have an account?</span>
-          <NuxtLink to="/auth/register" @click.stop class="text-sm font-semibold ml-1 transition-colors hover:text-primary text-primary">
+          <NuxtLink :to="routes.register" class="text-sm font-semibold ml-1 transition-colors hover:text-primary text-primary" aria-label="Create new account">
             Create Account
           </NuxtLink>
         </p>
