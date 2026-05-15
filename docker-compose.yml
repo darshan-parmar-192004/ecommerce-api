@@ -25,6 +25,13 @@ services:
       BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
       BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
       BLUEPRINT_DB_DIALECT: pgx
+      BLUEPRINT_JWT_SECRET: ${BLUEPRINT_JWT_SECRET}
+      BLUEPRINT_JWT_EXPIRY: ${BLUEPRINT_JWT_EXPIRY}
+      BLUEPRINT_JWT_ISSUER: ${BLUEPRINT_JWT_ISSUER}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: ${REDIS_DB}
 
     networks:
       - blueprint
@@ -51,11 +58,23 @@ services:
       - psql_volume_bp:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
 
+    networks:
+      - blueprint
+
+  redis:
+    image: docker.io/redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - 6379:6379
     networks:
       - blueprint
 

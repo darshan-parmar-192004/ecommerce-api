@@ -51,13 +51,11 @@ func (h *InventoryController) GetCategoryTree(c fiber.Ctx) error {
 			fiber.StatusInternalServerError,
 			constants.ErrDBQueryGeneric,
 			constants.MsgFailedToFetch,
-			fiber.Map{constants.JSONFieldError: err.Error()},
+			nil,
 		)
 	}
 
-	return apperrors.SendSuccess(c, fiber.StatusOK, fiber.Map{
-		constants.JSONFieldData: tree,
-	})
+	return apperrors.SendSuccess(c, fiber.StatusOK, tree)
 }
 
 func (h *InventoryController) GetTopSellers(c fiber.Ctx) error {

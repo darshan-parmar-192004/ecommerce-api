@@ -18,13 +18,14 @@ type Category struct {
 }
 
 type Customer struct {
-	CustomerID string    `json:"customer_id" db:"customer_id"`
-	Email      string    `json:"email" db:"email"`
-	Name       string    `json:"name" db:"name"`
-	Country    string    `json:"country" db:"country"`
-	Phone      string    `json:"phone" db:"phone"`
-	CreatedAt  time.Time `json:"created_at" db:"created_at"`
-	Status     string    `json:"status" db:"status"`
+	CustomerID   string    `json:"customer_id" db:"customer_id"`
+	Email        string    `json:"email" db:"email"`
+	Name         string    `json:"name" db:"name"`
+	Country      string    `json:"country" db:"country"`
+	Phone        string    `json:"phone" db:"phone"`
+	PasswordHash string    `json:"-" db:"password_hash"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+	Status       string    `json:"status" db:"status"`
 }
 
 type Inventory struct {

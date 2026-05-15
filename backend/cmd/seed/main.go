@@ -249,8 +249,8 @@ func seedInventory(ctx context.Context, tx pgx.Tx, r *csv.Reader) error {
 	}
 
 	_, err := tx.Exec(ctx, `
-		INSERT INTO inventory (product_id, warehouse_id, quantity, updated_at, created_at, updated_at)
-		SELECT p.product_id, s.warehouse_id, s.quantity::int, s.updated_at::timestamp, NOW(), NOW()
+		INSERT INTO inventory (product_id, warehouse_id, quantity, updated_at, created_at)
+		SELECT p.product_id, s.warehouse_id, s.quantity::int, s.updated_at::timestamp, NOW()
 		FROM inv_stage s
 		JOIN products p ON s.p_code = p.code
 		ON CONFLICT (product_id, warehouse_id) DO NOTHING`)

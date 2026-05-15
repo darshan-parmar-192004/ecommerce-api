@@ -1,12 +1,14 @@
 package server
 
 import (
+	"backend/internal/cache"
 	"backend/internal/constants"
 	"backend/internal/controllers"
 	"backend/internal/database"
 	"backend/internal/logger"
 	"backend/internal/middleware"
 	"backend/internal/models"
+	"backend/internal/services"
 
 	"github.com/doug-martin/goqu"
 	"github.com/gofiber/fiber/v3"
@@ -14,7 +16,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 )
 
-func RegisterRoutes(app *fiber.App) {
+func RegisterRoutes(app *fiber.App, cacheSvc cache.Service, stats *cache.CacheStats) {
 
 	app.Use(middleware.RequestID())
 	app.Use(middleware.Logging())
@@ -31,13 +33,16 @@ func RegisterRoutes(app *fiber.App) {
 	goquDB := goqu.New(constants.DBDriverPostgres, rawDB)
 
 	productRepo := models.NewProductRepository(goquDB)
-	productController := controllers.NewProductController(productRepo)
+	productSvc := services.NewProductService(productRepo, cacheSvc, stats)
+	productController := controllers.NewProductController(productSvc)
 
 	categoryRepo := models.NewCategoryRepository(goquDB)
-	categoryController := controllers.NewCategoryController(categoryRepo)
+	categorySvc := services.NewCategoryService(categoryRepo, cacheSvc, stats)
+	categoryController := controllers.NewCategoryController(categorySvc)
 
 	customerRepo := models.NewCustomerRepository(goquDB)
-	customerController := controllers.NewCustomerController(customerRepo)
+	customerSvc := services.NewCustomerService(customerRepo)
+	customerController := controllers.NewCustomerController(customerRepo, customerSvc)
 
 	orderRepo := models.NewOrderRepository(goquDB)
 	orderController := controllers.NewOrderController(orderRepo)
@@ -45,11 +50,15 @@ func RegisterRoutes(app *fiber.App) {
 	inventoryRepo := models.NewInventoryRepository(goquDB)
 	inventoryController := controllers.NewInventoryController(inventoryRepo)
 
+	authSvc := services.NewAuthService(customerRepo, cacheSvc)
+	authController := controllers.NewAuthController(authSvc)
+	authMiddleware := middleware.AuthRequired(authSvc)
+
 	app.Get(constants.RouteProducts, productController.GetAll)
 	app.Get(constants.RouteProductsID, productController.GetById)
-	app.Post(constants.RouteProducts, productController.Create)
-	app.Put(constants.RouteProductsID, productController.Update)
-	app.Delete(constants.RouteProductsID, productController.Delete)
+	app.Post(constants.RouteProducts, authMiddleware, productController.Create)
+	app.Put(constants.RouteProductsID, authMiddleware, productController.Update)
+	app.Delete(constants.RouteProductsID, authMiddleware, productController.Delete)
 
 	app.Get(constants.RouteCategories, categoryController.GetAll)
 	app.Get(constants.RouteCategoriesProd, categoryController.GetCategoryProducts)
@@ -70,10 +79,21 @@ func RegisterRoutes(app *fiber.App) {
 	app.Get(constants.RouteInvHier, inventoryController.GetCategoryTree)
 	app.Get(constants.RouteInvTopSell, inventoryController.GetTopSellers)
 
+	app.Post(constants.RouteAuthRegister, authController.Register)
+	app.Post(constants.RouteAuthLogin, authController.Login)
+	app.Post(constants.RouteAuthLogout, authMiddleware, authController.Logout)
+
+	app.Get(constants.RouteCustomersMe, authMiddleware, customerController.GetMe)
+	app.Put(constants.RouteCustomersMe, authMiddleware, customerController.UpdateMe)
+
 	app.Get(constants.RouteHealth, func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			constants.JSONFieldStatus: constants.ResponseStatusOK,
 		})
+	})
+
+	app.Get(constants.RouteCacheStats, func(c fiber.Ctx) error {
+		return c.JSON(stats.Stats())
 	})
 
 	logger.Log.Infof("Routes registered successfully")

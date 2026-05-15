@@ -48,16 +48,16 @@ func (r *InventoryRepository) GetStockLevels(ctx context.Context) ([]map[string]
 	}
 
 	var results []StockLevel
-	err := r.db.From("inventory").As("i").Select(
-		goqu.I("p.name").As("product_name"),
-		goqu.I("i.product_id"),
-		goqu.I("i.warehouse_id"),
-		goqu.I("i.quantity"),
-		goqu.I("i.updated_at"),
+	err := r.db.From("inventory").Select(
+		goqu.I("products.name").As("product_name"),
+		goqu.I("inventory.product_id"),
+		goqu.I("inventory.warehouse_id"),
+		goqu.I("inventory.quantity"),
+		goqu.I("inventory.updated_at"),
 	).Join(
-		goqu.I("products").As("p"),
-		goqu.On(goqu.I("i.product_id").Eq(goqu.I("p.product_id"))),
-	).Order(goqu.I("i.quantity").Asc()).ScanStructsContext(ctxTimeout, &results)
+		goqu.I("products"),
+		goqu.On(goqu.I("inventory.product_id").Eq(goqu.I("products.product_id"))),
+	).Order(goqu.I("inventory.quantity").Asc()).ScanStructsContext(ctxTimeout, &results)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (r *InventoryRepository) GetCategoryTree(ctx context.Context) ([]Category, 
 	err := r.db.From("categories").Select(
 		"category_id",
 		"name",
-		"parent_category_id",
+		goqu.L(`COALESCE(parent_category_id::TEXT, '')`).As("parent_category_id"),
 	).Order(goqu.I("category_id").Asc()).ScanStructsContext(ctxTimeout, &categories)
 	if err != nil {
 		return nil, err

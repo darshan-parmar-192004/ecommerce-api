@@ -60,7 +60,11 @@ const (
 	MsgFailedToUpdate   = "Failed to update"
 	MsgFailedToDelete   = "Failed to delete"
 	MsgCheckProduct     = "Failed to check product"
-	MsgInternalError    = "Internal server error"
+	MsgInternalError     = "Internal server error"
+	MsgRegisterSuccess   = "Customer registered successfully"
+	MsgLoginSuccess      = "Login successful"
+	MsgLogoutSuccess     = "Logged out successfully"
+	MsgPasswordMinLength = "Password must be at least 8 characters"
 
 	HealthDBUp            = "It's healthy"
 	HealthDBHeavyLoad     = "The database is experiencing heavy load."
@@ -106,12 +110,25 @@ const (
 	RouteInvCLV         = "/inventory/customer-lifetime-value"
 	RouteInvHier        = "/inventory/hierarchy"
 	RouteInvTopSell     = "/inventory/top-sellers"
+	RouteAuthRegister   = "/auth/register"
+	RouteAuthLogin      = "/auth/login"
+	RouteAuthLogout     = "/auth/logout"
+	RouteCustomersMe    = "/customers/me"
+	RouteCacheStats     = "/stats/cache"
+
+	CacheKeyTokenBlacklist = "blacklist:%s"
+	CacheKeyProductList    = "products:%s:%s:%s:%s:%d:%d"
+	CacheKeyProductByID   = "product:%s"
+	CacheKeyCategoriesAll = "categories:all"
+	CacheKeyCategoriesHier = "categories:hierarchy"
 
 	ServerHeader = "backend"
 	AppName      = "backend"
 
-	HeaderXRequestID = "X-Request-Id"
-	LocalsRequestID  = "request_id"
+	HeaderXRequestID  = "X-Request-Id"
+	LocalsRequestID   = "request_id"
+	LocalsCustomerID  = "customer_id"
+	LocalsEmail       = "email"
 
 	LoggerEncoding       = "json"
 	LoggerOutputStdout   = "stdout"
@@ -143,4 +160,8 @@ var (
 	CORSAllowHeaders     = []string{"Accept", "Authorization", "Content-Type"}
 	CORSAllowCredentials = false
 	CORSMaxAge           = 300
+
+	CacheProductsListTTL = 5 * 60
+	CacheProductByIDTTL  = 10 * 60
+	CacheCategoriesTTL   = 30 * 60
 )

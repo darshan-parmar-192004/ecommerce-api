@@ -3,11 +3,15 @@ package models
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"backend/internal/constants"
 
+	"errors"
+
 	"github.com/doug-martin/goqu"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type CustomerRepository struct {
@@ -98,4 +102,59 @@ func (r *CustomerRepository) GetByID(ctx context.Context, customerID string) (*C
 		return nil, sql.ErrNoRows
 	}
 	return &customer, nil
+}
+
+func (r *CustomerRepository) FindByEmail(ctx context.Context, email string) (*Customer, error) {
+	var customer Customer
+	found, err := r.db.From("customers").Select(
+		"customer_id",
+		"email",
+		"name",
+		"country",
+		"phone",
+		"password_hash",
+		"created_at",
+		"status",
+	).Where(goqu.Ex{"email": email}).ScanStructContext(ctx, &customer)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, sql.ErrNoRows
+	}
+	return &customer, nil
+}
+
+func (r *CustomerRepository) Create(ctx context.Context, customer Customer) (*Customer, error) {
+	rec := goqu.Record{
+		"customer_id":   customer.CustomerID,
+		"email":         customer.Email,
+		"name":          customer.Name,
+		"country":       customer.Country,
+		"phone":         customer.Phone,
+		"password_hash": customer.PasswordHash,
+		"created_at":    customer.CreatedAt,
+		"status":        customer.Status,
+	}
+
+	_, err := r.db.From("customers").Insert(rec).ExecContext(ctx)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == constants.ErrCodeDuplicateKey {
+			return nil, fmt.Errorf("duplicate key")
+		}
+		return nil, err
+	}
+
+	return &customer, nil
+}
+
+func (r *CustomerRepository) Update(ctx context.Context, customerID string, updates map[string]interface{}) error {
+	rec := goqu.Record{}
+	for k, v := range updates {
+		rec[k] = v
+	}
+
+	_, err := r.db.From("customers").Where(goqu.Ex{"customer_id": customerID}).Update(rec).ExecContext(ctx)
+	return err
 }
