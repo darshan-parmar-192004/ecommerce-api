@@ -1,37 +1,43 @@
 package config
 
 import (
-	"fmt"
-	"os"
-	"strconv"
-
 	"backend/internal/constants"
+	"fmt"
+
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
 
 type AppConfig struct {
-	Port int      `envconfig:"APP_PORT"`
-	DB   DBConfig `envconfig:"-"`
+	Port          int    `envconfig:"BLUEPRINT_PORT" default:"8080"`
+	DBHost        string `envconfig:"BLUEPRINT_DB_HOST"`
+	DBPort        string `envconfig:"BLUEPRINT_DB_PORT" default:"5432"`
+	DBName        string `envconfig:"BLUEPRINT_DB_DATABASE"`
+	DBUser        string `envconfig:"BLUEPRINT_DB_USERNAME"`
+	DBPass        string `envconfig:"BLUEPRINT_DB_PASSWORD"`
+	DBSchema      string `envconfig:"BLUEPRINT_DB_SCHEMA" default:"public"`
+	DBDialect     string `envconfig:"BLUEPRINT_DB_DIALECT" default:"pgx"`
+	MigrationPath string `envconfig:"BLUEPRINT_MIGRATION_PATH" default:"internal/migrations"`
+	CategoriesCSV string `envconfig:"BLUEPRINT_CSV_CATEGORIES" default:"internal/datasets/ecommerce/categories.csv"`
+	CustomersCSV  string `envconfig:"BLUEPRINT_CSV_CUSTOMERS" default:"internal/datasets/ecommerce/customers.csv"`
+	ProductsCSV   string `envconfig:"BLUEPRINT_CSV_PRODUCTS" default:"internal/datasets/ecommerce/products.csv"`
+	OrdersCSV     string `envconfig:"BLUEPRINT_CSV_ORDERS" default:"internal/datasets/ecommerce/orders.csv"`
+	InventoryCSV  string `envconfig:"BLUEPRINT_CSV_INVENTORY" default:"internal/datasets/ecommerce/inventory.csv"`
+	OrderItemsCSV string `envconfig:"BLUEPRINT_CSV_ORDER_ITEMS" default:"internal/datasets/ecommerce/order_items.csv"`
 }
 
-type DBConfig struct {
-	Host     string `envconfig:"DB_HOST"`
-	Port     string `envconfig:"DB_PORT"`
-	Username string `envconfig:"DB_USERNAME"`
-	Password string `envconfig:"DB_PASSWORD"`
-	DBName   string `envconfig:"DB_NAME"`
-	Schema   string `envconfig:"DB_SCHEMA"`
-}
+var cfg *AppConfig
 
-// Load loads configuration from .env file or OS environment using envconfig
 func Load() (*AppConfig, error) {
+	if cfg != nil {
+		return cfg, nil
+	}
+
 	_ = godotenv.Load()
 
-	var cfg AppConfig
+	cfg = &AppConfig{}
 
-	// envconfig automatically maps environment variables to struct fields
-	err := envconfig.Process("", &cfg)
+	err := envconfig.Process("", cfg)
 	if err != nil {
 		return nil, fmt.Errorf("config error: %w", err)
 	}
@@ -40,45 +46,46 @@ func Load() (*AppConfig, error) {
 		cfg.Port = constants.DefaultPort
 	}
 
-	if cfg.DB.Schema == "" {
-		cfg.DB.Schema = "public"
+	if cfg.DBSchema == "" {
+		cfg.DBSchema = constants.DBSchemaDefault
+	}
+	if cfg.DBDialect == "" {
+		cfg.DBDialect = constants.DBDialectPgx
 	}
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 func LoadTest(dbHost, dbPort, dbName, dbUser, dbPwd string) (*AppConfig, error) {
 	return &AppConfig{
-		Port: constants.DefaultPort,
-		DB: DBConfig{
-			Host:     dbHost,
-			Port:     dbPort,
-			DBName:   dbName,
-			Username: dbUser,
-			Password: dbPwd,
-			Schema:   "public",
-		},
+		Port:      constants.DefaultPort,
+		DBHost:    dbHost,
+		DBPort:    dbPort,
+		DBName:    dbName,
+		DBUser:    dbPwd,
+		DBSchema:  constants.DBSchemaDefault,
+		DBDialect: constants.DBDriverPostgres,
 	}, nil
 }
 
 func (c *AppConfig) GetDSN() string {
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s",
-		c.DB.Username, c.DB.Password, c.DB.Host, c.DB.Port, c.DB.DBName, c.DB.Schema,
-	)
+	return "postgres://" + c.DBUser + ":" + c.DBPass + "@" + c.DBHost + ":" + c.DBPort + "/" + c.DBName + "?sslmode=disable&search_path=" + c.DBSchema
 }
 
 func GetPort() int {
-
-	if v := os.Getenv("APP_PORT"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil && p > 0 {
-			return p
-		}
+	cfg, err := Load()
+	if err != nil {
+		return constants.DefaultPort
 	}
-	if v := os.Getenv("PORT"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil && p > 0 {
-			return p
-		}
+	if cfg.Port > 0 {
+		return cfg.Port
 	}
 	return constants.DefaultPort
+}
+
+func GetDBDialect() string {
+	if cfg != nil && cfg.DBDialect != "" {
+		return cfg.DBDialect
+	}
+	return constants.DBDialectPgx
 }
