@@ -1,6 +1,7 @@
 <script setup>
 import { useUserStore } from '~/stores/user'
 import { useAuthStore } from '~/stores/auth'
+import { successMessages } from '~/constants/errorMessages'
 const userStore = useUserStore()
 const authStore = useAuthStore()
 
@@ -23,7 +24,7 @@ const updateProfile = async () => {
   try {
     await userStore.updateProfile(form)
     success.value = true
-    useAppToast().success('Profile updated successfully!')
+    useAppToast().success(successMessages.profileUpdated)
     setTimeout(() => success.value = false, 3000)
   } catch (error) {
     console.error('Failed to update profile:', error)
@@ -39,7 +40,7 @@ const updateProfile = async () => {
     
     <div class="bg-surface-container-lowest rounded-lg p-6 shadow-ambient">
       <Message v-if="success" severity="success" :closable="false" class="mb-4">
-        Profile updated successfully!
+        {{ successMessages.profileUpdated }}
       </Message>
       <form @submit.prevent="updateProfile" class="space-y-6">
         <div>

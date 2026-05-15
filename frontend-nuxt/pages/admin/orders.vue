@@ -4,6 +4,8 @@ definePageMeta({
   middleware: 'admin'
 })
 
+import { statusMessages } from '~/constants/errorMessages'
+
 const { admin: adminApi } = useApi()
 const { success: showSuccess, error: showError } = useAppToast()
 
@@ -41,7 +43,7 @@ const updateStatus = async (order, newStatus) => {
     showSuccess(`Order ${order.order_id || order.id} → ${newStatus}`)
     await fetchOrders()
   } catch (err) {
-    showError(err.message || 'Failed to update order status')
+    showError(err.message || statusMessages.orderUpdateFailed)
   }
 }
 

@@ -7,13 +7,16 @@ definePageMeta({
 
 const { admin: adminApi } = useApi()
 const stats = ref({ totalOrders: 0, totalProducts: 0, totalCustomers: 0, revenue: 0 })
+const { showError } = useErrorHandler()
 const loading = ref(false)
 
 const fetchStats = async () => {
   loading.value = true
   try {
-    const productsRes = await adminApi.products.list()
-    const ordersRes = await adminApi.orders.list()
+    const [productsRes, ordersRes] = await Promise.all([
+      adminApi.products.list(),
+      adminApi.orders.list()
+    ])
     const orders = ordersRes.data || ordersRes || []
     const products = productsRes.data || productsRes || []
     stats.value = {
@@ -23,7 +26,7 @@ const fetchStats = async () => {
       revenue: orders.reduce((sum, o) => sum + (o.total_amount || o.total || 0), 0)
     }
   } catch (error) {
-    console.error('Failed to fetch dashboard stats:', error)
+    showError(error)
   } finally {
     loading.value = false
   }

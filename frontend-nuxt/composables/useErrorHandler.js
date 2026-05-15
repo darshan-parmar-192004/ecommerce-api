@@ -1,46 +1,48 @@
+import { errorMessages } from '../constants/errorMessages'
+
 export const useErrorHandler = () => {
   const toast = useAppToast()
 
   const parseApiError = (error) => {
-    if (!error) return 'An unknown error occurred'
+    if (!error) return errorMessages.unknown
 
     if (error.response?.data?.message) {
       return error.response.data.message
     }
 
     if (error.response?.status === 400) {
-      return 'Bad request. Please check your input.'
+      return errorMessages.badRequest
     }
     if (error.response?.status === 401) {
-      return 'Unauthorized. Please log in again.'
+      return errorMessages.unauthorized
     }
     if (error.response?.status === 403) {
-      return 'Access denied. You do not have permission.'
+      return errorMessages.forbidden
     }
     if (error.response?.status === 404) {
-      return 'Resource not found.'
+      return errorMessages.notFound
     }
     if (error.response?.status === 409) {
-      return 'Conflict. The resource already exists.'
+      return errorMessages.conflict
     }
     if (error.response?.status === 422) {
-      return 'Validation error. Please check your input.'
+      return errorMessages.validationError
     }
     if (error.response?.status === 429) {
-      return 'Too many requests. Please try again later.'
+      return errorMessages.tooManyRequests
     }
     if (error.response?.status >= 500) {
-      return 'Server error. Please try again later.'
+      return errorMessages.serverError
     }
 
     if (error.message) {
       return error.message
     }
 
-    return 'An error occurred. Please try again.'
+    return errorMessages.genericError
   }
 
-  const showError = (error, fallback = 'An error occurred') => {
+  const showError = (error, fallback = errorMessages.defaultFallback) => {
     const message = parseApiError(error) || fallback
     toast.error(message)
   }
