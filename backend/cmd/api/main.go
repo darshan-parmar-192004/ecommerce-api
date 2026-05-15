@@ -29,6 +29,10 @@ func gracefulShutdown(fiberServer *server.FiberServer, done chan bool) {
 		logger.Log.Errorf("Server forced to shutdown with error: %v", err)
 	}
 
+	if err := fiberServer.CloseCache(); err != nil {
+		logger.Log.Errorf("Redis close error: %v", err)
+	}
+
 	logger.Log.Info("Server exiting")
 
 	done <- true

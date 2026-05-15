@@ -2,22 +2,22 @@ package controllers
 
 import (
 	"backend/internal/constants"
-	"backend/internal/models"
+	"backend/internal/services"
 	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
 )
 
 type CategoryController struct {
-	Repo *models.CategoryRepository
+	Svc *services.CategoryService
 }
 
-func NewCategoryController(repo *models.CategoryRepository) *CategoryController {
-	return &CategoryController{Repo: repo}
+func NewCategoryController(svc *services.CategoryService) *CategoryController {
+	return &CategoryController{Svc: svc}
 }
 
 func (h *CategoryController) GetAll(c fiber.Ctx) error {
-	categories, err := h.Repo.GetAll(c.Context())
+	categories, err := h.Svc.GetAll(c.Context())
 	if err != nil {
 		return apperrors.SendError(
 			c,
@@ -36,7 +36,7 @@ func (h *CategoryController) GetAll(c fiber.Ctx) error {
 func (h *CategoryController) GetCategoryProducts(c fiber.Ctx) error {
 	categoryID := c.Params(constants.ParamID)
 
-	products, err := h.Repo.GetCategoryProducts(c.Context(), categoryID)
+	products, err := h.Svc.GetCategoryProducts(c.Context(), categoryID)
 	if err != nil {
 		return apperrors.SendError(
 			c,
@@ -53,7 +53,7 @@ func (h *CategoryController) GetCategoryProducts(c fiber.Ctx) error {
 }
 
 func (h *CategoryController) GetHierarchy(c fiber.Ctx) error {
-	categories, err := h.Repo.GetHierarchy(c.Context())
+	categories, err := h.Svc.GetHierarchy(c.Context())
 	if err != nil {
 		return apperrors.SendError(
 			c,

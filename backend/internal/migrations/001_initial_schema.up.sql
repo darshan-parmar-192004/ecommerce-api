@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS inventory (
         ON UPDATE CASCADE,
     warehouse_id VARCHAR(50) NOT NULL,
     quantity INT NOT NULL CHECK (quantity >= 0),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (product_id, warehouse_id)
 );

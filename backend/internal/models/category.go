@@ -23,10 +23,10 @@ func (r *CategoryRepository) GetAll(ctx context.Context) ([]Category, error) {
 	defer cancel()
 
 	var categories []Category
-	err := r.db.From("categories").Select(
+		err := r.db.From("categories").Select(
 		"category_id",
 		"name",
-		goqu.COALESCE(goqu.I("parent_category_id"), "").As("parent_category_id"),
+		goqu.L(`COALESCE(parent_category_id::TEXT, '')`).As("parent_category_id"),
 	).Order(goqu.I("name").Asc()).ScanStructsContext(ctxTimeout, &categories)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func (r *CategoryRepository) GetByID(ctx context.Context, categoryID string) (*C
 	found, err := r.db.From("categories").Select(
 		"category_id",
 		"name",
-		goqu.COALESCE(goqu.I("parent_category_id"), "").As("parent_category_id"),
+		goqu.L(`COALESCE(parent_category_id::TEXT, '')`).As("parent_category_id"),
 	).Where(goqu.Ex{"category_id": categoryID}).ScanStructContext(ctx, &cat)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func (r *CategoryRepository) GetHierarchy(ctx context.Context) ([]Category, erro
 	err := r.db.From("categories").Select(
 		"category_id",
 		"name",
-		goqu.COALESCE(goqu.I("parent_category_id"), "").As("parent_category_id"),
+		goqu.L(`COALESCE(parent_category_id::TEXT, '')`).As("parent_category_id"),
 	).Order(goqu.I("category_id").Asc()).ScanStructsContext(ctxTimeout, &categories)
 	if err != nil {
 		return nil, err

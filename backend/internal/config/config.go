@@ -24,6 +24,11 @@ type AppConfig struct {
 	OrdersCSV     string `envconfig:"BLUEPRINT_CSV_ORDERS" default:"internal/datasets/ecommerce/orders.csv"`
 	InventoryCSV  string `envconfig:"BLUEPRINT_CSV_INVENTORY" default:"internal/datasets/ecommerce/inventory.csv"`
 	OrderItemsCSV string `envconfig:"BLUEPRINT_CSV_ORDER_ITEMS" default:"internal/datasets/ecommerce/order_items.csv"`
+
+	RedisHost     string `envconfig:"REDIS_HOST" default:"localhost"`
+	RedisPort     string `envconfig:"REDIS_PORT" default:"6379"`
+	RedisPassword string `envconfig:"REDIS_PASSWORD" default:""`
+	RedisDB       int    `envconfig:"REDIS_DB" default:"0"`
 }
 
 var cfg *AppConfig

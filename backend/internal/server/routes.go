@@ -1,12 +1,14 @@
 package server
 
 import (
+	"backend/internal/cache"
 	"backend/internal/constants"
 	"backend/internal/controllers"
 	"backend/internal/database"
 	"backend/internal/logger"
 	"backend/internal/middleware"
 	"backend/internal/models"
+	"backend/internal/services"
 
 	"github.com/doug-martin/goqu"
 	"github.com/gofiber/fiber/v3"
@@ -14,7 +16,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 )
 
-func RegisterRoutes(app *fiber.App) {
+func RegisterRoutes(app *fiber.App, cacheSvc cache.Service, stats *cache.CacheStats) {
 
 	app.Use(middleware.RequestID())
 	app.Use(middleware.Logging())
@@ -31,10 +33,12 @@ func RegisterRoutes(app *fiber.App) {
 	goquDB := goqu.New(constants.DBDriverPostgres, rawDB)
 
 	productRepo := models.NewProductRepository(goquDB)
-	productController := controllers.NewProductController(productRepo)
+	productSvc := services.NewProductService(productRepo, cacheSvc, stats)
+	productController := controllers.NewProductController(productSvc)
 
 	categoryRepo := models.NewCategoryRepository(goquDB)
-	categoryController := controllers.NewCategoryController(categoryRepo)
+	categorySvc := services.NewCategoryService(categoryRepo, cacheSvc, stats)
+	categoryController := controllers.NewCategoryController(categorySvc)
 
 	customerRepo := models.NewCustomerRepository(goquDB)
 	customerController := controllers.NewCustomerController(customerRepo)
@@ -74,6 +78,10 @@ func RegisterRoutes(app *fiber.App) {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			constants.JSONFieldStatus: constants.ResponseStatusOK,
 		})
+	})
+
+	app.Get(constants.RouteCacheStats, func(c fiber.Ctx) error {
+		return c.JSON(stats.Stats())
 	})
 
 	logger.Log.Infof("Routes registered successfully")

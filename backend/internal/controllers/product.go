@@ -9,6 +9,7 @@ import (
 
 	"backend/internal/constants"
 	"backend/internal/models"
+	"backend/internal/services"
 	apperrors "backend/internal/utils"
 
 	"github.com/gofiber/fiber/v3"
@@ -65,11 +66,11 @@ func ValidateProductInput(input ProductInput) ValidationResult {
 }
 
 type ProductController struct {
-	Repo *models.ProductRepository
+	Svc *services.ProductService
 }
 
-func NewProductController(repo *models.ProductRepository) *ProductController {
-	return &ProductController{Repo: repo}
+func NewProductController(svc *services.ProductService) *ProductController {
+	return &ProductController{Svc: svc}
 }
 
 func (h *ProductController) GetAll(c fiber.Ctx) error {
@@ -94,7 +95,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 		limit = constants.MaxLimit
 	}
 
-	products, pagination, err := h.Repo.GetAll(c.Context(), category, minPriceStr, maxPriceStr, search, page, limit)
+	products, pagination, err := h.Svc.GetAll(c.Context(), category, minPriceStr, maxPriceStr, search, page, limit)
 	if err != nil {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgFailedToFetch, fiber.Map{constants.JSONFieldDebug: err.Error()})
 	}
@@ -108,7 +109,7 @@ func (h *ProductController) GetAll(c fiber.Ctx) error {
 func (h *ProductController) GetById(c fiber.Ctx) error {
 	id := c.Params(constants.ParamID)
 
-	product, err := h.Repo.GetByID(c.Context(), id)
+	product, err := h.Svc.GetByID(c.Context(), id)
 	if err != nil {
 		if errors.Is(err, models.ErrNoRows) {
 			return apperrors.SendError(c, fiber.StatusNotFound, constants.ErrProductNotFound, constants.MsgProductNotFound2, nil)
@@ -131,7 +132,7 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 
 	productID := uuid.New().String()
 
-	newProduct, err := h.Repo.Create(c.Context(), productID, input.Name, input.CategoryID, input.Price, input.Description, time.Now())
+	newProduct, err := h.Svc.Create(c.Context(), productID, input.Name, input.CategoryID, input.Price, input.Description, time.Now())
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") {
 			return apperrors.SendError(c, fiber.StatusConflict, constants.ErrDuplicateKey, constants.MsgProductIDExists, nil)
@@ -145,7 +146,7 @@ func (h *ProductController) Create(c fiber.Ctx) error {
 func (h *ProductController) Update(c fiber.Ctx) error {
 	id := c.Params(constants.ParamID)
 
-	exists, err := h.Repo.Exists(c.Context(), id)
+	exists, err := h.Svc.Exists(c.Context(), id)
 	if err != nil {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgCheckProduct, fiber.Map{constants.JSONFieldDebug: err.Error()})
 	}
@@ -162,7 +163,7 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusUnprocessableEntity, validation.Code, constants.MsgValidationFailed, validation.Errors)
 	}
 
-	updatedProduct, err := h.Repo.Update(c.Context(), id, input.Name, input.CategoryID, input.Price, input.Description)
+	updatedProduct, err := h.Svc.Update(c.Context(), id, input.Name, input.CategoryID, input.Price, input.Description)
 	if err != nil {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgFailedToUpdate, fiber.Map{constants.JSONFieldDebug: err.Error()})
 	}
@@ -173,7 +174,7 @@ func (h *ProductController) Update(c fiber.Ctx) error {
 func (h *ProductController) Delete(c fiber.Ctx) error {
 	id := c.Params(constants.ParamID)
 
-	exists, err := h.Repo.Exists(c.Context(), id)
+	exists, err := h.Svc.Exists(c.Context(), id)
 	if err != nil {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgCheckProduct, fiber.Map{constants.JSONFieldDebug: err.Error()})
 	}
@@ -181,7 +182,7 @@ func (h *ProductController) Delete(c fiber.Ctx) error {
 		return apperrors.SendError(c, fiber.StatusNotFound, constants.ErrProductNotFound, fmt.Sprintf(constants.MsgProductNotFound2, id), nil)
 	}
 
-	err = h.Repo.Delete(c.Context(), id)
+	err = h.Svc.Delete(c.Context(), id)
 	if err != nil {
 		return apperrors.SendError(c, fiber.StatusInternalServerError, constants.ErrDBQuery, constants.MsgFailedToDelete, fiber.Map{constants.JSONFieldDebug: err.Error()})
 	}

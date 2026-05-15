@@ -1,10 +1,11 @@
 package middleware
 
 import (
+	"runtime/debug"
+
 	"backend/internal/constants"
 	"backend/internal/logger"
 	apperrors "backend/internal/utils"
-	"runtime/debug"
 
 	"github.com/gofiber/fiber/v3"
 )

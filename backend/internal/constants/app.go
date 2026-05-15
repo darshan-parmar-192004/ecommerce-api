@@ -106,6 +106,12 @@ const (
 	RouteInvCLV         = "/inventory/customer-lifetime-value"
 	RouteInvHier        = "/inventory/hierarchy"
 	RouteInvTopSell     = "/inventory/top-sellers"
+	RouteCacheStats     = "/stats/cache"
+
+	CacheKeyProductList   = "products:%s:%s:%s:%s:%d:%d"
+	CacheKeyProductByID   = "product:%s"
+	CacheKeyCategoriesAll = "categories:all"
+	CacheKeyCategoriesHier = "categories:hierarchy"
 
 	ServerHeader = "backend"
 	AppName      = "backend"
@@ -143,4 +149,8 @@ var (
 	CORSAllowHeaders     = []string{"Accept", "Authorization", "Content-Type"}
 	CORSAllowCredentials = false
 	CORSMaxAge           = 300
+
+	CacheProductsListTTL = 5 * 60
+	CacheProductByIDTTL  = 10 * 60
+	CacheCategoriesTTL   = 30 * 60
 )
